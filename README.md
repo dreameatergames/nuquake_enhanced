@@ -3,8 +3,8 @@
 
 ## Working:
 - the game
-- audio (+CD Audio)
-- rendering
+- audio +CD Audio (semi-working - 8-bit only)
+- rendering (semi-working - )
 - keyboard+mouse 
 - controllers (analog too!)
 - console (with keyboard)

@@ -266,7 +266,7 @@ static void SCR_CalcRefdef (void)
 	qboolean		full = false;
 
 	scr_fullupdate = 0;		// force a background redraw
-	vid.recalc_refdef = 0;
+	vid.recalc_refdef = false;
 
 // force the status bar to redraw
 	Sbar_Changed ();
@@ -348,7 +348,7 @@ Keybinding command
 void SCR_SizeUp_f (void)
 {
 	Cvar_SetValue ("viewsize",scr_viewsize.value+10);
-	vid.recalc_refdef = 1;
+	vid.recalc_refdef = true;
 }
 
 
@@ -362,7 +362,7 @@ Keybinding command
 void SCR_SizeDown_f (void)
 {
 	Cvar_SetValue ("viewsize",scr_viewsize.value-10);
-	vid.recalc_refdef = 1;
+	vid.recalc_refdef = true;
 }
 
 //============================================================================
@@ -923,9 +923,9 @@ void SCR_UpdateScreen (void)
 	V_RenderView ();
 
 	GL_Set2D ();
-	glEnableClientState(GL_VERTEX_ARRAY);
-	glEnableClientState(GL_TEXTURE_COORD_ARRAY);
-	R_PolyBlend();
+//	glEnableClientState(GL_VERTEX_ARRAY);
+//	glEnableClientState(GL_TEXTURE_COORD_ARRAY);
+//	R_PolyBlend();
 
 	//
 	// draw any areas not covered by the refresh
@@ -971,6 +971,9 @@ void SCR_UpdateScreen (void)
 		glPushMatrix();
 		glTranslatef(320+(1-scr_menuscale.value*320),0,0);
 		glScalef(scr_menuscale.value,scr_menuscale.value,1);
+		GL_Bind(char_texture);
+		glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+		glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 		M_Draw ();
 		glPopMatrix();
 		glDisable(GL_BLEND);
