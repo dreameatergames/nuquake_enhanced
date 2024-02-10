@@ -3,6 +3,8 @@
 #include <math.h>
 #include <assert.h>
 #include <stdio.h>
+#include <dc/sq.h>
+#include <kos/string.h>
 
 #if defined(__APPLE__) || defined(__WIN32__)
 /* Linux + Kos define this, OSX does not, so just use malloc there */
@@ -24,14 +26,12 @@ void aligned_vector_init(AlignedVector* vector, unsigned int element_size) {
     aligned_vector_reserve(vector, ALIGNED_VECTOR_CHUNK_SIZE);
 }
 
-
 static inline unsigned int round_to_chunk_size(unsigned int val) {
     const unsigned int n = val;
     const unsigned int m = ALIGNED_VECTOR_CHUNK_SIZE;
 
     return ((n + m - 1) / m) * m;
 }
-
 
 void aligned_vector_reserve(AlignedVector* vector, unsigned int element_count) {
     if(element_count == 0) {
@@ -107,31 +107,10 @@ void* aligned_vector_resize(AlignedVector* vector, const unsigned int element_co
     }
 }
 
-void* aligned_vector_at(const AlignedVector* vector, const unsigned int index) {
-    #if 0
-    if(index >= vector->size){
-        char msg[60];
-        sprintf(msg, "Vector OOB: %d %d wanted %d\n", vector->capacity, vector->size, index);
-        //aligned_vector_resize(vector, index);
-        assert_msg(index < vector->size, msg);
-    }
-    #endif
-    assert(index < vector->size);
-    return &vector->data[index * vector->element_size];
-}
-
-void* aligned_vector_back(AlignedVector* vector) {
-    return aligned_vector_at(vector, vector->size - 1);
-}
-
 void* aligned_vector_extend(AlignedVector* vector, const unsigned int additional_count) {
     const unsigned int current = vector->size;
     aligned_vector_resize(vector, vector->size + additional_count);
     return aligned_vector_at(vector, current);
-}
-
-void aligned_vector_clear(AlignedVector* vector) {
-    vector->size = 0;
 }
 
 void aligned_vector_shrink_to_fit(AlignedVector* vector) {

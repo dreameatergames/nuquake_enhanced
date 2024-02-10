@@ -6,8 +6,7 @@ build:sh4-gcc:
   image: haydenkow/nu_dckos
   script:
     - source /etc/bash.bashrc
-    - make clean
-    - make build
+    - make clean build link
     - tar -zcf gldc.tar.gz libGLdc.a LICENSE README.md include
   artifacts:
     paths:

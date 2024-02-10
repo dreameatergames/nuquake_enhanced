@@ -1,0 +1,14 @@
+stages:
+  - build
+
+build:sh4-gcc:
+  stage: build
+  image: haydenkow/nu_dckos
+  script:
+    - source /etc/bash.bashrc
+    - make clean
+    - make build
+    - tar -zcf gldc.tar.gz libGLdc.a LICENSE README.md include
+  artifacts:
+    paths:
+    - gldc.tar.gz

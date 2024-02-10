@@ -1,9 +1,7 @@
 
-# GLdc - Dev Fork
+# GLdc
 
-## Bleeding edge features are found here and as such, may not always work or be as stable as upstream
-
-**Fork of GLdc official upstream which also lives on [Gitlab](https://gitlab.com/simulant/GLdc)**
+**Development of GLdc has moved to [Gitlab](https://gitlab.com/simulant/GLdc)**
 
 This is a partial implementation of OpenGL 1.2 for the SEGA Dreamcast for use
 with the KallistiOS SDK.
@@ -26,6 +24,34 @@ Things I'd like to do:
  - Define an extension for modifier volumes
  - Add support for point sprites
  - Optimise, add unit tests for correctness
+
+# Compiling
+
+GLdc uses CMake for its build system, it currently ships with two "backends":
+
+ - kospvr - This is the hardware-accelerated Dreamcast backend
+ - software - This is a stub software rasterizer used for testing testing and debugging
+ 
+To compile for Dreamcast, you'll want to do something like the following:
+
+```
+mkdir dcbuild
+cd dcbuild
+cmake -DCMAKE_TOOLCHAIN_FILE=../toolchains/Dreamcast.cmake -G "Unix Makefiles" ..
+make
+```
+
+You will need KallistiOS compiled and configured (e.g. the KOS_BASE environment
+variable must be set)
+
+To compile for PC:
+
+```
+mkdir pcbuild
+cd pcbuild
+cmake -G "Unix Makefiles" ..
+make
+```
  
 # Special Thanks!
 

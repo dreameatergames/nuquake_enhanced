@@ -11,7 +11,7 @@ clean:
 rm-elf:
 	-rm -f $(TARGET)
 
-$(TARGET): $(OBJS) 
+$(TARGET): $(OBJS)
 	$(KOS_CC) $(KOS_CFLAGS) $(KOS_LDFLAGS) -o $(TARGET) $(KOS_START) \
 		$(OBJS) $(OBJEXTRA) -lm -lkosutils $(KOS_LIBS)
 

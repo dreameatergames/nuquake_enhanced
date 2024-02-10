@@ -5,6 +5,8 @@
 extern "C" {
 #endif
 
+#include "../GL/cygprofile.h"
+
 typedef struct {
     unsigned int element_size;
     unsigned int max_element_count;
@@ -14,7 +16,13 @@ typedef struct {
 } NamedArray;
 
 void named_array_init(NamedArray* array, unsigned int element_size, unsigned int max_elements);
-char named_array_used(NamedArray* array, unsigned int id);
+INLINE_ALWAYS char named_array_used(NamedArray* array, unsigned int id) {
+    const unsigned int i = id / 8;
+    const unsigned int j = id % 8;
+
+    unsigned char v = array->used_markers[i] & (unsigned char) (1 << j);
+    return !!(v);
+}
 
 void* named_array_alloc(NamedArray* array, unsigned int* new_id);
 void* named_array_reserve(NamedArray* array, unsigned int id);

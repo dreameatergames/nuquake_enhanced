@@ -1,0 +1,315 @@
+Compiling the C compiler identification source file "CMakeCCompilerId.c" failed.
+Compiler: /bin/sh-elf-gcc 
+Build flags: 
+Id flags:  
+
+The output was:
+No such file or directory
+
+
+Compiling the C compiler identification source file "CMakeCCompilerId.c" failed.
+Compiler: /bin/sh-elf-gcc 
+Build flags: 
+Id flags: -c 
+
+The output was:
+No such file or directory
+
+
+Compiling the C compiler identification source file "CMakeCCompilerId.c" failed.
+Compiler: /bin/sh-elf-gcc 
+Build flags: 
+Id flags: -Aa 
+
+The output was:
+No such file or directory
+
+
+Compiling the C compiler identification source file "CMakeCCompilerId.c" failed.
+Compiler: /bin/sh-elf-gcc 
+Build flags: 
+Id flags: -D__CLASSIC_C__ 
+
+The output was:
+No such file or directory
+
+
+Compiling the C compiler identification source file "CMakeCCompilerId.c" failed.
+Compiler: /bin/sh-elf-gcc 
+Build flags: 
+Id flags: --target=arm-arm-none-eabi;-mcpu=cortex-m3 
+
+The output was:
+No such file or directory
+
+
+Compiling the C compiler identification source file "CMakeCCompilerId.c" failed.
+Compiler: /bin/sh-elf-gcc 
+Build flags: 
+Id flags:  
+
+The output was:
+No such file or directory
+
+
+Compiling the C compiler identification source file "CMakeCCompilerId.c" failed.
+Compiler: /bin/sh-elf-gcc 
+Build flags: 
+Id flags: -c 
+
+The output was:
+No such file or directory
+
+
+Compiling the C compiler identification source file "CMakeCCompilerId.c" failed.
+Compiler: /bin/sh-elf-gcc 
+Build flags: 
+Id flags: -Aa 
+
+The output was:
+No such file or directory
+
+
+Compiling the C compiler identification source file "CMakeCCompilerId.c" failed.
+Compiler: /bin/sh-elf-gcc 
+Build flags: 
+Id flags: -D__CLASSIC_C__ 
+
+The output was:
+No such file or directory
+
+
+Compiling the C compiler identification source file "CMakeCCompilerId.c" failed.
+Compiler: /bin/sh-elf-gcc 
+Build flags: 
+Id flags: --target=arm-arm-none-eabi;-mcpu=cortex-m3 
+
+The output was:
+No such file or directory
+
+
+Checking whether the C compiler is IAR using "" did not match "IAR .+ Compiler":
+Checking whether the C compiler is IAR using "" did not match "IAR .+ Compiler":
+Compiling the CXX compiler identification source file "CMakeCXXCompilerId.cpp" failed.
+Compiler: /bin/sh-elf-g++ 
+Build flags: 
+Id flags:  
+
+The output was:
+No such file or directory
+
+
+Compiling the CXX compiler identification source file "CMakeCXXCompilerId.cpp" failed.
+Compiler: /bin/sh-elf-g++ 
+Build flags: 
+Id flags: -c 
+
+The output was:
+No such file or directory
+
+
+Compiling the CXX compiler identification source file "CMakeCXXCompilerId.cpp" failed.
+Compiler: /bin/sh-elf-g++ 
+Build flags: 
+Id flags: --c++ 
+
+The output was:
+No such file or directory
+
+
+Compiling the CXX compiler identification source file "CMakeCXXCompilerId.cpp" failed.
+Compiler: /bin/sh-elf-g++ 
+Build flags: 
+Id flags: --ec++ 
+
+The output was:
+No such file or directory
+
+
+Compiling the CXX compiler identification source file "CMakeCXXCompilerId.cpp" failed.
+Compiler: /bin/sh-elf-g++ 
+Build flags: 
+Id flags: --target=arm-arm-none-eabi;-mcpu=cortex-m3 
+
+The output was:
+No such file or directory
+
+
+Compiling the CXX compiler identification source file "CMakeCXXCompilerId.cpp" failed.
+Compiler: /bin/sh-elf-g++ 
+Build flags: 
+Id flags:  
+
+The output was:
+No such file or directory
+
+
+Compiling the CXX compiler identification source file "CMakeCXXCompilerId.cpp" failed.
+Compiler: /bin/sh-elf-g++ 
+Build flags: 
+Id flags: -c 
+
+The output was:
+No such file or directory
+
+
+Compiling the CXX compiler identification source file "CMakeCXXCompilerId.cpp" failed.
+Compiler: /bin/sh-elf-g++ 
+Build flags: 
+Id flags: --c++ 
+
+The output was:
+No such file or directory
+
+
+Compiling the CXX compiler identification source file "CMakeCXXCompilerId.cpp" failed.
+Compiler: /bin/sh-elf-g++ 
+Build flags: 
+Id flags: --ec++ 
+
+The output was:
+No such file or directory
+
+
+Compiling the CXX compiler identification source file "CMakeCXXCompilerId.cpp" failed.
+Compiler: /bin/sh-elf-g++ 
+Build flags: 
+Id flags: --target=arm-arm-none-eabi;-mcpu=cortex-m3 
+
+The output was:
+No such file or directory
+
+
+Checking whether the CXX compiler is IAR using "" did not match "IAR .+ Compiler":
+Checking whether the CXX compiler is IAR using "" did not match "IAR .+ Compiler":
+Detecting C compiler ABI info failed to compile with the following output:
+Change Dir: /home/dreamdev/projects/kos/libraries/GLdc/dcbuild/CMakeFiles/CMakeTmp
+
+Run Build Command(s):/usr/bin/make cmTC_93398/fast && /usr/bin/make -f CMakeFiles/cmTC_93398.dir/build.make CMakeFiles/cmTC_93398.dir/build
+make[1]: Entering directory '/mnt/e/projects/kos/libraries/GLdc/dcbuild/CMakeFiles/CMakeTmp'
+Building C object CMakeFiles/cmTC_93398.dir/CMakeCCompilerABI.c.obj
+/opt/toolchains/dc/sh-elf/bin/sh-elf-gcc -DDREAMCAST -DNDEBUG -D__DREAMCAST__ -D__arch_dreamcast -D_arch_dreamcast -D_arch_sub_pristine  -v -ml -m4-single-only -ffunction-sections -fdata-sections -o CMakeFiles/cmTC_93398.dir/CMakeCCompilerABI.c.obj   -c /usr/share/cmake-3.16/Modules/CMakeCCompilerABI.c
+Using built-in specs.
+COLLECT_GCC=/opt/toolchains/dc/sh-elf/bin/sh-elf-gcc
+Target: sh-elf
+Configured with: ../gcc-9.3.0/configure --target=sh-elf --prefix=/opt/toolchains/dc/sh-elf --with-newlib --disable-libssp --disable-tls --enable-threads=kos --enable-languages=c,c++,objc,obj-c++ --enable-checking=release --with-multilib-list=m4-single-only --with-endian=little --with-cpu=m4-single-only CC=cc CXX=g++
+Thread model: kos
+gcc version 9.3.0 (GCC) 
+COLLECT_GCC_OPTIONS='-D' 'DREAMCAST' '-D' 'NDEBUG' '-D' '__DREAMCAST__' '-D' '__arch_dreamcast' '-D' '_arch_dreamcast' '-D' '_arch_sub_pristine' '-v' '-ml' '-m4-single-only' '-ffunction-sections' '-fdata-sections' '-o' 'CMakeFiles/cmTC_93398.dir/CMakeCCompilerABI.c.obj' '-c'
+ /opt/toolchains/dc/sh-elf/libexec/gcc/sh-elf/9.3.0/cc1 -quiet -v -D DREAMCAST -D NDEBUG -D __DREAMCAST__ -D __arch_dreamcast -D _arch_dreamcast -D _arch_sub_pristine /usr/share/cmake-3.16/Modules/CMakeCCompilerABI.c -quiet -dumpbase CMakeCCompilerABI.c -ml -m4-single-only -auxbase-strip CMakeFiles/cmTC_93398.dir/CMakeCCompilerABI.c.obj -version -ffunction-sections -fdata-sections -o /tmp/ccsow8SV.s
+GNU C17 (GCC) version 9.3.0 (sh-elf)
+	compiled by GNU C version 9.4.0, GMP version 6.1.0, MPFR version 3.1.4, MPC version 1.0.3, isl version isl-0.18-GMP
+
+GGC heuristics: --param ggc-min-expand=100 --param ggc-min-heapsize=131072
+ignoring nonexistent directory "/opt/toolchains/dc/sh-elf/lib/gcc/sh-elf/9.3.0/../../../../sh-elf/sys-include"
+#include "..." search starts here:
+#include <...> search starts here:
+ /opt/toolchains/dc/sh-elf/lib/gcc/sh-elf/9.3.0/include
+ /opt/toolchains/dc/sh-elf/lib/gcc/sh-elf/9.3.0/include-fixed
+ /opt/toolchains/dc/sh-elf/lib/gcc/sh-elf/9.3.0/../../../../sh-elf/include
+End of search list.
+GNU C17 (GCC) version 9.3.0 (sh-elf)
+	compiled by GNU C version 9.4.0, GMP version 6.1.0, MPFR version 3.1.4, MPC version 1.0.3, isl version isl-0.18-GMP
+
+GGC heuristics: --param ggc-min-expand=100 --param ggc-min-heapsize=131072
+Compiler executable checksum: b11d65276e273c5d01aa8e52a0f7fad3
+COLLECT_GCC_OPTIONS='-D' 'DREAMCAST' '-D' 'NDEBUG' '-D' '__DREAMCAST__' '-D' '__arch_dreamcast' '-D' '_arch_dreamcast' '-D' '_arch_sub_pristine' '-v' '-ml' '-m4-single-only' '-ffunction-sections' '-fdata-sections' '-o' 'CMakeFiles/cmTC_93398.dir/CMakeCCompilerABI.c.obj' '-c'
+ /opt/toolchains/dc/sh-elf/lib/gcc/sh-elf/9.3.0/../../../../sh-elf/bin/as -little --isa=sh4a -o CMakeFiles/cmTC_93398.dir/CMakeCCompilerABI.c.obj /tmp/ccsow8SV.s
+COMPILER_PATH=/opt/toolchains/dc/sh-elf/libexec/gcc/sh-elf/9.3.0/:/opt/toolchains/dc/sh-elf/libexec/gcc/sh-elf/9.3.0/:/opt/toolchains/dc/sh-elf/libexec/gcc/sh-elf/:/opt/toolchains/dc/sh-elf/lib/gcc/sh-elf/9.3.0/:/opt/toolchains/dc/sh-elf/lib/gcc/sh-elf/:/opt/toolchains/dc/sh-elf/lib/gcc/sh-elf/9.3.0/../../../../sh-elf/bin/
+LIBRARY_PATH=/opt/toolchains/dc/sh-elf/lib/gcc/sh-elf/9.3.0/:/opt/toolchains/dc/sh-elf/lib/gcc/sh-elf/9.3.0/../../../../sh-elf/lib/
+COLLECT_GCC_OPTIONS='-D' 'DREAMCAST' '-D' 'NDEBUG' '-D' '__DREAMCAST__' '-D' '__arch_dreamcast' '-D' '_arch_dreamcast' '-D' '_arch_sub_pristine' '-v' '-ml' '-m4-single-only' '-ffunction-sections' '-fdata-sections' '-o' 'CMakeFiles/cmTC_93398.dir/CMakeCCompilerABI.c.obj' '-c'
+Linking C executable cmTC_93398.elf
+/usr/bin/cmake -E cmake_link_script CMakeFiles/cmTC_93398.dir/link.txt --verbose=1
+/opt/toolchains/dc/sh-elf/bin/sh-elf-gcc     -ml -m4-single-only -Wl,-Ttext=0x8c010000 -Wl,--gc-sections -T/home/dreamdev/projects/kos/kallistios/utils/ldscripts/shlelf.xc -nodefaultlibs -v -L/home/dreamdev/projects/kos/kallistios/lib/dreamcast CMakeFiles/cmTC_93398.dir/CMakeCCompilerABI.c.obj  -o cmTC_93398.elf   -L/home/dreamdev/projects/kos/kallistios/addons/lib/dreamcast  -L/home/dreamdev/projects/kos/kallistios/../kos-ports/lib  -L/home/dreamdev/projects/kos/kallistios/lib/dreamcast  -Wl,--start-group -lstdc++ -lkallisti -lc -lgcc -Wl,--end-group -lm 
+Using built-in specs.
+COLLECT_GCC=/opt/toolchains/dc/sh-elf/bin/sh-elf-gcc
+COLLECT_LTO_WRAPPER=/opt/toolchains/dc/sh-elf/libexec/gcc/sh-elf/9.3.0/lto-wrapper
+Target: sh-elf
+Configured with: ../gcc-9.3.0/configure --target=sh-elf --prefix=/opt/toolchains/dc/sh-elf --with-newlib --disable-libssp --disable-tls --enable-threads=kos --enable-languages=c,c++,objc,obj-c++ --enable-checking=release --with-multilib-list=m4-single-only --with-endian=little --with-cpu=m4-single-only CC=cc CXX=g++
+Thread model: kos
+gcc version 9.3.0 (GCC) 
+COMPILER_PATH=/opt/toolchains/dc/sh-elf/libexec/gcc/sh-elf/9.3.0/:/opt/toolchains/dc/sh-elf/libexec/gcc/sh-elf/9.3.0/:/opt/toolchains/dc/sh-elf/libexec/gcc/sh-elf/:/opt/toolchains/dc/sh-elf/lib/gcc/sh-elf/9.3.0/:/opt/toolchains/dc/sh-elf/lib/gcc/sh-elf/:/opt/toolchains/dc/sh-elf/lib/gcc/sh-elf/9.3.0/../../../../sh-elf/bin/
+LIBRARY_PATH=/opt/toolchains/dc/sh-elf/lib/gcc/sh-elf/9.3.0/:/opt/toolchains/dc/sh-elf/lib/gcc/sh-elf/9.3.0/../../../../sh-elf/lib/
+COLLECT_GCC_OPTIONS='-ml' '-m4-single-only' '-T' '/home/dreamdev/projects/kos/kallistios/utils/ldscripts/shlelf.xc' '-nodefaultlibs' '-v' '-L/home/dreamdev/projects/kos/kallistios/lib/dreamcast' '-o' 'cmTC_93398.elf' '-L/home/dreamdev/projects/kos/kallistios/addons/lib/dreamcast' '-L/home/dreamdev/projects/kos/kallistios/../kos-ports/lib' '-L/home/dreamdev/projects/kos/kallistios/lib/dreamcast'
+ /opt/toolchains/dc/sh-elf/libexec/gcc/sh-elf/9.3.0/collect2 -plugin /opt/toolchains/dc/sh-elf/libexec/gcc/sh-elf/9.3.0/liblto_plugin.so -plugin-opt=/opt/toolchains/dc/sh-elf/libexec/gcc/sh-elf/9.3.0/lto-wrapper -plugin-opt=-fresolution=/tmp/ccwB8ioq.res -m shlelf -o cmTC_93398.elf /opt/toolchains/dc/sh-elf/lib/gcc/sh-elf/9.3.0/crt1.o /opt/toolchains/dc/sh-elf/lib/gcc/sh-elf/9.3.0/crti.o /opt/toolchains/dc/sh-elf/lib/gcc/sh-elf/9.3.0/crtbegin.o -L/home/dreamdev/projects/kos/kallistios/lib/dreamcast -L/home/dreamdev/projects/kos/kallistios/addons/lib/dreamcast -L/home/dreamdev/projects/kos/kallistios/../kos-ports/lib -L/home/dreamdev/projects/kos/kallistios/lib/dreamcast -L/opt/toolchains/dc/sh-elf/lib/gcc/sh-elf/9.3.0 -L/opt/toolchains/dc/sh-elf/lib/gcc/sh-elf/9.3.0/../../../../sh-elf/lib -Ttext=0x8c010000 --gc-sections CMakeFiles/cmTC_93398.dir/CMakeCCompilerABI.c.obj --start-group -lstdc++ -lkallisti -lc -lgcc --end-group -lm /opt/toolchains/dc/sh-elf/lib/gcc/sh-elf/9.3.0/crtend.o /opt/toolchains/dc/sh-elf/lib/gcc/sh-elf/9.3.0/crtn.o -T /home/dreamdev/projects/kos/kallistios/utils/ldscripts/shlelf.xc
+COLLECT_GCC_OPTIONS='-ml' '-m4-single-only' '-T' '/home/dreamdev/projects/kos/kallistios/utils/ldscripts/shlelf.xc' '-nodefaultlibs' '-v' '-L/home/dreamdev/projects/kos/kallistios/lib/dreamcast' '-o' 'cmTC_93398.elf' '-L/home/dreamdev/projects/kos/kallistios/addons/lib/dreamcast' '-L/home/dreamdev/projects/kos/kallistios/../kos-ports/lib' '-L/home/dreamdev/projects/kos/kallistios/lib/dreamcast'
+make[1]: Leaving directory '/mnt/e/projects/kos/libraries/GLdc/dcbuild/CMakeFiles/CMakeTmp'
+
+
+Cannot copy output executable
+  ''
+to destination specified by COPY_FILE:
+  '/home/dreamdev/projects/kos/libraries/GLdc/dcbuild/CMakeFiles/3.16.3/CMakeDetermineCompilerABI_C.bin'
+Unable to find the executable at any of:
+  /home/dreamdev/projects/kos/libraries/GLdc/dcbuild/CMakeFiles/CMakeTmp/cmTC_93398
+  /home/dreamdev/projects/kos/libraries/GLdc/dcbuild/CMakeFiles/CMakeTmp/Debug/cmTC_93398
+  /home/dreamdev/projects/kos/libraries/GLdc/dcbuild/CMakeFiles/CMakeTmp/Development/cmTC_93398
+
+
+Detecting CXX compiler ABI info failed to compile with the following output:
+Change Dir: /home/dreamdev/projects/kos/libraries/GLdc/dcbuild/CMakeFiles/CMakeTmp
+
+Run Build Command(s):/usr/bin/make cmTC_e6936/fast && /usr/bin/make -f CMakeFiles/cmTC_e6936.dir/build.make CMakeFiles/cmTC_e6936.dir/build
+make[1]: Entering directory '/mnt/e/projects/kos/libraries/GLdc/dcbuild/CMakeFiles/CMakeTmp'
+Building CXX object CMakeFiles/cmTC_e6936.dir/CMakeCXXCompilerABI.cpp.obj
+/opt/toolchains/dc/sh-elf/bin/sh-elf-g++  -DDREAMCAST -DNDEBUG -D__DREAMCAST__ -D__arch_dreamcast -D_arch_dreamcast -D_arch_sub_pristine  -v -ml -m4-single-only -ffunction-sections -fdata-sections -o CMakeFiles/cmTC_e6936.dir/CMakeCXXCompilerABI.cpp.obj -c /usr/share/cmake-3.16/Modules/CMakeCXXCompilerABI.cpp
+Using built-in specs.
+COLLECT_GCC=/opt/toolchains/dc/sh-elf/bin/sh-elf-g++
+Target: sh-elf
+Configured with: ../gcc-9.3.0/configure --target=sh-elf --prefix=/opt/toolchains/dc/sh-elf --with-newlib --disable-libssp --disable-tls --enable-threads=kos --enable-languages=c,c++,objc,obj-c++ --enable-checking=release --with-multilib-list=m4-single-only --with-endian=little --with-cpu=m4-single-only CC=cc CXX=g++
+Thread model: kos
+gcc version 9.3.0 (GCC) 
+COLLECT_GCC_OPTIONS='-D' 'DREAMCAST' '-D' 'NDEBUG' '-D' '__DREAMCAST__' '-D' '__arch_dreamcast' '-D' '_arch_dreamcast' '-D' '_arch_sub_pristine' '-v' '-ml' '-m4-single-only' '-ffunction-sections' '-fdata-sections' '-o' 'CMakeFiles/cmTC_e6936.dir/CMakeCXXCompilerABI.cpp.obj' '-c'
+ /opt/toolchains/dc/sh-elf/libexec/gcc/sh-elf/9.3.0/cc1plus -quiet -v -D DREAMCAST -D NDEBUG -D __DREAMCAST__ -D __arch_dreamcast -D _arch_dreamcast -D _arch_sub_pristine /usr/share/cmake-3.16/Modules/CMakeCXXCompilerABI.cpp -quiet -dumpbase CMakeCXXCompilerABI.cpp -ml -m4-single-only -auxbase-strip CMakeFiles/cmTC_e6936.dir/CMakeCXXCompilerABI.cpp.obj -version -ffunction-sections -fdata-sections -o /tmp/cc04QJlV.s
+GNU C++14 (GCC) version 9.3.0 (sh-elf)
+	compiled by GNU C version 9.4.0, GMP version 6.1.0, MPFR version 3.1.4, MPC version 1.0.3, isl version isl-0.18-GMP
+
+GGC heuristics: --param ggc-min-expand=100 --param ggc-min-heapsize=131072
+ignoring nonexistent directory "/opt/toolchains/dc/sh-elf/lib/gcc/sh-elf/9.3.0/../../../../sh-elf/sys-include"
+#include "..." search starts here:
+#include <...> search starts here:
+ /opt/toolchains/dc/sh-elf/lib/gcc/sh-elf/9.3.0/../../../../sh-elf/include/c++/9.3.0
+ /opt/toolchains/dc/sh-elf/lib/gcc/sh-elf/9.3.0/../../../../sh-elf/include/c++/9.3.0/sh-elf
+ /opt/toolchains/dc/sh-elf/lib/gcc/sh-elf/9.3.0/../../../../sh-elf/include/c++/9.3.0/backward
+ /opt/toolchains/dc/sh-elf/lib/gcc/sh-elf/9.3.0/include
+ /opt/toolchains/dc/sh-elf/lib/gcc/sh-elf/9.3.0/include-fixed
+ /opt/toolchains/dc/sh-elf/lib/gcc/sh-elf/9.3.0/../../../../sh-elf/include
+End of search list.
+GNU C++14 (GCC) version 9.3.0 (sh-elf)
+	compiled by GNU C version 9.4.0, GMP version 6.1.0, MPFR version 3.1.4, MPC version 1.0.3, isl version isl-0.18-GMP
+
+GGC heuristics: --param ggc-min-expand=100 --param ggc-min-heapsize=131072
+Compiler executable checksum: 9f270b59a6e5f8e6fb675fb3e6227758
+COLLECT_GCC_OPTIONS='-D' 'DREAMCAST' '-D' 'NDEBUG' '-D' '__DREAMCAST__' '-D' '__arch_dreamcast' '-D' '_arch_dreamcast' '-D' '_arch_sub_pristine' '-v' '-ml' '-m4-single-only' '-ffunction-sections' '-fdata-sections' '-o' 'CMakeFiles/cmTC_e6936.dir/CMakeCXXCompilerABI.cpp.obj' '-c'
+ /opt/toolchains/dc/sh-elf/lib/gcc/sh-elf/9.3.0/../../../../sh-elf/bin/as -little --isa=sh4a -o CMakeFiles/cmTC_e6936.dir/CMakeCXXCompilerABI.cpp.obj /tmp/cc04QJlV.s
+COMPILER_PATH=/opt/toolchains/dc/sh-elf/libexec/gcc/sh-elf/9.3.0/:/opt/toolchains/dc/sh-elf/libexec/gcc/sh-elf/9.3.0/:/opt/toolchains/dc/sh-elf/libexec/gcc/sh-elf/:/opt/toolchains/dc/sh-elf/lib/gcc/sh-elf/9.3.0/:/opt/toolchains/dc/sh-elf/lib/gcc/sh-elf/:/opt/toolchains/dc/sh-elf/lib/gcc/sh-elf/9.3.0/../../../../sh-elf/bin/
+LIBRARY_PATH=/opt/toolchains/dc/sh-elf/lib/gcc/sh-elf/9.3.0/:/opt/toolchains/dc/sh-elf/lib/gcc/sh-elf/9.3.0/../../../../sh-elf/lib/
+COLLECT_GCC_OPTIONS='-D' 'DREAMCAST' '-D' 'NDEBUG' '-D' '__DREAMCAST__' '-D' '__arch_dreamcast' '-D' '_arch_dreamcast' '-D' '_arch_sub_pristine' '-v' '-ml' '-m4-single-only' '-ffunction-sections' '-fdata-sections' '-o' 'CMakeFiles/cmTC_e6936.dir/CMakeCXXCompilerABI.cpp.obj' '-c'
+Linking CXX executable cmTC_e6936.elf
+/usr/bin/cmake -E cmake_link_script CMakeFiles/cmTC_e6936.dir/link.txt --verbose=1
+/opt/toolchains/dc/sh-elf/bin/sh-elf-g++      -ml -m4-single-only -Wl,-Ttext=0x8c010000 -Wl,--gc-sections -T/home/dreamdev/projects/kos/kallistios/utils/ldscripts/shlelf.xc -nodefaultlibs -v -L/home/dreamdev/projects/kos/kallistios/lib/dreamcast CMakeFiles/cmTC_e6936.dir/CMakeCXXCompilerABI.cpp.obj  -o cmTC_e6936.elf   -L/home/dreamdev/projects/kos/kallistios/addons/lib/dreamcast  -L/home/dreamdev/projects/kos/kallistios/../kos-ports/lib  -L/home/dreamdev/projects/kos/kallistios/lib/dreamcast  -Wl,--start-group -lstdc++ -lkallisti -lc -lgcc -Wl,--end-group -lm 
+Using built-in specs.
+COLLECT_GCC=/opt/toolchains/dc/sh-elf/bin/sh-elf-g++
+COLLECT_LTO_WRAPPER=/opt/toolchains/dc/sh-elf/libexec/gcc/sh-elf/9.3.0/lto-wrapper
+Target: sh-elf
+Configured with: ../gcc-9.3.0/configure --target=sh-elf --prefix=/opt/toolchains/dc/sh-elf --with-newlib --disable-libssp --disable-tls --enable-threads=kos --enable-languages=c,c++,objc,obj-c++ --enable-checking=release --with-multilib-list=m4-single-only --with-endian=little --with-cpu=m4-single-only CC=cc CXX=g++
+Thread model: kos
+gcc version 9.3.0 (GCC) 
+COMPILER_PATH=/opt/toolchains/dc/sh-elf/libexec/gcc/sh-elf/9.3.0/:/opt/toolchains/dc/sh-elf/libexec/gcc/sh-elf/9.3.0/:/opt/toolchains/dc/sh-elf/libexec/gcc/sh-elf/:/opt/toolchains/dc/sh-elf/lib/gcc/sh-elf/9.3.0/:/opt/toolchains/dc/sh-elf/lib/gcc/sh-elf/:/opt/toolchains/dc/sh-elf/lib/gcc/sh-elf/9.3.0/../../../../sh-elf/bin/
+LIBRARY_PATH=/opt/toolchains/dc/sh-elf/lib/gcc/sh-elf/9.3.0/:/opt/toolchains/dc/sh-elf/lib/gcc/sh-elf/9.3.0/../../../../sh-elf/lib/
+COLLECT_GCC_OPTIONS='-ml' '-m4-single-only' '-T' '/home/dreamdev/projects/kos/kallistios/utils/ldscripts/shlelf.xc' '-nodefaultlibs' '-v' '-L/home/dreamdev/projects/kos/kallistios/lib/dreamcast' '-o' 'cmTC_e6936.elf' '-L/home/dreamdev/projects/kos/kallistios/addons/lib/dreamcast' '-L/home/dreamdev/projects/kos/kallistios/../kos-ports/lib' '-L/home/dreamdev/projects/kos/kallistios/lib/dreamcast'
+ /opt/toolchains/dc/sh-elf/libexec/gcc/sh-elf/9.3.0/collect2 -plugin /opt/toolchains/dc/sh-elf/libexec/gcc/sh-elf/9.3.0/liblto_plugin.so -plugin-opt=/opt/toolchains/dc/sh-elf/libexec/gcc/sh-elf/9.3.0/lto-wrapper -plugin-opt=-fresolution=/tmp/ccM7eN9k.res -m shlelf -o cmTC_e6936.elf /opt/toolchains/dc/sh-elf/lib/gcc/sh-elf/9.3.0/crt1.o /opt/toolchains/dc/sh-elf/lib/gcc/sh-elf/9.3.0/crti.o /opt/toolchains/dc/sh-elf/lib/gcc/sh-elf/9.3.0/crtbegin.o -L/home/dreamdev/projects/kos/kallistios/lib/dreamcast -L/home/dreamdev/projects/kos/kallistios/addons/lib/dreamcast -L/home/dreamdev/projects/kos/kallistios/../kos-ports/lib -L/home/dreamdev/projects/kos/kallistios/lib/dreamcast -L/opt/toolchains/dc/sh-elf/lib/gcc/sh-elf/9.3.0 -L/opt/toolchains/dc/sh-elf/lib/gcc/sh-elf/9.3.0/../../../../sh-elf/lib -Ttext=0x8c010000 --gc-sections CMakeFiles/cmTC_e6936.dir/CMakeCXXCompilerABI.cpp.obj --start-group -lstdc++ -lkallisti -lc -lgcc --end-group -lm /opt/toolchains/dc/sh-elf/lib/gcc/sh-elf/9.3.0/crtend.o /opt/toolchains/dc/sh-elf/lib/gcc/sh-elf/9.3.0/crtn.o -T /home/dreamdev/projects/kos/kallistios/utils/ldscripts/shlelf.xc
+COLLECT_GCC_OPTIONS='-ml' '-m4-single-only' '-T' '/home/dreamdev/projects/kos/kallistios/utils/ldscripts/shlelf.xc' '-nodefaultlibs' '-v' '-L/home/dreamdev/projects/kos/kallistios/lib/dreamcast' '-o' 'cmTC_e6936.elf' '-L/home/dreamdev/projects/kos/kallistios/addons/lib/dreamcast' '-L/home/dreamdev/projects/kos/kallistios/../kos-ports/lib' '-L/home/dreamdev/projects/kos/kallistios/lib/dreamcast'
+make[1]: Leaving directory '/mnt/e/projects/kos/libraries/GLdc/dcbuild/CMakeFiles/CMakeTmp'
+
+
+Cannot copy output executable
+  ''
+to destination specified by COPY_FILE:
+  '/home/dreamdev/projects/kos/libraries/GLdc/dcbuild/CMakeFiles/3.16.3/CMakeDetermineCompilerABI_CXX.bin'
+Unable to find the executable at any of:
+  /home/dreamdev/projects/kos/libraries/GLdc/dcbuild/CMakeFiles/CMakeTmp/cmTC_e6936
+  /home/dreamdev/projects/kos/libraries/GLdc/dcbuild/CMakeFiles/CMakeTmp/Debug/cmTC_e6936
+  /home/dreamdev/projects/kos/libraries/GLdc/dcbuild/CMakeFiles/CMakeTmp/Development/cmTC_e6936
+
+
