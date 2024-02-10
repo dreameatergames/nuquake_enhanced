@@ -1,0 +1,80 @@
+TARGET_EXEC ?= nuquake.elf
+
+BUILD_DIR ?= ./build_dc
+EXEC_DIR ?= $(BUILD_DIR)
+SRC_DIRS ?= ./src
+ROOT_DIR := .
+DEP_DIR := $(ROOT_DIR)/deps
+
+FILTER_PLATFORMS = ./src/win32/% ./src/linux/% ./src/null/% ./src/common/unused/% ./src/client/unused/% ./src/dreamcast/unused/% 
+
+SRCS := $(filter-out $(FILTER_PLATFORMS), $(shell find $(SRC_DIRS) -name *.cpp -or -name *.c -or -name *.s -or -name *.rc))
+OBJS := $(SRCS:%=$(BUILD_DIR)/%.o)
+DEPS := $(OBJS:.o=.d)
+
+INC_DIRS := $(filter-out $(FILTER_PLATFORMS), $(shell find $(SRC_DIRS) -type d))
+INC_FLAGS := $(addprefix -I,$(INC_DIRS))
+
+BASE_CFLAGS = $(INC_FLAGS) -Wall -Wextra -Wformat=0 -Wno-missing-field-initializers -Wdouble-promotion  -fsingle-precision-constant -Xlinker -Map=output.map -DGLQUAKE -DBUILD_LIBGL -std=gnu11
+RELEASE_CFLAGS = $(BASE_CFLAGS) -DQUIET -DNDEBUG -O3 -g -ffast-math -mdiv=inv -maccumulate-outgoing-args -mpretend-cmove -Wl,--gc-sections 
+#$(LTO_FLAGS)
+LTO_FLAGS = -flto -fuse-linker-plugin
+DEBUG_CFLAGS = $(BASE_CFLAGS) -O0 -g
+
+#INC_LZO = -I$(DEP_DIR)/minilzo
+#INC_ALDC = -I$(DEP_DIR)/aldc/include
+INCS :=  -I$(DEP_DIR)/libgl/include  -I$(DEP_DIR)/cglm/include 
+
+CC = kos-cc 
+CXX = kos-c++
+AS = kos-as
+
+STRIP = $(PREFIX)strip
+
+LIB_GLDC = $(DEP_DIR)/libgl/libGLdc.a
+LIB_LZO = $(DEP_DIR)/minilzo/libminilzo.a
+LIB_ALDC = $(DEP_DIR)/aldc/libAL.a
+
+LIBS = $(LIB_GLDC)  -lz
+INCS += -iquote src/common -iquote src/dreamcast
+
+CPPFLAGS ?= $(INC_FLAGS) -MMD -MP
+
+$(BUILD_DIR)/$(TARGET_EXEC): $(OBJS) $(LIB_GLDC)
+	@echo -e "\n+ $@"
+	@$(CC) $(RELEASE_CFLAGS) $(INCS) $(LDFLAGS) -o $@  $(OBJS) -L$(KOS_BASE)/lib $(LIBS) -lm $(KOS_LIBS)
+	@$(KOS_CC_BASE)/sh-elf/bin/objcopy -R .stack -O binary $@ $(basename $@)
+	@$(KOS_BASE)/utils/scramble/scramble $(basename $@) $(BUILD_DIR)/1ST_READ.BIN
+	@-$(CP_N) assets/* $(EXEC_DIR)/
+
+$(BUILD_DIR)/%.s.o: %.s
+	@echo  "! $@"
+	@$(MKDIR_P) $(dir $@)
+	@$(AS) $(ASFLAGS) -c $< -o $@
+
+$(BUILD_DIR)/%.c.o: %.c
+	@echo  "> $@"
+	@$(MKDIR_P) $(dir $@)
+	@$(CC)  $(RELEASE_CFLAGS) $(INCS) -c $< -o $@
+
+$(BUILD_DIR)/%.cpp.o: %.cpp
+	@echo  "> $@"
+	@$(MKDIR_P) $(dir $@)
+	@$(CXX) $(CPPFLAGS) $(CXXFLAGS) $(INCS) $(LDFLAGS) -c $< -o $@
+
+#GLdc :
+#	@$(MAKE) -C deps/libgl CFLAGS=-DBUILD_LIBGL build
+
+$(LIB_GLDC):
+	$(MAKE) -C deps/libgl
+
+$(LIB_LZO):
+	$(MAKE) -C deps/minilzo
+
+.PHONY: clean
+
+clean:
+	$(RM) -r $(BUILD_DIR)/src
+
+MKDIR_P ?= mkdir -p
+CP_N ?= cp -n

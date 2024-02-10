@@ -1,0 +1,35 @@
+#!/bin/sh
+
+# A POSIX variable
+OPTIND=1         # Reset in case getopts has been used previously in the shell.
+
+# Initialize our own variables:
+output_file=""
+
+while :; do
+  while getopts "h?Dpieo:E" opt; do
+    case "$opt" in
+    h|\?)
+        echo 'Copyright (C) 0000 Free Software Foundation, Inc.'
+        exit 0
+        ;;
+    o)
+       output_file=$OPTARG 
+       echo 'Faking' $output_file
+       cp /usr/bin/gcc $output_file
+       chmod +x $output_file
+       ;;
+    p)
+        ((OPTIND++)) 
+       ;;
+    E)
+      echo '#define __meson_dumb 1'
+      exit 0
+      ;;
+    esac
+done
+  ((OPTIND++)) 
+  [ $OPTIND -gt $# ] && break
+done
+
+exit 0

@@ -1,0 +1,6 @@
+[submodule "deps/libgl"]
+	path = deps/libgl
+	url = https://gitlab.com/HaydenKow/GLdc.git
+[submodule "deps/zlib-master"]
+	path = deps/zlib-master
+	url = https://github.com/madler/zlib.git

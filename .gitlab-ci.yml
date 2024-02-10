@@ -1,0 +1,35 @@
+stages:
+  - build
+  - publish
+
+variables:
+  GIT_SUBMODULE_STRATEGY: recursive
+
+build:sh4-gcc:
+  stage: build
+  image: haydenkow/nu_dckos
+  script:
+    - source /etc/bash.bashrc
+    - make -f Makefile.dc
+  artifacts:
+    paths:
+    - build_dc/glquake.elf
+    - build_dc/glquake
+    - build_dc/1ST_READ.BIN
+
+build:windows-x64-mingw:
+  stage: build
+  image: kazade/windows-sdk
+  script:
+    - mingw64-make -f Makefile.win
+  artifacts:
+    paths:
+    - build_win/glquake.exe
+
+publish-tags:
+  stage: publish
+  image: inetprocess/gitlab-release
+  only:
+    - tags
+  script:
+    - gitlab-release --message 'ADD TEMPLATE HERE'  build_dc/glquake.elf  build_dc/glquake  build_dc/1ST_READ.BIN   build_win/glquake.exe

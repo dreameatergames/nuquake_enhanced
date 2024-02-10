@@ -1,0 +1,6 @@
+*.o
+*.d
+*.vscode
+artifacst
+*.txt
+*build_*
