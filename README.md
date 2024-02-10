@@ -1,4 +1,4 @@
-# nuQuake © 2019 HaydenKow
+# nuQuake © 2024 David Croshaw
 ## Free and Open for the Community!
 
 ## Working:
@@ -18,6 +18,9 @@ __let me know if stuff is broken.__
 - no networking
 
 ## Shoutouts
+- Hayden Kowalchuck
+  - For the initial port of nuQuake
+  - Putting up with so much of my BS
 - Kazade
   - GLdc: the best damn opengl implemention on the Dreamcast
   - Numerous discussions and info sharing
@@ -26,9 +29,6 @@ __let me know if stuff is broken.__
 - Ian Michael
   - Inspiration and Encouragement
   - Tossing the save code over
-- Rizzo
-  - Pushing me to fix stuff and add things
-  - Stressing the hell out of Quake
 - The Dreamcast Community as a whole!
   - Assembler, DC-Talk, DCEMU. 
 
