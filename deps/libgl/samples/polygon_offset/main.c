@@ -182,14 +182,14 @@ void DrawGLScene()
     }
 
 
-	glColor3f(0.0f, 0.0f, 0.0f);
-	glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-	drawBox();
+    glColor3f(0.0f, 0.0f, 0.0f);
+    glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+    drawBox();
 
-	if (offset)
-		glDisable(GL_POLYGON_OFFSET_LINE);
+    if (offset)
+        glDisable(GL_POLYGON_OFFSET_LINE);
 
-	glFlush();
+    glFlush();
 #endif
     // swap buffers to display, since we're double buffered.
     glKosSwapBuffers();

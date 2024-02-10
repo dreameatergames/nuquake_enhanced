@@ -393,7 +393,7 @@ int main(int argc, char **argv) {
   parms.membase = memalign(0x20, parms.memsize);
  	getRamStatus();
   malloc_stats();
-  printf("GL Mem left:%u\n", (unsigned int)pvr_mem_available());
+  //printf("GL Mem left:%u\n", (unsigned int)pvr_mem_available());
 
   if (!parms.membase)
     Sys_Error("Not enough memory free;\n");

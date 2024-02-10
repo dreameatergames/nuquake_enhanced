@@ -3,36 +3,29 @@
 # kos-ports/libgl Makefile
 # Copyright (C) 2013, 2014 Josh Pearson
 # Copyright (C) 2014 Lawrence Sebald
-# Copyright (C) 2018 Luke Benstead
+# Copyright (C) 2020 Luke Benstead
+# Copyright (c) 2020 HaydenKow
 
 TARGET = libGLdc.a
 OBJS = GL/gldc.o
-#OBJS = GL/draw.o GL/flush.o GL/framebuffer.o GL/immediate.o GL/lighting.o GL/state.o GL/texture.o GL/glu.o
-#OBJS += GL/matrix.o GL/fog.o GL/error.o GL/clip.o containers/stack.o containers/named_array.o containers/aligned_vector.o GL/profiler.o
+OBJS = GL/draw.o GL/flush.o GL/framebuffer.o GL/immediate.o GL/lighting.o GL/state.o GL/texture.o GL/glu.o
+OBJS += GL/matrix.o GL/fog.o GL/error.o GL/clip.o containers/stack.o containers/named_array.o containers/aligned_vector.o GL/profiler.o
 OBJS += containers/stack.o containers/named_array.o containers/aligned_vector.o GL/profiler.o
 
 SUBDIRS =
 
-GCCVERSIONGTEQ5 := $(shell expr `sh-elf-gcc -dumpversion | cut -f1 -d.` \>= 5)
+EXTRA_CFLAGS = -mpretend-cmove -Wall -Wextra -Wformat=0 -Wno-missing-field-initializers -fsingle-precision-constant 
+KOS_CFLAGS +=  -ffast-math -Ofast -Iinclude -DNDEBUG -DBUILD_LIBGL $(EXTRA_CFLAGS)
 
-ifeq "$(GCCVERSIONGTEQ5)" "1"
-    GCC_WILD_FLAGS = -mdiv=inv -matomic-model=none -maccumulate-outgoing-args -ffp-contract=fast  -mpretend-cmove -ffinite-math-only 
-	GCC5_FLAGS = -mfsca -mfsrra -mlra $(GCC_WILD_FLAGS)
-endif
+GL/version.h:
+	rm -f $@
+	@echo -e '#pragma once\n#define GLDC_VERSION "$(shell git describe --abbrev=4 --dirty --always --tags)"\n' > $@
 
-EXTRA_CFLAGS=  -Wall -Wextra $(GCC5_FLAGS)
-KOS_CFLAGS += -ffast-math -O2 -funroll-loops -fsingle-precision-constant -Iinclude -funsafe-math-optimizations -DBUILD_LIBGL $(EXTRA_CFLAGS)
-
-# Manipulate the CFLAGS to look our *our* version of the library and includes
-INC_DIR = ./include
-LIB_DIR = ./
-export CFLAGS := $(CFLAGS) -I $(INC_DIR)
-export OBJEXTRA := $(LIB_DIR)/libGLdc.a
-
-link: | $(OBJS) ;
+link:
 	$(KOS_AR) rcs $(TARGET) $(OBJS)
 
-build: $(OBJS) 
+build: GL/version.h $(OBJS) link
+
 
 samples: build
 	$(KOS_MAKE) -C samples all
@@ -45,15 +38,3 @@ include $(KOS_BASE)/addons/Makefile.prefab
 create_kos_link:
 	rm -f ../include/GL
 	ln -s ../GLdc/include ../include/GL
-
-polymark:
-	$(KOS_MAKE) -C samples/quadmark dist
-
-offset:
-	$(KOS_MAKE) -C samples/polygon_offset 
-	
-nehe07:
-	$(KOS_MAKE) -C samples/nehe07 dist
-
-mipmap:
-	$(KOS_MAKE) -C samples/mipmap dist

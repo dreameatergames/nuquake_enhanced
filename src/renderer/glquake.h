@@ -272,6 +272,8 @@ extern const char *gl_extensions;
 void R_TranslatePlayerSkin(int playernum);
 void GL_Bind(int texnum);
 
+extern int char_texture;
+
 #ifndef _WIN32
 #define APIENTRY
 #define TEXTURE0_SGIS GL_TEXTURE0_ARB

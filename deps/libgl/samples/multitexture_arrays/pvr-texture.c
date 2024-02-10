@@ -22,7 +22,7 @@ static GLuint PVR_TextureWidth(unsigned char *HDR);
 static GLuint PVR_TextureFormat(unsigned char *HDR);
 
 static GLuint _glGetMipmapLevelCount(GLuint width, GLuint height) {
-    return 1 + floor(log2(MAX(width, height)));
+    return 1 + floorf(log2f(MAX(width, height)));
 }
 
 static GLuint _glGetMipmapDataSize(GLuint width, GLuint height) {
