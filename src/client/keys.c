@@ -338,7 +338,7 @@ the given string.  Single ascii characters return themselves, while
 the K_* names are matched up.
 ===================
 */
-int Key_StringToKeynum (char *str)
+int Key_StringToKeynum (const char *str)
 {
 	keyname_t	*kn;
 	
@@ -469,16 +469,16 @@ void Key_Bind_f (void)
 	b = Key_StringToKeynum (Cmd_Argv(1));
 	if (b==-1)
 	{
-		Con_Printf ("\"%s\" isn't a valid key\n", Cmd_Argv(1));
+		Con_DPrintf ("\"%s\" isn't a valid key\n", Cmd_Argv(1));
 		return;
 	}
 
 	if (c == 2)
 	{
 		if (keybindings[b])
-			Con_Printf ("\"%s\" = \"%s\"\n", Cmd_Argv(1), keybindings[b] );
+			Con_DPrintf ("\"%s\" = \"%s\"\n", Cmd_Argv(1), keybindings[b] );
 		else
-			Con_Printf ("\"%s\" is not bound\n", Cmd_Argv(1) );
+			Con_DPrintf ("\"%s\" is not bound\n", Cmd_Argv(1) );
 		return;
 	}
 	
@@ -504,11 +504,16 @@ Writes lines containing "bind key value"
 void Key_WriteBindings (FILE *f)
 {
 	int		i;
+	char buf[256];
 
 	for (i=0 ; i<256 ; i++)
 		if (keybindings[i])
 			if (*keybindings[i])
-				fprintf (f, "bind \"%s\" \"%s\"\n", Key_KeynumToString(i), keybindings[i]);
+				//fprintf (f, "bind \"%s\" \"%s\"\n", Key_KeynumToString(i), keybindings[i]);
+				{
+					const int size = snprintf (buf, 256, "bind \"%s\" \"%s\"\n", Key_KeynumToString(i), keybindings[i]);
+					fwrite(buf, size, 1, f);
+				}
 }
 
 
@@ -599,7 +604,8 @@ Should NOT be called during an interrupt!
 void Key_Event (int key, qboolean down)
 {
 	char	*kb;
-	char	cmd[1024];
+	//char	cmd[1024];
+	char	cmd[64];
 
 	keydown[key] = down;
 

@@ -8,7 +8,7 @@ of the License, or (at your option) any later version.
 
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 See the GNU General Public License for more details.
 
@@ -38,7 +38,6 @@ quakeparms_t host_parms;
 qboolean	host_initialized;		// true if into command execution
 
 float		host_frametime;
-float		host_time;
 float		realtime;				// without any filtering or bounding
 float		oldrealtime;			// last frame run
 int			host_framecount;
@@ -52,8 +51,11 @@ client_t	*host_client;			// current client
 byte		*host_basepal;
 byte		*host_colormap;
 
+float	host_netinterval = 1.0/72;
 cvar_t	host_framerate = {"host_framerate","0"};	// set for slow motion
 cvar_t	host_speeds = {"host_speeds","0"};			// set for running times
+cvar_t	host_maxfps = {"host_maxfps", "60", true}; //johnfitz, change
+cvar_t	host_timescale = {"host_timescale", "0"}; //johnfitz
 
 cvar_t	sys_ticrate = {"sys_ticrate","0.05"};
 cvar_t	serverprofile = {"serverprofile","0"};
@@ -88,6 +90,30 @@ void 	VID_Cvar_Update(void);
 
 /*
 ================
+Max_Fps_f -- ericw
+================
+*/
+static void Max_Fps_f (cvar_t *var)
+{
+	if (var->value > 72 || var->value <= 0)
+	{
+		if (!host_netinterval)
+			Con_Printf ("Using renderer/network isolation.\n");
+		host_netinterval = 1.0/72;
+	}
+	else
+	{
+		if (host_netinterval)
+			Con_Printf ("Disabling renderer/network isolation.\n");
+		host_netinterval = 0;
+
+		if (var->value > 72)
+			Con_Printf ("host_maxfps above 72 breaks physics.\n");
+	}
+}
+
+/*
+================
 Host_EndGame
 ================
 */
@@ -95,18 +121,18 @@ void Host_EndGame (char *message, ...)
 {
 	va_list		argptr;
 	char		string[CON_MAX_MSG];
-	
+
 	va_start (argptr,message);
 	vsprintf (string,message,argptr);
 	va_end (argptr);
 	Con_DPrintf ("Host_EndGame: %s\n",string);
-	
+
 	if (sv.active)
 		Host_ShutdownServer (false);
 
 	if (cls.state == ca_dedicated)
 		Sys_Error ("Host_EndGame: %s\n",string);	// dedicated servers exit
-	
+
 	if (cls.demonum != -1)
 		CL_NextDemo ();
 	else
@@ -125,18 +151,18 @@ void Host_Error (char *error, ...)
 	va_list		argptr;
 	char		string[CON_MAX_MSG];
 	static	qboolean inerror = false;
-	
+
 	if (inerror)
 		Sys_Error ("Host_Error: recursively entered");
 	inerror = true;
-	
+
 	SCR_EndLoadingPlaque ();		// reenable screen updates
 
 	va_start (argptr,error);
 	vsprintf (string,error,argptr);
 	va_end (argptr);
 	Con_Printf ("Host_Error: %s\n",string);
-	
+
 	if (sv.active)
 		Host_ShutdownServer (false);
 
@@ -159,7 +185,7 @@ void	Host_FindMaxClients (void)
 	int		i;
 
 	svs.maxclients = 1;
-		
+
 	i = COM_CheckParm ("-dedicated");
 	if (i)
 	{
@@ -209,9 +235,11 @@ Host_InitLocal
 void Host_InitLocal (void)
 {
 	Host_InitCommands ();
-	
+
 	Cvar_RegisterVariable (&host_framerate);
 	Cvar_RegisterVariable (&host_speeds);
+	Cvar_RegisterVariableWithCallback(&host_maxfps, Max_Fps_f);
+	Cvar_RegisterVariable (&host_timescale); //johnfitz
 
 	Cvar_RegisterVariable (&sys_ticrate);
 	Cvar_RegisterVariable (&serverprofile);
@@ -233,8 +261,6 @@ void Host_InitLocal (void)
 	Cvar_RegisterVariable (&show_fps); // muff
 
 	Host_FindMaxClients ();
-	
-	host_time = 1.0;		// so a think at time 0 won't get called
 }
 
 
@@ -260,22 +286,23 @@ void Host_WriteConfiguration (void)
 			Con_Printf ("Couldn't write config.cfg.\n");
 			return;
 		}
-		
+
 		Key_WriteBindings (f);
 		Cvar_WriteVariables (f);
 
 		fclose (f);
 	}
 }
-#else 
+#else
 #include "dreamcast/vmu_misc.h"
 extern int filelength (FILE *f);
+static uint8_t file_buf[1024 * 128]; //128k
 void Host_WriteConfiguration (void)
 {
 	char	buffer[8];
 	uint16	crc;
 	int	filesize, total, head_len=1664;
-	char	vmu_path[21], *file_buf, *ptr, playername[33];
+	char	vmu_path[21],  *ptr, playername[33];
 	FILE	*f1;
 	file_t	f2;
 
@@ -311,7 +338,6 @@ void Host_WriteConfiguration (void)
 		while ((total % 512) != 0)
 			total ++;
 
-		file_buf = (char *)malloc(total+1);
 		if (file_buf == NULL) {
 			Con_Printf ("Not enough memory.\n");
 			fs_unlink("/ram/save.cfg");
@@ -332,11 +358,11 @@ void Host_WriteConfiguration (void)
 
 		char desc[17];
 		snprintf(desc,17,"\x12%s CONFIG",VMU_NAME);
-		for (int i=1; i < 17; i++) 
-	    { 
-	        if (desc[i]=='_') 
-	            desc[i] = ' '; 
-	    } 
+		for (int i=1; i < 17; i++)
+	    {
+	        if (desc[i]=='_')
+	            desc[i] = ' ';
+	    }
 		memcpy(ptr, desc, 		16);ptr += 16;	// VM desc
 		memcpy(ptr, playername,	32);ptr += 32;	// DC desc: playername
 		memcpy(ptr, APP_NAME,	16);ptr += 16;	// Application
@@ -369,7 +395,6 @@ void Host_WriteConfiguration (void)
 		if (vm_dev == NULL) {
 			Con_Printf ("ERROR: no VM in %c-%d.\n", (int)vmu_port.value+'A', (int)vmu_unit.value);
 			fs_unlink("/ram/save.cfg");
-			free(file_buf);
 			return;
 		}
 
@@ -378,12 +403,10 @@ void Host_WriteConfiguration (void)
 		if (vmu_freeblocks == -1) {
 			Con_Printf ("ERROR: couldn't read root block.\n");
 			fs_unlink("/ram/save.cfg");
-			free(file_buf);
 			return;
 		} else if (vmu_freeblocks == -2) {
 			Con_Printf ("ERROR: couldn't read FAT.\n");
 			fs_unlink("/ram/save.cfg");
-			free(file_buf);
 			return;
 		}
 
@@ -397,7 +420,6 @@ void Host_WriteConfiguration (void)
 		if ((vmu_freeblocks*512) < total) {
 			Con_Printf ("Not enough free blocks. Free:%d Needed:%d.\n", vmu_freeblocks, total/512);
 			fs_unlink("/ram/save.cfg");
-			free(file_buf);
 			return;
 		}
 
@@ -410,16 +432,13 @@ void Host_WriteConfiguration (void)
 		{
 			Con_Printf ("ERROR: couldn't open.\n");
 			fs_unlink("/ram/save.cfg");
-			free(file_buf);
 			return;
 		}
 
 		fs_write(f2, file_buf, total);
 		fs_close(f2);
 
-
 		fs_unlink("/ram/save.cfg");
-		free(file_buf);
 
 		Con_Printf("done.\n");
 	}
@@ -434,11 +453,10 @@ Added by speud
 */
 void Host_ReadConfiguration (void) {
 	FILE	*f;
-	char	path[32], *file_buf, buffer[32];
+	char	path[32], buffer[32];
 	int	head_len;
 	uint16	icons_n, crc, eyec_t;
 	uint32	data_len;
-
 
 	sprintf(path, "/vmu/%c%d/%s_CFG", (int)vmu_port.value+'a', (int)vmu_unit.value, VMU_NAME);
 	path[20] = 0;
@@ -465,7 +483,7 @@ void Host_ReadConfiguration (void) {
 		return;
 	}
 
-		
+
 // Checking icons number
 	fread(&icons_n, 2, 1, f);
 
@@ -490,7 +508,7 @@ void Host_ReadConfiguration (void) {
 		fclose(f);
 		return;
 	}
-	
+
 // Getting data size
 	fread(&crc, 2, 1, f);
 	fread(&data_len, 4, 1, f);
@@ -505,13 +523,12 @@ void Host_ReadConfiguration (void) {
 	}
 
 // Reading options
-	file_buf = (char *)malloc(data_len+1);
 	if (file_buf == NULL) {
 		Con_Printf ("ERROR: not enough memory.\n");
 		fclose(f);
 		return;
 	}
-	
+
 	fseek(f, /*head_len*/0x680, SEEK_SET);
 	fread(file_buf, data_len, 1, f);
 	fclose(f);
@@ -520,8 +537,6 @@ void Host_ReadConfiguration (void) {
 	Cbuf_AddText (file_buf);
 	Con_Print(file_buf);
 	Cbuf_AddText ("echo \"done.\"\n");
-
-	free(file_buf);
 }
 #endif
 
@@ -530,7 +545,7 @@ void Host_ReadConfiguration (void) {
 =================
 SV_ClientPrintf
 
-Sends text across to be displayed 
+Sends text across to be displayed
 FIXME: make this just a stuffed echo?
 =================
 */
@@ -538,11 +553,11 @@ void SV_ClientPrintf (char *fmt, ...)
 {
 	va_list		argptr;
 	char		string[CON_MAX_MSG];
-	
+
 	va_start (argptr,fmt);
 	vsprintf (string, fmt,argptr);
 	va_end (argptr);
-	
+
 	MSG_WriteByte (&host_client->message, svc_print);
 	MSG_WriteString (&host_client->message, string);
 }
@@ -559,11 +574,11 @@ void SV_BroadcastPrintf (char *fmt, ...)
 	va_list		argptr;
 	char		string[CON_MAX_MSG];
 	int			i;
-	
+
 	va_start (argptr,fmt);
 	vsprintf (string, fmt,argptr);
 	va_end (argptr);
-	
+
 	for (i=0 ; i<svs.maxclients ; i++)
 		if (svs.clients[i].active && svs.clients[i].spawned)
 		{
@@ -583,11 +598,11 @@ void Host_ClientCommands (char *fmt, ...)
 {
 	va_list		argptr;
 	char		string[CON_MAX_MSG];
-	
+
 	va_start (argptr,fmt);
 	vsprintf (string, fmt,argptr);
 	va_end (argptr);
-	
+
 	MSG_WriteByte (&host_client->message, svc_stufftext);
 	MSG_WriteString (&host_client->message, string);
 }
@@ -614,7 +629,7 @@ void SV_DropClient (qboolean crash)
 			MSG_WriteByte (&host_client->message, svc_disconnect);
 			NET_SendMessage (host_client->netconnection, &host_client->message);
 		}
-	
+
 		if (host_client->edict && host_client->spawned)
 		{
 		// call the prog function for removing a client
@@ -760,24 +775,28 @@ Returns false if the time is too short to run a frame
 */
 qboolean Host_FilterTime (float time)
 {
+	float maxfps; //johnfitz
+
 	realtime += time;
 
-	if (!cls.timedemo && realtime - oldrealtime < 1.0/72.0)
-		return false;		// framerate is too high
+	//johnfitz -- max fps cvar
+	maxfps = CLAMP (10.0, host_maxfps.value, 120.0);
+	if (host_maxfps.value && !cls.timedemo && realtime - oldrealtime < 1.0/maxfps)
+		return false; // framerate is too high
+	//johnfitz
 
 	host_frametime = realtime - oldrealtime;
 	oldrealtime = realtime;
 
-	if (host_framerate.value > 0)
+	//johnfitz -- host_timescale is more intuitive than host_framerate
+	if (host_timescale.value > 0)
+		host_frametime *= host_timescale.value;
+	//johnfitz
+	else if (host_framerate.value > 0)
 		host_frametime = host_framerate.value;
-	else
-	{	// don't allow really long or short frames
-		if (host_frametime > 0.1)
-			host_frametime = 0.1;
-		if (host_frametime < 0.001)
-			host_frametime = 0.001;
-	}
-	
+	else if (host_maxfps.value)// don't allow really long or short frames
+		host_frametime = CLAMP ((1.0/120.0), host_frametime, (1.0/10.0)); //johnfitz -- use CLAMP
+
 	return true;
 }
 
@@ -813,12 +832,12 @@ Host_ServerFrame
 
 void _Host_ServerFrame (void)
 {
-// run the world state	
+// run the world state
 	pr_global_struct->frametime = host_frametime;
 
 // read client messages
 	SV_RunClients ();
-	
+
 // move things around and think
 // always pause in single player if in console or menus
 	if (!sv.paused && (svs.maxclients > 1 || key_dest == key_game) )
@@ -830,12 +849,12 @@ void Host_ServerFrame (void)
 	float	save_host_frametime;
 	float	temp_host_frametime;
 
-// run the world state	
+// run the world state
 	pr_global_struct->frametime = host_frametime;
 
 // set the time and clear the general datagram
 	SV_ClearDatagram ();
-	
+
 // check for new clients
 	SV_CheckForNewClients ();
 
@@ -859,18 +878,18 @@ void Host_ServerFrame (void)
 
 void Host_ServerFrame (void)
 {
-// run the world state	
+// run the world state
 	pr_global_struct->frametime = host_frametime;
 
 // set the time and clear the general datagram
 	SV_ClearDatagram ();
-	
+
 // check for new clients
 	SV_CheckForNewClients ();
 
 // read client messages
 	SV_RunClients ();
-	
+
 // move things around and think
 // always pause in single player if in console or menus
 	if (!sv.paused && (svs.maxclients > 1 || key_dest == key_game) )
@@ -892,47 +911,60 @@ Runs all active servers
 */
 void _Host_Frame (float time)
 {
+	static float	accumtime = 0;
 	static float		time1 = 0;
 	static float		time2 = 0;
 	static float		time3 = 0;
 	int			pass1, pass2, pass3;
 
 	for (;;) // something bad happened, or the server disconnected
-	{ 
+	{
 
 // keep the random time dependent
 	rand ();
-	
+
 // decide the simulation time
+	accumtime += host_netinterval?CLAMP(0, time, 0.2):0;	//for renderer/server isolation
 	if (!Host_FilterTime (time))
 		return;			// don't run too fast, or packets will flood out
-		
+
 // get new key events
 	Sys_SendKeyEvents ();
 
 // allow mice or other external controllers to add commands
 	IN_Commands ();
 
+//check the stdin for commands (dedicated servers)
+	Host_GetConsoleCommands ();
+
 // process console commands
 	Cbuf_Execute ();
 
 	NET_Poll();
 
-// if running the server locally, make intentions now
-	if (sv.active)
+//Run the server+networking (client->server->client), at a different rate from everyt
+	if (accumtime >= host_netinterval)
+	{
+		float realframetime = host_frametime;
+		if (host_netinterval)
+		{
+			host_frametime = q_max(accumtime, host_netinterval);
+			accumtime -= host_frametime;
+			if (host_timescale.value > 0)
+				host_frametime *= host_timescale.value;
+			else if (host_framerate.value)
+				host_frametime = host_framerate.value;
+		}
+		else
+			accumtime -= host_netinterval;
 		CL_SendCmd ();
-	
-//-------------------
-//
-// server operations
-//
-//-------------------
-
-// check for commands typed to the host
-	Host_GetConsoleCommands ();
-	
-	if (sv.active)
-		Host_ServerFrame ();
+		if (sv.active)
+		{
+			Host_ServerFrame ();
+		}
+		host_frametime = realframetime;
+		Cbuf_Waited();
+	}
 
 //-------------------
 //
@@ -940,29 +972,19 @@ void _Host_Frame (float time)
 //
 //-------------------
 
-// if running the server remotely, send intentions now after
-// the incoming messages have been read
-	if (!sv.active)
-		CL_SendCmd ();
-
-	host_time += host_frametime;
-
 // fetch results from server
 	if (cls.state == ca_connected)
-	{
-		if (CL_ReadFromServer () == -1)
-			continue;
-	}
+		CL_ReadFromServer ();
 
 // update video
 	if (host_speeds.value)
 		time1 = Sys_FloatTime ();
-		
+
 	SCR_UpdateScreen ();
 
 	if (host_speeds.value)
 		time2 = Sys_FloatTime ();
-		
+
 // update audio
 	if (cls.signon == SIGNONS)
 	{
@@ -971,7 +993,7 @@ void _Host_Frame (float time)
 	}
 	else
 		S_Update (vec3_origin, vec3_origin, vec3_origin, vec3_origin);
-	
+
 	CDAudio_Update();
 
 	if (host_speeds.value)
@@ -983,7 +1005,7 @@ void _Host_Frame (float time)
 		Con_Printf ("%3i tot %3i server %3i gfx %3i snd\n",
 					pass1+pass2+pass3, pass1, pass2, pass3);
 	}
-	
+
 	host_framecount++;
 	fps_count++;	//muff
 	break;
@@ -1002,14 +1024,14 @@ void Host_Frame (float time)
 		_Host_Frame (time);
 		return;
 	}
-	
+
 	time1 = Sys_FloatTime ();
 	_Host_Frame (time);
-	time2 = Sys_FloatTime ();	
-	
+	time2 = Sys_FloatTime ();
+
 	timetotal += time2 - time1;
 	timecount++;
-	
+
 	if (timecount < 1000)
 		return;
 
@@ -1037,7 +1059,7 @@ void Host_InitVCR (quakeparms_t *parms)
 {
 	int		i, len, n;
 	char	*p;
-	
+
 	if (COM_CheckParm("-playback"))
 	{
 		if (com_argc != 2)
@@ -1065,7 +1087,7 @@ void Host_InitVCR (quakeparms_t *parms)
 		parms->argc = com_argc;
 		parms->argv = com_argv;
 	}
-	
+
 	if ( (n = COM_CheckParm("-record")) != 0)
 	{
 		vcrFile = Sys_FileOpenWrite("quake.vcr");
@@ -1117,7 +1139,7 @@ void Host_Init (quakeparms_t *parms)
 
 	Memory_Init (parms->membase, parms->memsize);
 	Cbuf_Init ();
-	Cmd_Init ();	
+	Cmd_Init ();
 	V_Init ();
 	Chase_Init ();
 	#ifndef _arch_dreamcast
@@ -1127,8 +1149,8 @@ void Host_Init (quakeparms_t *parms)
 	Host_InitLocal ();
 	W_LoadWadFile ("gfx.wad");
 	Key_Init ();
-	Con_Init ();	
-	M_Init ();	
+	Con_Init ();
+	M_Init ();
 	PR_Init ();
 	Mod_Init ();
 	NET_Init ();
@@ -1142,9 +1164,9 @@ void Host_Init (quakeparms_t *parms)
 
 	Con_Printf ("Exe: "__TIME__" "__DATE__"\n");
 	Con_Printf ("%4.1f megabyte heap\n",parms->memsize/ (1024*1024.0));
-	
+
 	R_InitTextures ();		// needed even for dedicated servers
- 
+
 	if (cls.state != ca_dedicated)
 	{
 		host_basepal = (byte *)COM_LoadHunkFile ("gfx/palette.lmp");
@@ -1180,8 +1202,8 @@ void Host_Init (quakeparms_t *parms)
 	host_hunklevel = Hunk_LowMark ();
 
 	host_initialized = true;
-	
-	Sys_Printf ("========Quake Initialized=========\n");	
+
+	Sys_Printf ("========Quake Initialized=========\n");
 }
 
 
@@ -1196,7 +1218,7 @@ to run quit through here before the final handoff to the sys code.
 void Host_Shutdown(void)
 {
 	static qboolean isdown = false;
-	
+
 	if (isdown)
 	{
 		printf ("recursive shutdown\n");
@@ -1207,7 +1229,7 @@ void Host_Shutdown(void)
 // keep Con_Printf from trying to update the screen
 	scr_disabled_for_loading = true;
 
-	Host_WriteConfiguration (); 
+	Host_WriteConfiguration ();
 
 	CDAudio_Shutdown ();
 	NET_Shutdown ();

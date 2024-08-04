@@ -21,6 +21,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 #include "conproc.h"
 #include <windows.h>
+#include <ctype.h>
 #include "../common/quakedef.h"
 
 HANDLE heventDone;
@@ -30,7 +31,7 @@ HANDLE heventParentSend;
 HANDLE hStdout;
 HANDLE hStdin;
 
-DWORD RequestProc(DWORD dwNichts);
+DWORD RequestProc(LPVOID unused);
 LPVOID GetMappedBuffer(HANDLE hfileBuffer);
 void ReleaseMappedBuffer(LPVOID pBuffer);
 BOOL GetScreenBufferLines(int *piLines);
@@ -83,8 +84,8 @@ void DeinitConProc(void) {
     SetEvent(heventDone);
 }
 
-DWORD RequestProc(DWORD dwNichts) {
-  (void)dwNichts;
+DWORD RequestProc(LPVOID unused) {
+  (void)unused;
   int *pBuffer;
   DWORD dwRet;
   HANDLE heventWait[2];

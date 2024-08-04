@@ -8,7 +8,7 @@ of the License, or (at your option) any later version.
 
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 See the GNU General Public License for more details.
 
@@ -78,7 +78,7 @@ into the cache directory, then opened there.
 
 FIXME:
 The file "parms.txt" will be read out of the game directory and appended to the current command line arguments to allow different games to initialize startup parms differently.  This could be used to add a "-sspeed 22050" for the high quality sound edition.  Because they are added at the end, they will not override an explicit setting on the original command line.
-	
+
 */
 
 //============================================================================
@@ -168,8 +168,8 @@ float FloatSwap (float f)
 		float   f;
 		byte    b[4];
 	} dat1, dat2;
-	
-	
+
+
 	dat1.f = f;
 	dat2.b[0] = dat1.b[3];
 	dat2.b[1] = dat1.b[2];
@@ -199,7 +199,7 @@ Handles byte ordering and avoids alignment errors
 void MSG_WriteChar (sizebuf_t *sb, int c)
 {
 	byte    *buf;
-	
+
 #ifdef PARANOID
 	if (c < -128 || c > 127)
 		Sys_Error ("MSG_WriteChar: range error");
@@ -212,7 +212,7 @@ void MSG_WriteChar (sizebuf_t *sb, int c)
 void MSG_WriteByte (sizebuf_t *sb, int c)
 {
 	byte    *buf;
-	
+
 #ifdef PARANOID
 	if (c < 0 || c > 255)
 		Sys_Error ("MSG_WriteByte: range error");
@@ -225,7 +225,7 @@ void MSG_WriteByte (sizebuf_t *sb, int c)
 void MSG_WriteShort (sizebuf_t *sb, int c)
 {
 	byte    *buf;
-	
+
 #ifdef PARANOID
 	if (c < ((short)0x8000) || c > (short)0x7fff)
 		Sys_Error ("MSG_WriteShort: range error");
@@ -239,7 +239,7 @@ void MSG_WriteShort (sizebuf_t *sb, int c)
 void MSG_WriteLong (sizebuf_t *sb, int c)
 {
 	byte    *buf;
-	
+
 	buf = SZ_GetSpace (sb, 4);
 	buf[0] = c&0xff;
 	buf[1] = (c>>8)&0xff;
@@ -254,11 +254,11 @@ void MSG_WriteFloat (sizebuf_t *sb, float f)
 		float   f;
 		int     l;
 	} dat;
-	
-	
+
+
 	dat.f = f;
 	dat.l = LittleLong (dat.l);
-	
+
 	SZ_Write (sb, &dat.l, 4);
 }
 
@@ -296,70 +296,70 @@ void MSG_BeginReading (void)
 int MSG_ReadChar (void)
 {
 	int     c;
-	
+
 	if (msg_readcount+1 > net_message.cursize)
 	{
 		msg_badread = true;
 		return -1;
 	}
-		
+
 	c = (signed char)net_message.data[msg_readcount];
 	msg_readcount++;
-	
+
 	return c;
 }
 
 int MSG_ReadByte (void)
 {
 	int     c;
-	
+
 	if (msg_readcount+1 > net_message.cursize)
 	{
 		msg_badread = true;
 		return -1;
 	}
-		
+
 	c = (unsigned char)net_message.data[msg_readcount];
 	msg_readcount++;
-	
+
 	return c;
 }
 
 int MSG_ReadShort (void)
 {
 	int     c;
-	
+
 	if (msg_readcount+2 > net_message.cursize)
 	{
 		msg_badread = true;
 		return -1;
 	}
-		
+
 	c = (short)(net_message.data[msg_readcount]
 	+ (net_message.data[msg_readcount+1]<<8));
-	
+
 	msg_readcount += 2;
-	
+
 	return c;
 }
 
 int MSG_ReadLong (void)
 {
 	int     c;
-	
+
 	if (msg_readcount+4 > net_message.cursize)
 	{
 		msg_badread = true;
 		return -1;
 	}
-		
+
 	c = net_message.data[msg_readcount]
 	+ (net_message.data[msg_readcount+1]<<8)
 	+ (net_message.data[msg_readcount+2]<<16)
 	+ (net_message.data[msg_readcount+3]<<24);
-	
+
 	msg_readcount += 4;
-	
+
 	return c;
 }
 
@@ -371,23 +371,23 @@ float MSG_ReadFloat (void)
 		float   f;
 		int     l;
 	} dat;
-	
+
 	dat.b[0] =      net_message.data[msg_readcount];
 	dat.b[1] =      net_message.data[msg_readcount+1];
 	dat.b[2] =      net_message.data[msg_readcount+2];
 	dat.b[3] =      net_message.data[msg_readcount+3];
 	msg_readcount += 4;
-	
+
 	dat.l = LittleLong (dat.l);
 
-	return dat.f;   
+	return dat.f;
 }
 
 char *MSG_ReadString (void)
 {
 	static char     string[2048];
 	int             l,c;
-	
+
 	l = 0;
 	do
 	{
@@ -397,9 +397,9 @@ char *MSG_ReadString (void)
 		string[l] = c;
 		l++;
 	} while (l < (int)sizeof(string)-1);
-	
+
 	string[l] = 0;
-	
+
 	return string;
 }
 
@@ -451,35 +451,35 @@ void SZ_Clear (sizebuf_t *buf)
 void *SZ_GetSpace (sizebuf_t *buf, int length)
 {
 	void    *data;
-	
+
 	if (buf->cursize + length > buf->maxsize)
 	{
 		if (!buf->allowoverflow)
 			Sys_Error ("SZ_GetSpace: overflow without allowoverflow set");
-		
+
 		if (length > buf->maxsize)
 			Sys_Error ("SZ_GetSpace: %i is > full buffer size", length);
-			
+
 		buf->overflowed = true;
 		Con_Printf ("SZ_GetSpace: overflow");
-		SZ_Clear (buf); 
+		SZ_Clear (buf);
 	}
 
 	data = buf->data + buf->cursize;
 	buf->cursize += length;
-	
+
 	return data;
 }
 
 void SZ_Write (sizebuf_t *buf, const void *data, int length)
 {
-	memcpy (SZ_GetSpace(buf,length),data,length);         
+	memcpy (SZ_GetSpace(buf,length),data,length);
 }
 
 void SZ_Print (sizebuf_t *buf, const char *data)
 {
 	int             len;
-	
+
 	len = strlen(data)+1;
 
 // byte * cast to keep VC++ happy
@@ -501,7 +501,7 @@ COM_SkipPath
 char *COM_SkipPath (char *pathname)
 {
 	char    *last;
-	
+
 	last = pathname;
 	while (*pathname)
 	{
@@ -553,15 +553,15 @@ COM_FileBase
 void COM_FileBase (const char *in, char *out)
 {
 	const char *s, *s2;
-	
+
 	s = in + strlen(in) - 1;
-	
+
 	while (s != in && *s != '.')
 		s--;
-	
-	for (s2 = s ; s2 != in && *s2 != '/' ; s2--) 
+
+	for (s2 = s ; s2 != in && *s2 != '/' ; s2--)
 	;
-	
+
 	if (s-s2 < 2)
 		strcpy (out,"?model?");
 	else
@@ -609,13 +609,13 @@ const char *COM_Parse (const char *data)
 {
 	int             c;
 	int             len;
-	
+
 	len = 0;
 	com_token[0] = 0;
-	
+
 	if (!data)
 		return NULL;
-		
+
 // skip whitespace
 skipwhite:
 	while ( (c = *data) <= ' ')
@@ -624,7 +624,7 @@ skipwhite:
 			return NULL;                    // end of file;
 		data++;
 	}
-	
+
 // skip // comments
 	if (c=='/' && data[1] == '/')
 	{
@@ -632,7 +632,7 @@ skipwhite:
 			data++;
 		goto skipwhite;
 	}
-	
+
 
 // handle quoted strings specially
 	if (c == '\"')
@@ -670,7 +670,7 @@ skipwhite:
 	if (c=='{' || c=='}'|| c==')'|| c=='(' || c=='\'' || c==':')
 			break;
 	} while (c>32);
-	
+
 	com_token[len] = 0;
 	return data;
 }
@@ -687,7 +687,7 @@ where the given parameter apears, or 0 if not present
 int COM_CheckParm (char *parm)
 {
 	int             i;
-	
+
 	for (i=1 ; i<com_argc ; i++)
 	{
 		if (!com_argv[i])
@@ -695,7 +695,7 @@ int COM_CheckParm (char *parm)
 		if (!strcasecmp (parm,com_argv[i]))
 			return i;
 	}
-		
+
 	return 0;
 }
 
@@ -732,7 +732,7 @@ void COM_CheckRegistered (void)
 
 	Sys_FileRead (h, check, sizeof(check));
 	COM_CloseFile (h);
-	
+
 	for (i=0 ; i<128 ; i++)
 		if (pop[i] != (unsigned short)BigShort (check[i]))
 			Sys_Error ("Corrupted data file.");
@@ -893,12 +893,12 @@ char    *va(char *format, ...)
 {
 	va_list         argptr;
 	static char             string[1024];
-	
+
 	va_start (argptr, format);
 	vsprintf (string, format,argptr);
 	va_end (argptr);
 
-	return string;  
+	return string;
 }
 
 
@@ -906,7 +906,7 @@ char    *va(char *format, ...)
 int     memsearch (byte *start, int count, int search)
 {
 	int             i;
-	
+
 	for (i=0 ; i<count ; i++)
 		if (start[i] == search)
 			return i;
@@ -958,7 +958,7 @@ typedef struct
 	int             dirlen;
 } dpackheader_t;
 
-#define MAX_FILES_IN_PACK       512 //2048
+#define MAX_FILES_IN_PACK       2048
 
 char    com_cachedir[MAX_OSPATH];
 char    com_gamedir[MAX_OSPATH];
@@ -981,7 +981,7 @@ COM_Path_f
 void COM_Path_f (void)
 {
 	searchpath_t    *s;
-	
+
 	Con_Printf ("Current search path:\n");
 	for (s=com_searchpaths ; s ; s=s->next)
 	{
@@ -1005,7 +1005,7 @@ void COM_WriteFile (const char *filename, void *data, int len)
 {
 	int             handle;
 	char    name[MAX_OSPATH];
-	
+
 	sprintf (name, "%s/%s", com_gamedir, filename);
 
 	handle = Sys_FileOpenWrite (name);
@@ -1014,7 +1014,7 @@ void COM_WriteFile (const char *filename, void *data, int len)
 		Sys_Printf ("COM_WriteFile: failed on %s\n", name);
 		return;
 	}
-	
+
 	Sys_Printf ("COM_WriteFile: %s\n", name);
 	Sys_FileWrite (handle, data, len);
 	Sys_FileClose (handle);
@@ -1031,7 +1031,7 @@ Only used for CopyFile
 void    COM_CreatePath (char *path)
 {
 	char    *ofs;
-	
+
 	for (ofs = path+1 ; *ofs ; ofs++)
 	{
 		if (*ofs == '/')
@@ -1057,11 +1057,11 @@ void COM_CopyFile (char *netpath, char *cachepath)
 	int             in, out;
 	int             remaining, count;
 	char    buf[4096];
-	
-	remaining = Sys_FileOpenRead (netpath, &in);            
+
+	remaining = Sys_FileOpenRead (netpath, &in);
 	COM_CreatePath (cachepath);     // create directories up to the cache file
 	out = Sys_FileOpenWrite (cachepath);
-	
+
 	while (remaining)
 	{
 		if (remaining < (int)sizeof(buf))
@@ -1074,7 +1074,7 @@ void COM_CopyFile (char *netpath, char *cachepath)
 	}
 
 	Sys_FileClose (in);
-	Sys_FileClose (out);    
+	Sys_FileClose (out);
 }
 
 /*
@@ -1102,7 +1102,7 @@ Sets com_filesize and one of handle or file
 ===========
 */
 int file_from_pak; // global indicating file came from pack file ZOID
-
+#if 0 /* unsure */
 int COM_FOpenFile (const char *filename, FILE **file)
 {
 	searchpath_t	*search;
@@ -1112,7 +1112,7 @@ int COM_FOpenFile (const char *filename, FILE **file)
 	int			findtime;
 
 	file_from_pak = 0;
-		
+
 		/* Rewrite to search folders FIRST then PAKs */
 //
 // search through the path, one element at a time
@@ -1121,15 +1121,15 @@ int COM_FOpenFile (const char *filename, FILE **file)
 	{
 	// is the element a pak file?
 		if (!search->pack)
-		{		
+		{
 	// check a file in the directory tree
-			//printf("Check: %s\n", search->filename);
+			printf("Check: %s\n", search->filename);
 			sprintf (netpath, "%s/%s",search->filename, filename);
 
 			findtime = Sys_FileTime (netpath);
 			if (findtime == -1)
 				continue;
-				
+
 			Sys_Printf ("FindFile: %s\n",netpath);
 
 			*file = fopen (netpath, "rb");
@@ -1148,24 +1148,137 @@ int COM_FOpenFile (const char *filename, FILE **file)
 			for (i=0 ; i<pak->numfiles ; i++)
 				if (!strcmp (pak->files[i].name, filename))
 				{	// found it!
-					//Sys_Printf ("PackFile: %s : %s\n",pak->filename, filename);
+					Sys_Printf ("PackFile: %s : %s\n",pak->filename, filename);
 				// open a new file on the pakfile
 					*file = fopen (pak->filename, "rb");
 					if (!*file)
-						Sys_Error ("Couldn't reopen %s", pak->filename);	
+						Sys_Error ("Couldn't reopen %s", pak->filename);
 					fseek (*file, pak->files[i].filepos, SEEK_SET);
 					com_filesize = pak->files[i].filelen;
 					file_from_pak = 1;
 					return com_filesize;
 				}
-		}		
+		}
 	}
-	
+
 	Sys_Printf ("FindFile: can't find %s\n", filename);
-	
+
 	*file = NULL;
 	com_filesize = -1;
 	return -1;
+}
+#endif
+/*
+===========
+COM_FindFile
+Finds the file in the search path.
+Sets com_filesize and one of handle or file
+===========
+*/
+int COM_FindFile (const char *filename, int *handle, FILE **file)
+{
+	searchpath_t    *search;
+	char            netpath[MAX_OSPATH];
+	char            cachepath[MAX_OSPATH];
+	pack_t          *pak;
+	int                     i;
+	int                     findtime, cachetime;
+
+	if (file && handle)
+		Sys_Error ("COM_FindFile: both handle and file set");
+	if (!file && !handle)
+		Sys_Error ("COM_FindFile: neither handle or file set");
+
+//
+// search through the path, one element at a time
+//
+	search = com_searchpaths;
+
+	for ( ; search ; search = search->next)
+	{
+	// is the element a pak file?
+		if (search->pack)
+		{
+		// look through all the pak file elements
+			pak = search->pack;
+			for (i=0 ; i<pak->numfiles ; i++)
+				if (!strcmp (pak->files[i].name, filename))
+				{       // found it!
+					Sys_Printf ("PackFile: %s : %s\n",pak->filename, filename);
+					if (handle)
+					{
+						*handle = pak->handle;
+						Sys_FileSeek (pak->handle, pak->files[i].filepos);
+					}
+					else
+					{       // open a new file on the pakfile
+						*file = fopen (pak->filename, "rb");
+						if (*file)
+							fseek (*file, pak->files[i].filepos, SEEK_SET);
+					}
+					com_filesize = pak->files[i].filelen;
+					return com_filesize;
+				}
+		}
+		else
+		{
+	// check a file in the directory tree
+
+			sprintf (netpath, "%s/%s",search->filename, filename);
+
+			findtime = Sys_FileTime (netpath);
+			if (findtime == -1)
+				continue;
+
+		// see if the file needs to be updated in the cache
+			if (!com_cachedir[0])
+				strcpy (cachepath, netpath);
+			else
+			{
+#if defined(_WIN32)
+				if ((strlen(netpath) < 2) || (netpath[1] != ':'))
+					sprintf (cachepath,"%s%s", com_cachedir, netpath);
+				else
+					sprintf (cachepath,"%s%s", com_cachedir, netpath+2);
+#else
+				sprintf (cachepath,"%s%s", com_cachedir, netpath);
+#endif
+
+				cachetime = Sys_FileTime (cachepath);
+
+				if (cachetime < findtime)
+					COM_CopyFile (netpath, cachepath);
+				strcpy (netpath, cachepath);
+			}
+
+			Sys_Printf ("FindFile: %s\n",netpath);
+			com_filesize = Sys_FileOpenRead (netpath, &i);
+			if (handle)
+				*handle = i;
+			else
+			{
+				Sys_FileClose (i);
+				*file = fopen (netpath, "rb");
+			}
+			return com_filesize;
+		}
+
+	}
+
+	Sys_Printf ("FindFile: can't find %s\n", filename);
+
+	if (handle)
+		*handle = -1;
+	else
+		*file = NULL;
+	com_filesize = -1;
+	return -1;
+}
+
+
+int COM_FOpenFile (const char *filename, FILE **file)
+{
+	return COM_FindFile (filename, NULL, file);
 }
 
 /*
@@ -1191,10 +1304,10 @@ byte *COM_LoadFile (const char *path, int usehunk)
 	len = com_filesize = COM_FOpenFile (path, &h);
 	if (!h)
 		return NULL;
-	
+
 // extract the filename base name for hunk tag
 	COM_FileBase (path, base);
-	
+
 	if (usehunk == 1)
 		buf = Hunk_AllocName (len+1, base);
 	else if (usehunk == 2)
@@ -1215,7 +1328,7 @@ byte *COM_LoadFile (const char *path, int usehunk)
 
 	if (!buf)
 		Sys_Error ("COM_LoadFile: not enough space for %s", path);
-		
+
 	((byte *)buf)[len] = 0;
 #ifndef SERVERONLY
 	Draw_BeginDisc ();
@@ -1249,11 +1362,11 @@ void COM_LoadCacheFile (const char *path, struct cache_user_s *cu)
 byte *COM_LoadStackFile (const char *path, void *buffer, int bufsize)
 {
 	byte    *buf;
-	
+
 	loadbuf = (byte *)buffer;
 	loadsize = bufsize;
 	buf = COM_LoadFile (path, 4);
-	
+
 	return buf;
 }
 
@@ -1280,7 +1393,7 @@ pack_t *COM_LoadPackFile (char *packfile)
 
 	if (!pak_info)
 	{
-		pak_info = (dpackfile_t *)malloc(sizeof(dpackfile_t) * MAX_FILES_IN_PACK);
+		pak_info = (dpackfile_t *)Hunk_TempAlloc(sizeof(dpackfile_t) * MAX_FILES_IN_PACK);
 		if(!pak_info){
 			printf("%.2f kb needed\n",  (float)(sizeof(dpackfile_t) * MAX_FILES_IN_PACK / 1024));
 			Sys_Error("not enough memory for info section!\n");
@@ -1328,12 +1441,12 @@ pack_t *COM_LoadPackFile (char *packfile)
 		newfiles[i].filelen = LittleLong(pak_info[i].filelen);
 	}
 
-	pack = (pack_t *)Hunk_Alloc (sizeof (pack_t));
+	pack = (pack_t *)Hunk_AllocName (sizeof (pack_t), "pak");
 	strcpy (pack->filename, packfile);
 	pack->handle = packhandle;
 	pack->numfiles = numpackfiles;
 	pack->files = newfiles;
-	
+
 	return pack;
 }
 
@@ -1343,14 +1456,14 @@ pack_t *COM_LoadPackFile (char *packfile)
 COM_AddGameDirectory
 
 Sets com_gamedir, adds the directory to the head of the path,
-then loads and adds pak1.pak pak2.pak ... 
+then loads and adds pak1.pak pak2.pak ...
 ================
 */
 void COM_AddGameDirectory (char *dir)
 {
 	int                             i;
 	searchpath_t    *search;
-	pack_t                  *pak;
+	pack_t                  *pak = NULL;
 	char                    pakfile[MAX_OSPATH];
 
 	strcpy (com_gamedir, dir);
@@ -1358,7 +1471,7 @@ void COM_AddGameDirectory (char *dir)
 //
 // add the directory to the search path
 //
-	search = Hunk_Alloc (sizeof(searchpath_t));
+	search = Hunk_AllocName (sizeof(searchpath_t), "searchpath");
 	strcpy (search->filename, dir);
 	search->next = com_searchpaths;
 	com_searchpaths = search;
@@ -1371,14 +1484,22 @@ void COM_AddGameDirectory (char *dir)
 		sprintf (pakfile, "%s/pak%i.pak", dir, i);
 		if(Sys_FileTime(pakfile)){
 			pak = COM_LoadPackFile (pakfile);
-			if (!pak)
-				break;
-			search = Hunk_Alloc (sizeof(searchpath_t));
-			search->pack = pak;
-			search->next = com_searchpaths;
-			com_searchpaths = search;    
-		} else 
-			break;           
+		}
+		if (!pak) {
+			sprintf (pakfile, "%s/PAK%i.PAK", dir, i);
+			if(Sys_FileTime(pakfile)){
+				pak = COM_LoadPackFile (pakfile);
+			}
+		}
+
+		if (!pak)
+			break;
+
+		search = Hunk_AllocName (sizeof(searchpath_t), "searchpath");
+		search->pack = pak;
+		search->next = com_searchpaths;
+		com_searchpaths = search;
+		printf("Loading %s", pakfile);
 	}
 
 //
@@ -1473,8 +1594,8 @@ void COM_InitFilesystem (void)
 		{
 			if (!com_argv[i] || com_argv[i][0] == '+' || com_argv[i][0] == '-')
 				break;
-			
-			search = Hunk_Alloc (sizeof(searchpath_t));
+
+			search = Hunk_AllocName (sizeof(searchpath_t), "searchpath");
 			if ( !strcmp(COM_FileExtension(com_argv[i]), "pak") )
 			{
 				search->pack = COM_LoadPackFile (com_argv[i]);
@@ -1492,4 +1613,94 @@ void COM_InitFilesystem (void)
 		proghack = true;
 }
 
+
+// Reverses a string 'str' of length 'len'
+static void ftoa_strrev(char* str, int len) {
+  int i = 0, j = len - 1, temp;
+  while (i < j) {
+    temp = str[i];
+    str[i] = str[j];
+    str[j] = temp;
+    i++;
+    j--;
+  }
+}
+// Converts a given integer x to string str[].
+// d is the number of digits required in the output.
+// If d is more than the number of digits in x,
+// then 0s are added at the beginning.
+int itostr(int x, char str[], int d) {
+  int i = 0;
+  if(x==0){
+    str[i++] = '0';
+  } else
+  while (x) {
+    str[i++] = (x % 10) + '0';
+    x = x / 10;
+  }
+
+  // If number of digits required is more, then
+  // add 0s at the beginning
+  while (i < d)
+    str[i++] = '0';
+
+  ftoa_strrev(str, i);
+  str[i] = '\0';
+  return i;
+}
+
+static int num_digits(unsigned int n) {
+  if (n < 10) return 1;
+  if (n < 100) return 2;
+  if (n < 1000) return 3;
+  if (n < 10000) return 4;
+  if (n < 100000) return 5;
+  if (n < 1000000) return 6;
+  if (n < 10000000) return 7;
+  if (n < 100000000) return 8;
+  if (n < 1000000000) return 9;
+  return 10;
+}
+
+// Converts a floating-point/double number to a string.
+void ftoa(float n, char* str, int length, int afterpoint) {
+  char* res = str;
+
+  // Extract integer part
+  int ipart = (int)n;
+  int is_negative = ipart && (ipart & 0x80000000);
+
+  if (is_negative) {
+    ipart *= -1;
+    n *= -1;
+  }
+
+  // Do front padding
+  while (res < (str + length) - (num_digits(ipart) + 1 + is_negative + afterpoint))
+    *res++ = ' ';
+
+  if (is_negative) {
+    *res++ = '-';
+  }
+
+  // Extract floating part
+  float fpart = n - (float)ipart;
+
+  // convert integer part to string
+  int i = itostr(ipart, res, 0);
+
+  // check for display option after point
+  if (afterpoint != 0) {
+    res[i] = '.';  // add dot
+
+    // Get the value of fraction part upto given no.
+    // of points after dot. The third parameter
+    // is needed to handle cases like 233.007
+    fpart = fpart * powf(10, afterpoint + 1);
+    const int second_digit = ((int)fpart) % 10;
+
+    /* handle rounding */
+    itostr((((int)fpart / 10) + (second_digit >= 5 ? 1 : 0)), res + i + 1, afterpoint);
+  }
+}
 

@@ -103,9 +103,9 @@ unsigned long getUsedRam(void)
 void getRamStatus(void)
 {
 	printf("stack: start:%x end:%x\n", (int)&_START, (int)&_END);
-	printf("Total Ram: %lu, Free Ram: %lu, Need: %lu,  Used Ram: %lu\n",
+	printf("Total Ram: %lu, Free Ram: %lu, Need: %d,  Used Ram: %lu\n",
 			getSystemRam(),
 			getFreeRam(),
-			3145728-getFreeRam(),
+			(int)getFreeRam(),
 			getUsedRam());
 }

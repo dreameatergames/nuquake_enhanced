@@ -1,5 +1,7 @@
 /*
-Copyright (C) 1996-1997 Id Software, Inc.
+Copyright (C) 1996-2001 Id Software, Inc.
+Copyright (C) 2002-2009 John Fitzgibbons and others
+Copyright (C) 2010-2014 QuakeSpasm developers
 
 This program is free software; you can redistribute it and/or
 modify it under the terms of the GNU General Public License
@@ -8,7 +10,7 @@ of the License, or (at your option) any later version.
 
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 See the GNU General Public License for more details.
 
@@ -17,6 +19,10 @@ along with this program; if not, write to the Free Software
 Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 */
+
+#ifndef __ZZONE_H
+#define __ZZONE_H
+
 /*
  memory allocation
 
@@ -87,18 +93,13 @@ void Memory_Init (void *buf, int size);
 
 void Z_Free (void *ptr);
 void *Z_Malloc (int size);			// returns 0 filled memory
-void *Z_Realloc(void *ptr, int size);
-void *Z_TagMalloc (int size, int tag);
-
-void Z_DumpHeap (void);
-void Z_CheckHeap (void);
-int Z_FreeMemory (void);
+void *Z_Realloc (void *ptr, int size);
+char *Z_Strdup (const char *s);
 
 void *Hunk_Alloc (int size);		// returns 0 filled memory
 void *Hunk_AllocName (int size, const char *name);
+void *Hunk_HighAllocName (int size, const char *name);
 char *Hunk_Strdup (const char *s, const char *name);
-
-void *Hunk_HighAllocName (int size, char *name);
 
 int	Hunk_LowMark (void);
 void Hunk_FreeToLowMark (int mark);
@@ -123,11 +124,10 @@ void *Cache_Check (cache_user_t *c);
 
 void Cache_Free (cache_user_t *c);
 
-void *Cache_Alloc (cache_user_t *c, int size, char *name);
+void *Cache_Alloc (cache_user_t *c, int size, const char *name);
 // Returns NULL if all purgable data was tossed and there still
 // wasn't enough room.
 
 void Cache_Report (void);
 
-
-
+#endif	/* __ZZONE_H */

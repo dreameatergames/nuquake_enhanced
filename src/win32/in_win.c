@@ -106,14 +106,12 @@ DWORD		joy_oldbuttonstate, joy_oldpovstate;
 
 int			joy_id;
 DWORD		joy_flags;
-DWORD		joy_numbuttons;
+int		joy_numbuttons;
 
 static LPDIRECTINPUT		g_pdi;
 static LPDIRECTINPUTDEVICE	g_pMouse;
 
 static JOYINFOEX	ji;
-
-static HINSTANCE hInstDI;
 
 static qboolean	dinput;
 
@@ -127,6 +125,7 @@ typedef struct MYDATA {
 	BYTE  bButtonD;             // Another button goes here
 } MYDATA;
 
+#ifdef DIRECTX
 static DIOBJECTDATAFORMAT rgodf[] = {
   { &GUID_XAxis,    FIELD_OFFSET(MYDATA, lX),       DIDFT_AXIS | DIDFT_ANYINSTANCE,   0,},
   { &GUID_YAxis,    FIELD_OFFSET(MYDATA, lY),       DIDFT_AXIS | DIDFT_ANYINSTANCE,   0,},
@@ -147,6 +146,8 @@ static DIDATAFORMAT	df = {
 	NUM_OBJECTS,                // number of objects
 	rgodf,                      // and here they are
 };
+static HINSTANCE hInstDI;
+#endif
 
 // forward-referenced functions
 void IN_StartupJoystick (void);
@@ -325,6 +326,7 @@ IN_InitDInput
 */
 qboolean IN_InitDInput (void)
 {
+	#ifdef DIRECTX
     HRESULT		hr;
 	DIPROPDWORD	dipdw = {
 		{
@@ -404,7 +406,7 @@ qboolean IN_InitDInput (void)
 		Con_SafePrintf ("Couldn't set DI buffersize\n");
 		return false;
 	}
-
+	#endif
 	return true;
 }
 
@@ -421,6 +423,7 @@ void IN_StartupMouse (void)
 
 	mouseinitialized = true;
 
+#ifdef DIRECTX
 	if (COM_CheckParm ("-dinput"))
 	{
 		dinput = IN_InitDInput ();
@@ -433,6 +436,10 @@ void IN_StartupMouse (void)
 		{
 			Con_SafePrintf ("DirectInput not initialized\n");
 		}
+	} else
+#endif
+	{
+		Con_SafePrintf ("Skipping DirectInput\n");
 	}
 
 	if (!dinput)
@@ -505,7 +512,7 @@ void IN_Init (void)
 	uiWheelMessage = RegisterWindowMessage ( "MSWHEEL_ROLLMSG" );
 
 	IN_StartupMouse ();
-	IN_StartupJoystick ();
+	//IN_StartupJoystick ();
 }
 
 /*
@@ -518,13 +525,13 @@ void IN_Shutdown (void)
 	IN_DeactivateMouse ();
 	IN_ShowMouse ();
 
-    if (g_pMouse)
+	if (g_pMouse)
 	{
 		IDirectInputDevice_Release(g_pMouse);
 		g_pMouse = NULL;
 	}
 
-    if (g_pdi)
+	if (g_pdi)
 	{
 		IDirectInput_Release(g_pdi);
 		g_pdi = NULL;
@@ -826,7 +833,7 @@ void IN_StartupJoystick (void)
 	}
 
 	// save the joystick's number of buttons and POV status
-	joy_numbuttons = jc.wNumButtons;
+	joy_numbuttons = (int)jc.wNumButtons;
 	joy_haspov = jc.wCaps & JOYCAPS_HASPOV;
 
 	// old button and POV states default to no buttons pressed
@@ -1096,7 +1103,7 @@ void IN_JoyMove (usercmd_t *cmd)
 				// y=ax^b; where a = 300 and b = 1.3
 				// also x values are in increments of 800 (so this is factored out)
 				// then bounds check result to level out excessively high spin rates
-				fTemp = 300.0f * powf(fabs(fAxisValue) * (1.0f/800.0f), 1.3f);
+				fTemp = 300.0f * powf(FABS(fAxisValue) * (1.0f/800.0f), 1.3f);
 				if (fTemp > 14000.0f)
 					fTemp = 14000.0f;
 				// restore direction information
@@ -1113,7 +1120,7 @@ void IN_JoyMove (usercmd_t *cmd)
 			if ((joy_advanced.value == 0.0) && freelook)
 			{
 				// user wants forward control to become look control
-				if (fabs(fAxisValue) > joy_pitchthreshold.value)
+				if (FABS(fAxisValue) > joy_pitchthreshold.value)
 				{		
 					// if mouse invert is on, invert the joystick pitch value
 					// only absolute control support here (joy_advanced is false)
@@ -1140,7 +1147,7 @@ void IN_JoyMove (usercmd_t *cmd)
 			else
 			{
 				// user wants forward control to be forward control
-				if (fabs(fAxisValue) > joy_forwardthreshold.value)
+				if (FABS(fAxisValue) > joy_forwardthreshold.value)
 				{
 					cmd->forwardmove += (fAxisValue * joy_forwardsensitivity.value) * speed * cl_forwardspeed.value;
 				}
@@ -1148,7 +1155,7 @@ void IN_JoyMove (usercmd_t *cmd)
 			break;
 
 		case AxisSide:
-			if (fabs(fAxisValue) > joy_sidethreshold.value)
+			if (FABS(fAxisValue) > joy_sidethreshold.value)
 			{
 				cmd->sidemove += (fAxisValue * joy_sidesensitivity.value) * speed * cl_sidespeed.value;
 			}
@@ -1158,7 +1165,7 @@ void IN_JoyMove (usercmd_t *cmd)
 			if ((in_strafe.state & 1) || (lookstrafe.value && freelook))
 			{
 				// user wants turn control to become side control
-				if (fabs(fAxisValue) > joy_sidethreshold.value)
+				if (FABS(fAxisValue) > joy_sidethreshold.value)
 				{
 					cmd->sidemove -= (fAxisValue * joy_sidesensitivity.value) * speed * cl_sidespeed.value;
 				}
@@ -1166,7 +1173,7 @@ void IN_JoyMove (usercmd_t *cmd)
 			else
 			{
 				// user wants turn control to be turn control
-				if (fabs(fAxisValue) > joy_yawthreshold.value)
+				if (FABS(fAxisValue) > joy_yawthreshold.value)
 				{
 					if(dwControlMap[i] == JOY_ABSOLUTE_AXIS)
 					{
@@ -1184,7 +1191,7 @@ void IN_JoyMove (usercmd_t *cmd)
 		case AxisLook:
 			if (freelook)
 			{
-				if (fabs(fAxisValue) > joy_pitchthreshold.value)
+				if (FABS(fAxisValue) > joy_pitchthreshold.value)
 				{
 					// pitch movement detected and pitch movement desired by user
 					if(dwControlMap[i] == JOY_ABSOLUTE_AXIS)

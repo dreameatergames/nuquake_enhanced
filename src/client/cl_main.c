@@ -225,6 +225,7 @@ CL_PrintEntities_f
 ==============
 */
 void CL_PrintEntities_f(void) {
+#ifndef  QUIET
   entity_t *ent;
   int i;
 
@@ -236,6 +237,7 @@ void CL_PrintEntities_f(void) {
     }
     Con_Printf("%s:%2i  (%5.1f,%5.1f,%5.1f) [%5.1f %5.1f %5.1f]\n", ent->model->name, ent->frame, ent->origin[0], ent->origin[1], ent->origin[2], ent->angles[0], ent->angles[1], ent->angles[2]);
   }
+#endif // ! QUIET
 }
 
 /*
@@ -392,7 +394,7 @@ float CL_LerpPoint(void) {
 CL_RelinkEntities
 ===============
 */
-void CL_RelinkEntities(void) {
+static void CL_RelinkEntities(void) {
   entity_t *ent;
   int i, j;
   float frac, f, d;
@@ -485,10 +487,6 @@ void CL_RelinkEntities(void) {
 
     if (ent->effects & EF_BRIGHTFIELD)
       R_EntityParticles(ent);
-#ifdef QUAKE2
-    if (ent->effects & EF_DARKFIELD)
-      R_DarkFieldParticles(ent);
-#endif
     if (ent->effects & EF_MUZZLEFLASH) {
       vec3_t fv, rv, uv;
 
@@ -515,21 +513,6 @@ void CL_RelinkEntities(void) {
       dl->radius = 200 + (rand() & 31);
       dl->die = cl.time + 0.001;
     }
-#ifdef QUAKE2
-    if (ent->effects & EF_DARKLIGHT) {
-      dl = CL_AllocDlight(i);
-      VectorCopy(ent->origin, dl->origin);
-      dl->radius = 200.0 + (rand() & 31);
-      dl->die = cl.time + 0.001;
-      dl->dark = true;
-    }
-    if (ent->effects & EF_LIGHT) {
-      dl = CL_AllocDlight(i);
-      VectorCopy(ent->origin, dl->origin);
-      dl->radius = 200;
-      dl->die = cl.time + 0.001;
-    }
-#endif
 
     if (ent->model->flags & EF_GIB)
       R_RocketTrail(oldorg, ent->origin, 2);
@@ -555,10 +538,6 @@ void CL_RelinkEntities(void) {
     if (i == cl.viewentity && !chase_active.value)
       continue;
 
-#ifdef QUAKE2
-    if (ent->effects & EF_NODRAW)
-      continue;
-#endif
     if (cl_numvisedicts < MAX_VISEDICTS) {
       cl_visedicts[cl_numvisedicts] = ent;
       cl_numvisedicts++;

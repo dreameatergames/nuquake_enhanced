@@ -4,3 +4,6 @@
 [submodule "deps/zlib-master"]
 	path = deps/zlib-master
 	url = https://github.com/madler/zlib.git
+[submodule "deps/cglm"]
+	path = deps/cglm
+	url = https://github.com/mrneo240/cglm.git

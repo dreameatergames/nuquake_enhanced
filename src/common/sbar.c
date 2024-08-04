@@ -925,6 +925,7 @@ Sbar_Draw
 */
 void Sbar_Draw (void)
 {
+	glEnable(GL_BLEND);
 	if (scr_con_current == vid.height)
 		return;		// console is full screen
 
@@ -1201,7 +1202,7 @@ void Sbar_MiniDeathmatchOverlay (void)
             i = 0;
 
 	x = 324;
-	for (/* */; i < scoreboardlines && y < vid.height - 8 ; i++)
+	for (/* */; i < scoreboardlines && y < (int)(vid.height - 8) ; i++)
 	{
 		k = fragsort[i];
 		s = &cl.scores[k];

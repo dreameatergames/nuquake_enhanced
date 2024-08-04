@@ -30,7 +30,7 @@ typedef int fixed16_t;
 #define M_PI 3.14159265358979323846f  // matches value in gcc v2 math.h
 #endif
 
-#ifdef _arch_dreamcast
+#if defined(_arch_dreamcast) && defined(ENABLE_DC_MATH)
 #include <dc/fmath.h>
 #include <dreamcast/sh4_math.h>
 
@@ -56,8 +56,10 @@ static inline __attribute__((always_inline)) float DotProduct(const vec3_t x, co
 	*/
   return fipr;
 }
+#elif defined(PSP)
 
-#elif !defined(PSP)
+#else
+#include <math.h>
 #define SIN(x) sinf(x)
 #define COS(x) cosf(x)
 #define SQRT(x) sqrtf(x)
@@ -71,26 +73,10 @@ static inline void CrossProduct(vec3_t v1, vec3_t v2, vec3_t cross) {
   cross[2] = v1[0] * v2[1] - v1[1] * v2[0];
 }
 #endif
-#define FLOOR(x) floorf(x)
 
-#define VectorSubtract(a, b, c) \
-  {                             \
-    c[0] = a[0] - b[0];         \
-    c[1] = a[1] - b[1];         \
-    c[2] = a[2] - b[2];         \
-  }
-#define VectorAdd(a, b, c) \
-  {                        \
-    c[0] = a[0] + b[0];    \
-    c[1] = a[1] + b[1];    \
-    c[2] = a[2] + b[2];    \
-  }
-#define VectorCopy(a, b) \
-  {                      \
-    b[0] = a[0];         \
-    b[1] = a[1];         \
-    b[2] = a[2];         \
-  }
+#define VectorAdd(a,b,c) _VectorAdd(a,b,c)
+#define VectorSubtract(a,b,c) _VectorSubtract(a,b,c)
+#define VectorCopy(a,b) _VectorCopy(a,b)
 
 struct mplane_s;
 
@@ -99,12 +85,26 @@ extern vec3_t vec3_origin;
 void VectorMA(vec3_t veca, float scale, vec3_t vecb, vec3_t vecc);
 
 vec_t _DotProduct(vec3_t v1, vec3_t v2);
-void _VectorSubtract(vec3_t veca, vec3_t vecb, vec3_t out);
-void _VectorAdd(vec3_t veca, vec3_t vecb, vec3_t out);
-void _VectorCopy(vec3_t in, vec3_t out);
+static inline void _VectorSubtract(const vec3_t veca, const vec3_t vecb, vec3_t out) {
+  out[0] = veca[0] - vecb[0];
+  out[1] = veca[1] - vecb[1];
+  out[2] = veca[2] - vecb[2];
+}
+
+static inline void _VectorAdd(const vec3_t veca, const vec3_t vecb, vec3_t out) {
+  out[0] = veca[0] + vecb[0];
+  out[1] = veca[1] + vecb[1];
+  out[2] = veca[2] + vecb[2];
+}
+
+static inline void _VectorCopy(vec3_t in, vec3_t out) {
+  out[0] = in[0];
+  out[1] = in[1];
+  out[2] = in[2];
+}
 INLINE_ALWAYS float VectorNormalize(vec3_t v) // returns vector length
 {
-	#ifdef _arch_dreamcast
+	#if defined(_arch_dreamcast) && defined(ENABLE_DC_MATH)
   // x*x+y*y+z*z
   float temp = v[0] * v[0];
   temp = MATH_fmac(v[1], v[1], temp);
@@ -119,7 +119,7 @@ INLINE_ALWAYS float VectorNormalize(vec3_t v) // returns vector length
   }
 
   return length;
-	#else 
+	#else
   float length, ilength;
   length = SQRT(v[0] * v[0] + v[1] * v[1] + v[2] * v[2]);
 

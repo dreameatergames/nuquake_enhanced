@@ -61,28 +61,28 @@ typedef struct cvar_s
 	qboolean server;		// notifies players when changed
 	float	value;
 	struct cvar_s *next;
-	void (*Cvar_Changed) (void); //Heffo - Cvar Callback Function
+	void (*Cvar_Changed) (struct cvar_s*); //Heffo - Cvar Callback Function, neo with passing cvar
 } cvar_t;
 
-void 	Cvar_RegisterVariableWithCallback (cvar_t *variable, void *function); //Heffo - Cvar Callback Function // mankrip - edited
+void 	Cvar_RegisterVariableWithCallback (cvar_t *variable,  void (*function) (cvar_t*)); //Heffo - Cvar Callback Function // mankrip - edited
 
 void 	Cvar_RegisterVariable (cvar_t *variable);
 // registers a cvar that already has the name, string, and optionally the
 // archive elements set.
 
-void 	Cvar_Set (char *var_name, char *value);
+void 	Cvar_Set (const char *var_name, const char *value);
 // equivelant to "<name> <variable>" typed at the console
 
-void	Cvar_SetValue (char *var_name, float value);
+void	Cvar_SetValue (const char *var_name, float value);
 // expands value to a string and calls Cvar_Set
 
-float	Cvar_VariableValue (char *var_name);
+float	Cvar_VariableValue (const char *var_name);
 // returns 0 if not defined or non numeric
 
-char	*Cvar_VariableString (char *var_name);
+char	*Cvar_VariableString (const char *var_name);
 // returns an empty string if not defined
 
-char 	*Cvar_CompleteVariable (char *partial);
+char 	*Cvar_CompleteVariable (const char *partial);
 // attempts to match a partial variable name for command line completion
 // returns NULL if nothing fits
 
@@ -95,6 +95,6 @@ void 	Cvar_WriteVariables (FILE *f);
 // Writes lines containing "set variable value" for all variables
 // with the archive flag set to true.
 
-cvar_t *Cvar_FindVar (char *var_name);
+cvar_t *Cvar_FindVar (const char *var_name);
 
 extern cvar_t	*cvar_vars;

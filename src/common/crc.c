@@ -70,7 +70,7 @@ void CRC_Init(unsigned short *crcvalue)
 	*crcvalue = CRC_INIT_VALUE;
 }
 
-void CRC_ProcessByte(unsigned short *crcvalue, byte data)
+__attribute__((no_instrument_function)) void CRC_ProcessByte(unsigned short *crcvalue, byte data)
 {
 	*crcvalue = (*crcvalue << 8) ^ crctable[(*crcvalue >> 8) ^ data];
 }

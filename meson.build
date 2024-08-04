@@ -1,4 +1,6 @@
-project('nuQuake', 'c', default_options:['c_std=gnu99', 'buildtype=release'])
+project('nuquake', 'c',
+  version : '0.1',
+  default_options : ['c_std=gnu99', 'buildtype=release'])
 
 sources = files(
     'src/client/cl_demo.c',
@@ -37,6 +39,7 @@ sources = files(
     'src/renderer/gl_rsurf.c',
     'src/renderer/gl_screen.c',
     'src/renderer/gl_warp.c',
+    'src/renderer/menu_loader.c',
     'src/renderer/r_part.c',
     'src/server/sv_main.c',
     'src/server/sv_move.c',
@@ -58,7 +61,7 @@ if host == 'windows'
 
     windres = find_program('x86_64-w64-mingw32-windres')
     win32_rc = custom_target('win32_rc',
-                    input: 'src/win32/winrc.rc', 
+                    input: 'src/win32/winrc.rc',
                     output: 'win32rc.o',
                     command : [windres, '-o', '@OUTPUT@', '--define', 'GCC_WINDRES', '@INPUT@' ],
                 )
@@ -81,26 +84,32 @@ if host == 'windows'
 endif
 
 if host == 'dreamcast'
-    platform_dir = include_directories('src/dreamcast', 'deps/libgl/include', 'deps/minilzo',
+    platform_dir = include_directories('src/dreamcast', 'deps/libgl/include', 'deps/minilzo','deps/cglm/include',
     '/opt/toolchains/dc/kos/include', '/opt/toolchains/dc/kos/kernel/arch/dreamcast/include', '/opt/toolchains/dc/kos/addons/include', '/opt/toolchains/dc/kos-ports/include')
-    
+
     build_dir = 'build_cdi'
     gl = declare_dependency()
 
-    add_global_arguments('-D_arch_dreamcast', '-D_arch_sub_pristine', '-DBUILD_LIBGL', language:'c')
-    
+    # '-Wall', '-Wextra',
+    warnings = ['-Wformat=0', '-Wstack-usage=8096', '-Wno-cast-align', '-Wno-missing-field-initializers', '-Wno-missing-braces', '-Wdouble-promotion', '-Wstrict-aliasing',
+     '-fstrict-aliasing', '-fsingle-precision-constant']
+
+    add_global_arguments('-D_arch_dreamcast', '-D_arch_sub_pristine', '-DBUILD_LIBGL' , '-DALPHASORT_PROVIDED', language:'c')
+
     add_project_link_arguments('-lm', '-lz', '../deps/libgl/libGLdc.a', '-Wl,--start-group', '-lkallisti', '-lc', '-lgcc', '-Wl,--end-group', language:'c')
-    
+
     platform_extras = [
     'src/dreamcast/aica.c',
-    'src/dreamcast/cd_kos.c',
+    'src/dreamcast/cd_dreamcast.c',
     'src/dreamcast/in_dreamcast.c',
+#    'src/dreamcast/libc_overrides.c',
     'src/dreamcast/net_none.c',
-    'src/dreamcast/menu_dreamcast.c',
+    'src/dreamcast/ram.c',
     'src/dreamcast/snd_mix_dreamcast.c',
     'src/dreamcast/snddma_dreamcast.c',
+#    'src/dreamcast/snd_null.c',
     'src/dreamcast/sys_dreamcast.c',
-    'src/dreamcast/vid_gldc.c', 
+    'src/dreamcast/vid_gldc.c',
     'src/dreamcast/vmu_misc.c',
     'src/dreamcast/vmu_state.c',
     'src/dreamcast/vmuheader.c', ]
@@ -109,12 +118,15 @@ if host == 'dreamcast'
         add_global_arguments('-DDEBUG', '-O0', '-g', '-finline-small-functions', language: 'c')
         add_project_link_arguments('-pg', language: 'c')
     else
-        add_global_arguments('-s', '-O2', '-ffast-math', '-funsafe-math-optimizations', '-funroll-loops', '-DQUIET', language: 'c')
+        add_global_arguments( '-ffast-math', '-funsafe-math-optimizations', '-funroll-loops', '-DQUIET', language: 'c')
+        # '-s', '-O2',
+        add_global_arguments(warnings, language: 'c')
     endif
 
     #run_target('scramble', command : ['scripts/scramble.sh', build_dir, 'nuQuake' ],  depends: [ nuQuake ])
 endif
 
+message('Host: '+ host )
 message('Build type: '+ get_option('buildtype') )
 
 add_global_arguments('-w', '-Wformat=0', '-Wno-missing-field-initializers', '-DGLQUAKE', '-fsingle-precision-constant', language: 'c')
@@ -122,8 +134,8 @@ add_global_arguments('-w', '-Wformat=0', '-Wno-missing-field-initializers', '-DG
 compiler = meson.get_compiler('c')
 incdir = include_directories('src', 'src/common', '.')
 
-nuQuake = executable(
-	'nuQuake',
+nuquake = executable(
+	'nuquake',
 	sources,
     platform_extras,
     objects: [ ],
@@ -135,5 +147,13 @@ nuQuake = executable(
 )
 
 if host == 'dreamcast'
-    run_target('scramble', command : ['scripts/scramble.sh', build_dir, 'nuQuake' ],  depends: [ nuQuake ])
+dc_binary = '1ST_READ.BIN'
+
+script_path = join_paths(meson.current_source_dir(), 'pkg_dreamcast.sh')
+custom_target(dc_binary,
+  depends: nuquake,
+  input : nuquake,
+  output : 'fake',
+  command : [script_path, '@INPUT@', '@OUTPUT@'],
+  build_by_default : true)
 endif

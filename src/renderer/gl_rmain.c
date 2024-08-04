@@ -21,7 +21,12 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 #include "quakedef.h"
 
+#include "glquake.h"
 #include "gl_local.h"
+#ifdef __SSE__
+#include <xmmintrin.h>
+#endif
+#include <cglm/cglm.h>
 
 entity_t r_worldentity;
 
@@ -39,14 +44,14 @@ int c_brush_polys, c_alias_polys;
 
 qboolean envmap;  // true during envmap command capture
 
-int currenttexture = -1;  // to avoid unnecessary texture sets
+unsigned int currenttexture = -1;  // to avoid unnecessary texture sets
 
-int cnttextures[2] = {-1, -1};  // cached
+unsigned int cnttextures[2] = {-1, -1};  // cached
 
-int particletexture;  // little dot for particles
-int playertextures;   // up to 16 color translated skins
+unsigned int particletexture;  // little dot for particles
+unsigned int playertextures[16];   // up to 16 color translated skins
 
-int mirrortexturenum;  // quake texturenum, not gltexturenum
+unsigned int mirrortexturenum;  // quake texturenum, not gltexturenum
 qboolean mirror;
 mplane_t *mirror_plane;
 
@@ -83,7 +88,7 @@ cvar_t r_lightmap = {"r_lightmap", "0"};
 cvar_t r_shadows = {"r_shadows", "0"};
 cvar_t r_mirroralpha = {"r_mirroralpha", "1"};
 cvar_t r_wateralpha = {"r_wateralpha", "1"};
-cvar_t r_dynamic = {"r_dynamic", "1"};
+cvar_t r_dynamic = {"r_dynamic", "0"}; //@Note: change back, WIN98
 cvar_t r_novis = {"r_novis", "0"};
 cvar_t r_interpolate_anim = {"r_interpolate_anim", "1", true};  // fenix@io.com: model interpolation
 cvar_t r_interpolate_pos = {"r_interpolate_pos", "1", true};    // " "
@@ -91,7 +96,6 @@ cvar_t r_interpolate_pos = {"r_interpolate_pos", "1", true};    // " "
 cvar_t gl_finish = {"gl_finish", "0"};
 cvar_t gl_clear = {"gl_clear", "0"};
 cvar_t gl_cull = {"gl_cull", "1"};
-cvar_t gl_texsort = {"gl_texsort", "1"};
 cvar_t gl_smoothmodels = {"gl_smoothmodels", "1"};
 cvar_t gl_affinemodels = {"gl_affinemodels", "1"};
 cvar_t gl_polyblend = {"gl_polyblend", "1"};
@@ -101,14 +105,23 @@ cvar_t gl_nocolors = {"gl_nocolors", "0"};
 cvar_t gl_keeptjunctions = {"gl_keeptjunctions", "0"};
 cvar_t gl_reporttjunctions = {"gl_reporttjunctions", "0"};
 cvar_t gl_doubleeyes = {"gl_doubleeys", "1"};
+cvar_t r_sky = {"r_sky", "1"};
 
 extern cvar_t gl_ztrick;
-extern cvar_t cull_dist;
+
+static int _backup_min_filter;
+static int _backup_max_filter;
 
 void R_DrawSkySphere(void);
 void R_DrawParticles(void);
 void R_RenderBrushPoly(msurface_t *fa);
-
+static mat4 _model_matrix __attribute__((aligned(32))) =
+    {
+        {1.0f, 0.0f, 0.0f, 0.0f},
+        {0.0f, 1.0f, 0.0f, 0.0f},
+        {0.0f, 0.0f, 1.0f, 0.0f},
+        {0.0f, 0.0f, 0.0f, 1.0f},
+};
 /*
 =================
 R_CullBox
@@ -126,11 +139,15 @@ qboolean R_CullBox(const vec3_t mins, const vec3_t maxs) {
 }
 
 void R_RotateForEntity(entity_t *e) {
-  glTranslatef(e->origin[0], e->origin[1], e->origin[2]);
+  glGetFloatv(GL_MODELVIEW_MATRIX, (float *)_model_matrix);
 
-  glRotatef(e->angles[1], 0, 0, 1);
-  glRotatef(-e->angles[0], 0, 1, 0);
-  glRotatef(e->angles[2], 1, 0, 0);
+  glm_translate(_model_matrix, (float *)e->origin);
+
+  glm_rotate_z(_model_matrix, DEG2RAD(e->angles[1]), _model_matrix);
+  glm_rotate_y(_model_matrix, DEG2RAD(-e->angles[0]), _model_matrix);
+  glm_rotate_x(_model_matrix, DEG2RAD(e->angles[2]), _model_matrix);
+
+  glLoadMatrixf((float *)_model_matrix);
 }
 
 /*
@@ -145,6 +162,8 @@ void R_BlendedRotateForEntity(entity_t *e) {
   float blend;
   vec3_t d;
   int i;
+
+  glGetFloatv(GL_MODELVIEW_MATRIX, (float *)_model_matrix);
 
   // positional interpolation
 
@@ -169,10 +188,7 @@ void R_BlendedRotateForEntity(entity_t *e) {
 
   VectorSubtract(e->origin2, e->origin1, d);
 
-  glTranslatef(
-      e->origin1[0] + (blend * d[0]),
-      e->origin1[1] + (blend * d[1]),
-      e->origin1[2] + (blend * d[2]));
+  glm_translate(_model_matrix, (vec3){e->origin1[0] + (blend * d[0]), e->origin1[1] + (blend * d[1]), e->origin1[2] + (blend * d[2])});
 
   // orientation interpolation (Euler angles, yuck!)
   timepassed = realtime - e->rotate_start_time;
@@ -205,9 +221,11 @@ void R_BlendedRotateForEntity(entity_t *e) {
     }
   }
 
-  glRotatef(e->angles1[1] + (blend * d[1]), 0, 0, 1);
-  glRotatef(-e->angles1[0] + (-blend * d[0]), 0, 1, 0);
-  glRotatef(e->angles1[2] + (blend * d[2]), 1, 0, 0);
+  glm_rotate_z(_model_matrix, DEG2RAD(e->angles1[1] + (blend * d[1])), _model_matrix);
+  glm_rotate_y(_model_matrix, DEG2RAD(-e->angles1[0] + (-blend * d[0])), _model_matrix);
+  glm_rotate_x(_model_matrix, DEG2RAD(e->angles1[2] + (blend * d[2])), _model_matrix);
+
+  glLoadMatrixf((float *)_model_matrix);
 }
 
 /*
@@ -299,40 +317,46 @@ void R_DrawSpriteModel(entity_t *e) {
     right = vright;
   }
 
-  //glColor3f (1,1,1);
-
   GL_DisableMultitexture();
 
   GL_Bind(frame->gl_texturenum);
+
+  glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+  glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 
   //@Note: Check but i think this is better
   //glEnable (GL_ALPHA_TEST);
   glEnable(GL_BLEND);
   glEnableClientState(GL_COLOR_ARRAY);
+  glEnableClientState(GL_TEXTURE_COORD_ARRAY);
 
   point[0] = (e->origin[0] + frame->down * up[0]) + frame->right * right[0];
   point[1] = (e->origin[1] + frame->down * up[1]) + frame->right * right[1];
   point[2] = (e->origin[2] + frame->down * up[2]) + frame->right * right[2];
-  gVertexFastBuffer[0] = (glvert_fast_t){.flags = VERTEX, .vert = {point[0], point[1], point[2]}, .texture = {1, 1}, .color = {255, 255, 255, 255}, .pad0 = {0}};
+  r_batchedtempverts[0] = (glvert_fast_t){.flags = VERTEX, .vert = {point[0], point[1], point[2]}, .texture = {1, 1}, VTX_COLOR_WHITE, .pad0 = {0}};
 
   point[0] = (e->origin[0] + frame->down * up[0]) + frame->left * right[0];
   point[1] = (e->origin[1] + frame->down * up[1]) + frame->left * right[1];
   point[2] = (e->origin[2] + frame->down * up[2]) + frame->left * right[2];
-  gVertexFastBuffer[1] = (glvert_fast_t){.flags = VERTEX, .vert = {point[0], point[1], point[2]}, .texture = {0, 1}, .color = {255, 255, 255, 255}, .pad0 = {0}};
+  r_batchedtempverts[1] = (glvert_fast_t){.flags = VERTEX, .vert = {point[0], point[1], point[2]}, .texture = {0, 1}, VTX_COLOR_WHITE, .pad0 = {0}};
 
   point[0] = (e->origin[0] + frame->up * up[0]) + frame->right * right[0];
   point[1] = (e->origin[1] + frame->up * up[1]) + frame->right * right[1];
   point[2] = (e->origin[2] + frame->up * up[2]) + frame->right * right[2];
-  gVertexFastBuffer[2] = (glvert_fast_t){.flags = VERTEX, .vert = {point[0], point[1], point[2]}, .texture = {1, 0}, .color = {255, 255, 255, 255}, .pad0 = {0}};
+  r_batchedtempverts[2] = (glvert_fast_t){.flags = VERTEX, .vert = {point[0], point[1], point[2]}, .texture = {1, 0}, VTX_COLOR_WHITE, .pad0 = {0}};
 
   point[0] = (e->origin[0] + frame->up * up[0]) + frame->left * right[0];
   point[1] = (e->origin[1] + frame->up * up[1]) + frame->left * right[1];
   point[2] = (e->origin[2] + frame->up * up[2]) + frame->left * right[2];
-  gVertexFastBuffer[3] = (glvert_fast_t){.flags = VERTEX_EOL, .vert = {point[0], point[1], point[2]}, .texture = {0, 0}, .color = {255, 255, 255, 255}, .pad0 = {0}};
+  r_batchedtempverts[3] = (glvert_fast_t){.flags = VERTEX_EOL, .vert = {point[0], point[1], point[2]}, .texture = {0, 0}, VTX_COLOR_WHITE, .pad0 = {0}};
 
-  glVertexPointer(3, GL_FLOAT, sizeof(glvert_fast_t), &gVertexFastBuffer[0].vert);
-  glTexCoordPointer(2, GL_FLOAT, sizeof(glvert_fast_t), &gVertexFastBuffer[0].texture);
-  glColorPointer(4, GL_UNSIGNED_BYTE, sizeof(glvert_fast_t), &gVertexFastBuffer[0].color);
+  glVertexPointer(3, GL_FLOAT, sizeof(glvert_fast_t), &r_batchedtempverts[0].vert);
+  glTexCoordPointer(2, GL_FLOAT, sizeof(glvert_fast_t), &r_batchedtempverts[0].texture);
+#ifdef WIN98
+  glColorPointer(4, GL_UNSIGNED_BYTE, sizeof(glvert_fast_t), &r_batchedtempverts[0].color);
+#else
+  glColorPointer(GL_BGRA, GL_UNSIGNED_BYTE, sizeof(glvert_fast_t), &r_batchedtempverts[0].color);
+#endif
 
   glDepthMask(GL_FALSE);
   glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
@@ -358,9 +382,25 @@ float shadelight, ambientlight;
 
 // precalculated dot products for quantized angles
 #define SHADEDOT_QUANT 16
-float r_avertexnormal_dots[SHADEDOT_QUANT][256] =
-#include "anorm_dots.h"
-    ;
+float r_avertexnormal_dots[16][256] =
+{
+{1.23,1.30,1.47,1.35,1.56,1.71,1.37,1.38,1.59,1.60,1.79,1.97,1.88,1.92,1.79,1.02,0.93,1.07,0.82,0.87,0.88,0.94,0.96,1.14,1.11,0.82,0.83,0.89,0.89,0.86,0.94,0.91,1.00,1.21,0.98,1.48,1.30,1.57,0.96,1.07,1.14,1.60,1.61,1.40,1.37,1.72,1.78,1.79,1.93,1.99,1.90,1.68,1.71,1.86,1.60,1.68,1.78,1.86,1.93,1.99,1.97,1.44,1.22,1.49,0.93,0.99,0.99,1.23,1.22,1.44,1.49,0.89,0.89,0.97,0.91,0.98,1.19,0.82,0.76,0.82,0.71,0.72,0.73,0.76,0.79,0.86,0.83,0.72,0.76,0.76,0.89,0.82,0.89,0.82,0.89,0.91,0.83,0.96,1.14,0.97,1.40,1.19,0.98,0.94,1.00,1.07,1.37,1.21,1.48,1.30,1.57,1.61,1.37,0.86,0.83,0.91,0.82,0.82,0.88,0.89,0.96,1.14,0.98,0.87,0.93,0.94,1.02,1.30,1.07,1.35,1.38,1.11,1.56,1.92,1.79,1.79,1.59,1.60,1.72,1.90,1.79,0.80,0.85,0.79,0.93,0.80,0.85,0.77,0.74,0.72,0.77,0.74,0.72,0.70,0.70,0.71,0.76,0.73,0.79,0.79,0.73,0.76,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00},
+{1.26,1.26,1.48,1.23,1.50,1.71,1.14,1.19,1.38,1.46,1.64,1.94,1.87,1.84,1.71,1.02,0.92,1.00,0.79,0.85,0.84,0.91,0.90,0.98,0.99,0.77,0.77,0.83,0.82,0.79,0.86,0.84,0.92,0.99,0.91,1.24,1.03,1.33,0.88,0.94,0.97,1.41,1.39,1.18,1.11,1.51,1.61,1.59,1.80,1.91,1.76,1.54,1.65,1.76,1.70,1.70,1.85,1.85,1.97,1.99,1.93,1.28,1.09,1.39,0.92,0.97,0.99,1.18,1.26,1.52,1.48,0.83,0.85,0.90,0.88,0.93,1.00,0.77,0.73,0.78,0.72,0.71,0.74,0.75,0.79,0.86,0.81,0.75,0.81,0.79,0.96,0.88,0.94,0.86,0.93,0.92,0.85,1.08,1.33,1.05,1.55,1.31,1.01,1.05,1.27,1.31,1.60,1.47,1.70,1.54,1.76,1.76,1.57,0.93,0.90,0.99,0.88,0.88,0.95,0.97,1.11,1.39,1.20,0.92,0.97,1.01,1.10,1.39,1.22,1.51,1.58,1.32,1.64,1.97,1.85,1.91,1.77,1.74,1.88,1.99,1.91,0.79,0.86,0.80,0.94,0.84,0.88,0.74,0.74,0.71,0.82,0.77,0.76,0.70,0.73,0.72,0.73,0.70,0.74,0.85,0.77,0.82,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00},
+{1.34,1.27,1.53,1.17,1.46,1.71,0.98,1.05,1.20,1.34,1.48,1.86,1.82,1.71,1.62,1.09,0.94,0.99,0.79,0.85,0.82,0.90,0.87,0.93,0.96,0.76,0.74,0.79,0.76,0.74,0.79,0.78,0.85,0.92,0.85,1.00,0.93,1.06,0.81,0.86,0.89,1.16,1.12,0.97,0.95,1.28,1.38,1.35,1.60,1.77,1.57,1.33,1.50,1.58,1.69,1.63,1.82,1.74,1.91,1.92,1.80,1.04,0.97,1.21,0.90,0.93,0.97,1.05,1.21,1.48,1.37,0.77,0.80,0.84,0.85,0.88,0.92,0.73,0.71,0.74,0.74,0.71,0.75,0.73,0.79,0.84,0.78,0.79,0.86,0.81,1.05,0.94,0.99,0.90,0.95,0.92,0.86,1.24,1.44,1.14,1.59,1.34,1.02,1.27,1.50,1.49,1.80,1.69,1.86,1.72,1.87,1.80,1.69,1.00,0.98,1.23,0.95,0.96,1.09,1.16,1.37,1.63,1.46,0.99,1.10,1.25,1.24,1.51,1.41,1.67,1.77,1.55,1.72,1.95,1.89,1.98,1.91,1.86,1.97,1.99,1.94,0.81,0.89,0.85,0.98,0.90,0.94,0.75,0.78,0.73,0.89,0.83,0.82,0.72,0.77,0.76,0.72,0.70,0.71,0.91,0.83,0.89,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00},
+{1.46,1.34,1.60,1.16,1.46,1.71,0.94,0.99,1.05,1.26,1.33,1.74,1.76,1.57,1.54,1.23,0.98,1.05,0.83,0.89,0.84,0.92,0.87,0.91,0.96,0.78,0.74,0.79,0.72,0.72,0.75,0.76,0.80,0.88,0.83,0.94,0.87,0.95,0.76,0.80,0.82,0.97,0.96,0.89,0.88,1.08,1.11,1.10,1.37,1.59,1.37,1.07,1.27,1.34,1.57,1.45,1.69,1.55,1.77,1.79,1.60,0.93,0.90,0.99,0.86,0.87,0.93,0.96,1.07,1.35,1.18,0.73,0.76,0.77,0.81,0.82,0.85,0.70,0.71,0.72,0.78,0.73,0.77,0.73,0.79,0.82,0.76,0.83,0.90,0.84,1.18,0.98,1.03,0.92,0.95,0.90,0.86,1.32,1.45,1.15,1.53,1.27,0.99,1.42,1.65,1.58,1.93,1.83,1.94,1.81,1.88,1.74,1.70,1.19,1.17,1.44,1.11,1.15,1.36,1.41,1.61,1.81,1.67,1.22,1.34,1.50,1.42,1.65,1.61,1.82,1.91,1.75,1.80,1.89,1.89,1.98,1.99,1.94,1.98,1.92,1.87,0.86,0.95,0.92,1.14,0.98,1.03,0.79,0.84,0.77,0.97,0.90,0.89,0.76,0.82,0.82,0.74,0.72,0.71,0.98,0.89,0.97,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00},
+{1.60,1.44,1.68,1.22,1.49,1.71,0.93,0.99,0.99,1.23,1.22,1.60,1.68,1.44,1.49,1.40,1.14,1.19,0.89,0.96,0.89,0.97,0.89,0.91,0.98,0.82,0.76,0.82,0.71,0.72,0.73,0.76,0.79,0.86,0.83,0.91,0.83,0.89,0.72,0.76,0.76,0.89,0.89,0.82,0.82,0.98,0.96,0.97,1.14,1.40,1.19,0.94,1.00,1.07,1.37,1.21,1.48,1.30,1.57,1.61,1.37,0.86,0.83,0.91,0.82,0.82,0.88,0.89,0.96,1.14,0.98,0.70,0.72,0.73,0.77,0.76,0.79,0.70,0.72,0.71,0.82,0.77,0.80,0.74,0.79,0.80,0.74,0.87,0.93,0.85,1.23,1.02,1.02,0.93,0.93,0.87,0.85,1.30,1.35,1.07,1.38,1.11,0.94,1.47,1.71,1.56,1.97,1.88,1.92,1.79,1.79,1.59,1.60,1.30,1.35,1.56,1.37,1.38,1.59,1.60,1.79,1.92,1.79,1.48,1.57,1.72,1.61,1.78,1.79,1.93,1.99,1.90,1.86,1.78,1.86,1.93,1.99,1.97,1.90,1.79,1.72,0.94,1.07,1.00,1.37,1.21,1.30,0.86,0.91,0.83,1.14,0.98,0.96,0.82,0.88,0.89,0.79,0.76,0.73,1.07,0.94,1.11,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00},
+{1.74,1.57,1.76,1.33,1.54,1.71,0.94,1.05,0.99,1.26,1.16,1.46,1.60,1.34,1.46,1.59,1.37,1.37,0.97,1.11,0.96,1.10,0.95,0.94,1.08,0.89,0.82,0.88,0.72,0.76,0.75,0.80,0.80,0.88,0.87,0.91,0.83,0.87,0.72,0.76,0.74,0.83,0.84,0.78,0.79,0.96,0.89,0.92,0.98,1.23,1.05,0.86,0.92,0.95,1.11,0.98,1.22,1.03,1.34,1.42,1.14,0.79,0.77,0.84,0.78,0.76,0.82,0.82,0.89,0.97,0.90,0.70,0.71,0.71,0.73,0.72,0.74,0.73,0.76,0.72,0.86,0.81,0.82,0.76,0.79,0.77,0.73,0.90,0.95,0.86,1.18,1.03,0.98,0.92,0.90,0.83,0.84,1.19,1.17,0.98,1.15,0.97,0.89,1.42,1.65,1.44,1.93,1.83,1.81,1.67,1.61,1.36,1.41,1.32,1.45,1.58,1.57,1.53,1.74,1.70,1.88,1.94,1.81,1.69,1.77,1.87,1.79,1.89,1.92,1.98,1.99,1.98,1.89,1.65,1.80,1.82,1.91,1.94,1.75,1.61,1.50,1.07,1.34,1.27,1.60,1.45,1.55,0.93,0.99,0.90,1.35,1.18,1.07,0.87,0.93,0.96,0.85,0.82,0.77,1.15,0.99,1.27,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00},
+{1.86,1.71,1.82,1.48,1.62,1.71,0.98,1.20,1.05,1.34,1.17,1.34,1.53,1.27,1.46,1.77,1.60,1.57,1.16,1.38,1.12,1.35,1.06,1.00,1.28,0.97,0.89,0.95,0.76,0.81,0.79,0.86,0.85,0.92,0.93,0.93,0.85,0.87,0.74,0.78,0.74,0.79,0.82,0.76,0.79,0.96,0.85,0.90,0.94,1.09,0.99,0.81,0.85,0.89,0.95,0.90,0.99,0.94,1.10,1.24,0.98,0.75,0.73,0.78,0.74,0.72,0.77,0.76,0.82,0.89,0.83,0.73,0.71,0.71,0.71,0.70,0.72,0.77,0.80,0.74,0.90,0.85,0.84,0.78,0.79,0.75,0.73,0.92,0.95,0.86,1.05,0.99,0.94,0.90,0.86,0.79,0.81,1.00,0.98,0.91,0.96,0.89,0.83,1.27,1.50,1.23,1.80,1.69,1.63,1.46,1.37,1.09,1.16,1.24,1.44,1.49,1.69,1.59,1.80,1.69,1.87,1.86,1.72,1.82,1.91,1.94,1.92,1.95,1.99,1.98,1.91,1.97,1.89,1.51,1.72,1.67,1.77,1.86,1.55,1.41,1.25,1.33,1.58,1.50,1.80,1.63,1.74,1.04,1.21,0.97,1.48,1.37,1.21,0.93,0.97,1.05,0.92,0.88,0.84,1.14,1.02,1.34,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00},
+{1.94,1.84,1.87,1.64,1.71,1.71,1.14,1.38,1.19,1.46,1.23,1.26,1.48,1.26,1.50,1.91,1.80,1.76,1.41,1.61,1.39,1.59,1.33,1.24,1.51,1.18,0.97,1.11,0.82,0.88,0.86,0.94,0.92,0.99,1.03,0.98,0.91,0.90,0.79,0.84,0.77,0.79,0.84,0.77,0.83,0.99,0.85,0.91,0.92,1.02,1.00,0.79,0.80,0.86,0.88,0.84,0.92,0.88,0.97,1.10,0.94,0.74,0.71,0.74,0.72,0.70,0.73,0.72,0.76,0.82,0.77,0.77,0.73,0.74,0.71,0.70,0.73,0.83,0.85,0.78,0.92,0.88,0.86,0.81,0.79,0.74,0.75,0.92,0.93,0.85,0.96,0.94,0.88,0.86,0.81,0.75,0.79,0.93,0.90,0.85,0.88,0.82,0.77,1.05,1.27,0.99,1.60,1.47,1.39,1.20,1.11,0.95,0.97,1.08,1.33,1.31,1.70,1.55,1.76,1.57,1.76,1.70,1.54,1.85,1.97,1.91,1.99,1.97,1.99,1.91,1.77,1.88,1.85,1.39,1.64,1.51,1.58,1.74,1.32,1.22,1.01,1.54,1.76,1.65,1.93,1.70,1.85,1.28,1.39,1.09,1.52,1.48,1.26,0.97,0.99,1.18,1.00,0.93,0.90,1.05,1.01,1.31,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00},
+{1.97,1.92,1.88,1.79,1.79,1.71,1.37,1.59,1.38,1.60,1.35,1.23,1.47,1.30,1.56,1.99,1.93,1.90,1.60,1.78,1.61,1.79,1.57,1.48,1.72,1.40,1.14,1.37,0.89,0.96,0.94,1.07,1.00,1.21,1.30,1.14,0.98,0.96,0.86,0.91,0.83,0.82,0.88,0.82,0.89,1.11,0.87,0.94,0.93,1.02,1.07,0.80,0.79,0.85,0.82,0.80,0.87,0.85,0.93,1.02,0.93,0.77,0.72,0.74,0.71,0.70,0.70,0.71,0.72,0.77,0.74,0.82,0.76,0.79,0.72,0.73,0.76,0.89,0.89,0.82,0.93,0.91,0.86,0.83,0.79,0.73,0.76,0.91,0.89,0.83,0.89,0.89,0.82,0.82,0.76,0.72,0.76,0.86,0.83,0.79,0.82,0.76,0.73,0.94,1.00,0.91,1.37,1.21,1.14,0.98,0.96,0.88,0.89,0.96,1.14,1.07,1.60,1.40,1.61,1.37,1.57,1.48,1.30,1.78,1.93,1.79,1.99,1.92,1.90,1.79,1.59,1.72,1.79,1.30,1.56,1.35,1.38,1.60,1.11,1.07,0.94,1.68,1.86,1.71,1.97,1.68,1.86,1.44,1.49,1.22,1.44,1.49,1.22,0.99,0.99,1.23,1.19,0.98,0.97,0.97,0.98,1.19,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00},
+{1.94,1.97,1.87,1.91,1.85,1.71,1.60,1.77,1.58,1.74,1.51,1.26,1.48,1.39,1.64,1.99,1.97,1.99,1.70,1.85,1.76,1.91,1.76,1.70,1.88,1.55,1.33,1.57,0.96,1.08,1.05,1.31,1.27,1.47,1.54,1.39,1.20,1.11,0.93,0.99,0.90,0.88,0.95,0.88,0.97,1.32,0.92,1.01,0.97,1.10,1.22,0.84,0.80,0.88,0.79,0.79,0.85,0.86,0.92,1.02,0.94,0.82,0.76,0.77,0.72,0.73,0.70,0.72,0.71,0.74,0.74,0.88,0.81,0.85,0.75,0.77,0.82,0.94,0.93,0.86,0.92,0.92,0.86,0.85,0.79,0.74,0.79,0.88,0.85,0.81,0.82,0.83,0.77,0.78,0.73,0.71,0.75,0.79,0.77,0.74,0.77,0.73,0.70,0.86,0.92,0.84,1.14,0.99,0.98,0.91,0.90,0.84,0.83,0.88,0.97,0.94,1.41,1.18,1.39,1.11,1.33,1.24,1.03,1.61,1.80,1.59,1.91,1.84,1.76,1.64,1.38,1.51,1.71,1.26,1.50,1.23,1.19,1.46,0.99,1.00,0.91,1.70,1.85,1.65,1.93,1.54,1.76,1.52,1.48,1.26,1.28,1.39,1.09,0.99,0.97,1.18,1.31,1.01,1.05,0.90,0.93,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00},
+{1.86,1.95,1.82,1.98,1.89,1.71,1.80,1.91,1.77,1.86,1.67,1.34,1.53,1.51,1.72,1.92,1.91,1.99,1.69,1.82,1.80,1.94,1.87,1.86,1.97,1.59,1.44,1.69,1.05,1.24,1.27,1.49,1.50,1.69,1.72,1.63,1.46,1.37,1.00,1.23,0.98,0.95,1.09,0.96,1.16,1.55,0.99,1.25,1.10,1.24,1.41,0.90,0.85,0.94,0.79,0.81,0.85,0.89,0.94,1.09,0.98,0.89,0.82,0.83,0.74,0.77,0.72,0.76,0.73,0.75,0.78,0.94,0.86,0.91,0.79,0.83,0.89,0.99,0.95,0.90,0.90,0.92,0.84,0.86,0.79,0.75,0.81,0.85,0.80,0.78,0.76,0.77,0.73,0.74,0.71,0.71,0.73,0.74,0.74,0.71,0.76,0.72,0.70,0.79,0.85,0.78,0.98,0.92,0.93,0.85,0.87,0.82,0.79,0.81,0.89,0.86,1.16,0.97,1.12,0.95,1.06,1.00,0.93,1.38,1.60,1.35,1.77,1.71,1.57,1.48,1.20,1.28,1.62,1.27,1.46,1.17,1.05,1.34,0.96,0.99,0.90,1.63,1.74,1.50,1.80,1.33,1.58,1.48,1.37,1.21,1.04,1.21,0.97,0.97,0.93,1.05,1.34,1.02,1.14,0.84,0.88,0.92,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00},
+{1.74,1.89,1.76,1.98,1.89,1.71,1.93,1.99,1.91,1.94,1.82,1.46,1.60,1.65,1.80,1.79,1.77,1.92,1.57,1.69,1.74,1.87,1.88,1.94,1.98,1.53,1.45,1.70,1.18,1.32,1.42,1.58,1.65,1.83,1.81,1.81,1.67,1.61,1.19,1.44,1.17,1.11,1.36,1.15,1.41,1.75,1.22,1.50,1.34,1.42,1.61,0.98,0.92,1.03,0.83,0.86,0.89,0.95,0.98,1.23,1.14,0.97,0.89,0.90,0.78,0.82,0.76,0.82,0.77,0.79,0.84,0.98,0.90,0.98,0.83,0.89,0.97,1.03,0.95,0.92,0.86,0.90,0.82,0.86,0.79,0.77,0.84,0.81,0.76,0.76,0.72,0.73,0.70,0.72,0.71,0.73,0.73,0.72,0.74,0.71,0.78,0.74,0.72,0.75,0.80,0.76,0.94,0.88,0.91,0.83,0.87,0.84,0.79,0.76,0.82,0.80,0.97,0.89,0.96,0.88,0.95,0.94,0.87,1.11,1.37,1.10,1.59,1.57,1.37,1.33,1.05,1.08,1.54,1.34,1.46,1.16,0.99,1.26,0.96,1.05,0.92,1.45,1.55,1.27,1.60,1.07,1.34,1.35,1.18,1.07,0.93,0.99,0.90,0.93,0.87,0.96,1.27,0.99,1.15,0.77,0.82,0.85,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00},
+{1.60,1.78,1.68,1.93,1.86,1.71,1.97,1.99,1.99,1.97,1.93,1.60,1.68,1.78,1.86,1.61,1.57,1.79,1.37,1.48,1.59,1.72,1.79,1.92,1.90,1.38,1.35,1.60,1.23,1.30,1.47,1.56,1.71,1.88,1.79,1.92,1.79,1.79,1.30,1.56,1.35,1.37,1.59,1.38,1.60,1.90,1.48,1.72,1.57,1.61,1.79,1.21,1.00,1.30,0.89,0.94,0.96,1.07,1.14,1.40,1.37,1.14,0.96,0.98,0.82,0.88,0.82,0.89,0.83,0.86,0.91,1.02,0.93,1.07,0.87,0.94,1.11,1.02,0.93,0.93,0.82,0.87,0.80,0.85,0.79,0.80,0.85,0.77,0.72,0.74,0.71,0.70,0.70,0.71,0.72,0.77,0.74,0.72,0.76,0.73,0.82,0.79,0.76,0.73,0.79,0.76,0.93,0.86,0.91,0.83,0.89,0.89,0.82,0.72,0.76,0.76,0.89,0.82,0.89,0.82,0.89,0.91,0.83,0.96,1.14,0.97,1.40,1.44,1.19,1.22,0.99,0.98,1.49,1.44,1.49,1.22,0.99,1.23,0.98,1.19,0.97,1.21,1.30,1.00,1.37,0.94,1.07,1.14,0.98,0.96,0.86,0.91,0.83,0.88,0.82,0.89,1.11,0.94,1.07,0.73,0.76,0.79,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00},
+{1.46,1.65,1.60,1.82,1.80,1.71,1.93,1.91,1.99,1.94,1.98,1.74,1.76,1.89,1.89,1.42,1.34,1.61,1.11,1.22,1.36,1.50,1.61,1.81,1.75,1.15,1.17,1.41,1.18,1.19,1.42,1.44,1.65,1.83,1.67,1.94,1.81,1.88,1.32,1.58,1.45,1.57,1.74,1.53,1.70,1.98,1.69,1.87,1.77,1.79,1.92,1.45,1.27,1.55,0.97,1.07,1.11,1.34,1.37,1.59,1.60,1.35,1.07,1.18,0.86,0.93,0.87,0.96,0.90,0.93,0.99,1.03,0.95,1.15,0.90,0.99,1.27,0.98,0.90,0.92,0.78,0.83,0.77,0.84,0.79,0.82,0.86,0.73,0.71,0.73,0.72,0.70,0.73,0.72,0.76,0.81,0.76,0.76,0.82,0.77,0.89,0.85,0.82,0.75,0.80,0.80,0.94,0.88,0.94,0.87,0.95,0.96,0.88,0.72,0.74,0.76,0.83,0.78,0.84,0.79,0.87,0.91,0.83,0.89,0.98,0.92,1.23,1.34,1.05,1.16,0.99,0.96,1.46,1.57,1.54,1.33,1.05,1.26,1.08,1.37,1.10,0.98,1.03,0.92,1.14,0.86,0.95,0.97,0.90,0.89,0.79,0.84,0.77,0.82,0.76,0.82,0.97,0.89,0.98,0.71,0.72,0.74,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00},
+{1.34,1.51,1.53,1.67,1.72,1.71,1.80,1.77,1.91,1.86,1.98,1.86,1.82,1.95,1.89,1.24,1.10,1.41,0.95,0.99,1.09,1.25,1.37,1.63,1.55,0.96,0.98,1.16,1.05,1.00,1.27,1.23,1.50,1.69,1.46,1.86,1.72,1.87,1.24,1.49,1.44,1.69,1.80,1.59,1.69,1.97,1.82,1.94,1.91,1.92,1.99,1.63,1.50,1.74,1.16,1.33,1.38,1.58,1.60,1.77,1.80,1.48,1.21,1.37,0.90,0.97,0.93,1.05,0.97,1.04,1.21,0.99,0.95,1.14,0.92,1.02,1.34,0.94,0.86,0.90,0.74,0.79,0.75,0.81,0.79,0.84,0.86,0.71,0.71,0.73,0.76,0.73,0.77,0.74,0.80,0.85,0.78,0.81,0.89,0.84,0.97,0.92,0.88,0.79,0.85,0.86,0.98,0.92,1.00,0.93,1.06,1.12,0.95,0.74,0.74,0.78,0.79,0.76,0.82,0.79,0.87,0.93,0.85,0.85,0.94,0.90,1.09,1.27,0.99,1.17,1.05,0.96,1.46,1.71,1.62,1.48,1.20,1.34,1.28,1.57,1.35,0.90,0.94,0.85,0.98,0.81,0.89,0.89,0.83,0.82,0.75,0.78,0.73,0.77,0.72,0.76,0.89,0.83,0.91,0.71,0.70,0.72,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00},
+{1.26,1.39,1.48,1.51,1.64,1.71,1.60,1.58,1.77,1.74,1.91,1.94,1.87,1.97,1.85,1.10,0.97,1.22,0.88,0.92,0.95,1.01,1.11,1.39,1.32,0.88,0.90,0.97,0.96,0.93,1.05,0.99,1.27,1.47,1.20,1.70,1.54,1.76,1.08,1.31,1.33,1.70,1.76,1.55,1.57,1.88,1.85,1.91,1.97,1.99,1.99,1.70,1.65,1.85,1.41,1.54,1.61,1.76,1.80,1.91,1.93,1.52,1.26,1.48,0.92,0.99,0.97,1.18,1.09,1.28,1.39,0.94,0.93,1.05,0.92,1.01,1.31,0.88,0.81,0.86,0.72,0.75,0.74,0.79,0.79,0.86,0.85,0.71,0.73,0.75,0.82,0.77,0.83,0.78,0.85,0.88,0.81,0.88,0.97,0.90,1.18,1.00,0.93,0.86,0.92,0.94,1.14,0.99,1.24,1.03,1.33,1.39,1.11,0.79,0.77,0.84,0.79,0.77,0.84,0.83,0.90,0.98,0.91,0.85,0.92,0.91,1.02,1.26,1.00,1.23,1.19,0.99,1.50,1.84,1.71,1.64,1.38,1.46,1.51,1.76,1.59,0.84,0.88,0.80,0.94,0.79,0.86,0.82,0.77,0.76,0.74,0.74,0.71,0.73,0.70,0.72,0.82,0.77,0.85,0.74,0.70,0.73,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00}
+};
 
 float *shadedots = r_avertexnormal_dots[0];
 
@@ -374,8 +414,8 @@ GL_DrawAliasFrame
 */
 void GL_DrawAliasFrame(aliashdr_t *paliashdr, int posenum) {
   unsigned char l;
-  trivertx_t *verts;
-  int *order;
+  trivertx_t * __restrict verts;
+  int * __restrict order;
   int count;
 
   glEnableClientState(GL_COLOR_ARRAY);
@@ -392,22 +432,75 @@ void GL_DrawAliasFrame(aliashdr_t *paliashdr, int posenum) {
       break;  // done
 
     int c;
-
-    // texture coordinates come from the draw list
-    glVertexPointer(3, GL_FLOAT, sizeof(glvert_fast_t), &gVertexFastBuffer[0].vert);
-    glTexCoordPointer(2, GL_FLOAT, sizeof(glvert_fast_t), &gVertexFastBuffer[0].texture);
-    glColorPointer(4, GL_UNSIGNED_BYTE, sizeof(glvert_fast_t), &gVertexFastBuffer[0].color);
-    c = count;
     int i = 0;
+
+    glvert_fast_t *submission_pointer = &r_batchedtempverts[0];
+
+#ifdef GL_EXT_dreamcast_direct_buffer
+    glEnable(GL_DIRECT_BUFFER_KOS);
+    glDirectBufferReserve_INTERNAL_KOS(count, (int *)&submission_pointer, GL_TRIANGLE_STRIP);
+#endif
+
+    glVertexPointer(3, GL_FLOAT, sizeof(glvert_fast_t), &submission_pointer->vert);
+    glTexCoordPointer(2, GL_FLOAT, sizeof(glvert_fast_t), &submission_pointer->texture);
+#ifdef WIN98
+    glColorPointer(4, GL_UNSIGNED_BYTE, sizeof(glvert_fast_t), &submission_pointer->color);
+#else
+    glColorPointer(GL_BGRA, GL_UNSIGNED_BYTE, sizeof(glvert_fast_t), &submission_pointer->color);
+#endif
+
+    c = count;
+    byte* restrict vert_x = &verts->v[0];
+    byte* restrict vert_y = &verts->v[1];
+    byte* restrict vert_z = &verts->v[2];
+    byte* restrict vert_light = &verts->lightnormalindex;
+    int vert_iter = 0;
+    const int vertex_stride = 4;
+    float* restrict texture_u = (float*)order;
+    float* restrict texture_v = (float*)(order+1);
+    int tex_iter = 0;
+    const int texture_stride = 2;
     do {
-      l = ambientlight < 0 ? 255 : (unsigned char)((shadedots[verts->lightnormalindex] * shadelight) * 255);
-      gVertexFastBuffer[i] = (glvert_fast_t){.flags = VERTEX, .vert = {verts->v[0], verts->v[1], verts->v[2]}, .texture = {((float *)order)[0], ((float *)order)[1]}, .color = {l, l, l, 255}, .pad0 = {0}};
-      order += 2;
-      i++;
-      verts++;
+      /* Load */
+      const byte vx = vert_x[vert_iter];
+      const byte vy = vert_y[vert_iter];
+      const byte vz = vert_z[vert_iter];
+      const byte vlight = vert_light[vert_iter];
+
+      const float tu = texture_u[tex_iter];
+      const float tv = texture_v[tex_iter];
+
+      /* Update */
+      const float vxf = (float)vx;
+      const float vyf = (float)vy;
+      const float vzf = (float)vz;
+
+      /* Store */
+      l = ambientlight < 0 ? 255 : (unsigned char)((shadedots[vlight] * shadelight) * 255);
+
+      *submission_pointer++ = (glvert_fast_t){.flags = VERTEX,
+                                              .vert = {vxf, vyf, vzf},
+                                              .texture = {tu, tv},
+                                              .color = {.packed = PACK_BGRA8888(l, l, l, 255)}, .pad0 = {0}};
+
+      tex_iter += texture_stride;
+      vert_iter += vertex_stride;
     } while (--c);
-    gVertexFastBuffer[i - 1].flags = VERTEX_EOL;
+    (*(submission_pointer - 1)).flags = VERTEX_EOL;
+
+    order += 2 * count;
+    i += count;
+    verts += count;
+
     glDrawArrays(GL_TRIANGLE_STRIP, 0, count);
+
+#ifdef GL_EXT_dreamcast_direct_buffer
+    glDisable(GL_DIRECT_BUFFER_KOS);
+#endif
+    #ifdef PARANOID
+    if (count > 32)
+      printf("%s:%d drew: %d\n", __FILE__, __LINE__, count);
+    #endif
   }
 
   glDisableClientState(GL_COLOR_ARRAY);
@@ -423,11 +516,10 @@ void GL_DrawAliasFrame(aliashdr_t *paliashdr, int posenum) {
  */
 void GL_DrawAliasBlendedFrame(aliashdr_t *paliashdr, int pose1, int pose2, float blend) {
   unsigned char l;
-  trivertx_t *verts1;
-  trivertx_t *verts2;
-  int *order;
+  trivertx_t * __restrict verts1;
+  trivertx_t * __restrict verts2;
+  int * __restrict order;
   int count;
-  vec3_t d;
 
   lastposenum0 = pose1;
   lastposenum = pose2;
@@ -450,26 +542,91 @@ void GL_DrawAliasBlendedFrame(aliashdr_t *paliashdr, int pose1, int pose2, float
 
     int c;
 
-    // texture coordinates come from the draw list
-    glVertexPointer(3, GL_FLOAT, sizeof(glvert_fast_t), &gVertexFastBuffer[0].vert);
-    glTexCoordPointer(2, GL_FLOAT, sizeof(glvert_fast_t), &gVertexFastBuffer[0].texture);
-    glColorPointer(4, GL_UNSIGNED_BYTE, sizeof(glvert_fast_t), &gVertexFastBuffer[0].color);
-    c = count;
-    int i = 0;
-    do {
-      /* Interpolate lighting */
-      d[0] = shadedots[verts2->lightnormalindex] - shadedots[verts1->lightnormalindex];
-      l = ambientlight < 0 ? 255 : (unsigned char)(((shadedots[verts1->lightnormalindex] + (blend * d[0])) * shadelight) * 255);
-      VectorSubtract(verts2->v, verts1->v, d);
+    glvert_fast_t *submission_pointer = &r_batchedtempverts[0];
 
-      gVertexFastBuffer[i] = (glvert_fast_t){.flags = VERTEX, .vert = {verts1->v[0] + (blend * d[0]), verts1->v[1] + (blend * d[1]), verts1->v[2] + (blend * d[2])}, .texture = {((float *)order)[0], ((float *)order)[1]}, .color = {l, l, l, 255}, .pad0 = {0}};
-      order += 2;
-      i++;
-      verts1++;
-      verts2++;
+#ifdef GL_EXT_dreamcast_direct_buffer
+    glEnable(GL_DIRECT_BUFFER_KOS);
+    glDirectBufferReserve_INTERNAL_KOS(count, (int *)&submission_pointer, GL_TRIANGLE_STRIP);
+#endif
+
+    glVertexPointer(3, GL_FLOAT, sizeof(glvert_fast_t), &submission_pointer->vert);
+    glTexCoordPointer(2, GL_FLOAT, sizeof(glvert_fast_t), &submission_pointer->texture);
+#ifdef WIN98
+    glColorPointer(4, GL_UNSIGNED_BYTE, sizeof(glvert_fast_t), &submission_pointer->color);
+#else
+    glColorPointer(GL_BGRA, GL_UNSIGNED_BYTE, sizeof(glvert_fast_t), &submission_pointer->color);
+#endif
+
+    c = count;
+
+    /* Vert data */
+    byte* restrict vert1_x = &verts1->v[0];
+    byte* restrict vert1_y = &verts1->v[1];
+    byte* restrict vert1_z = &verts1->v[2];
+    byte* restrict vert1_light = &verts1->lightnormalindex;
+
+    byte* restrict vert2_x = &verts2->v[0];
+    byte* restrict vert2_y = &verts2->v[1];
+    byte* restrict vert2_z = &verts2->v[2];
+    byte* restrict vert2_light = &verts2->lightnormalindex;
+
+    int vert_iter = 0;
+    const int vertex_stride = 4;
+
+    /* Texture */
+    float* restrict texture_u = (float*)order;
+    float* restrict texture_v = (float*)(order+1);
+
+    int tex_iter = 0;
+    const int texture_stride = 2;
+
+    do {
+      /* Load */
+      const byte v1x = vert1_x[vert_iter];
+      const byte v1y = vert1_y[vert_iter];
+      const byte v1z = vert1_z[vert_iter];
+      const byte v1light = vert1_light[vert_iter];
+
+      const byte v2x = vert2_x[vert_iter];
+      const byte v2y = vert2_y[vert_iter];
+      const byte v2z = vert2_z[vert_iter];
+      const byte v2light = vert2_light[vert_iter];
+
+      const float tu = texture_u[tex_iter];
+      const float tv = texture_v[tex_iter];
+
+      /* Update */
+      const float vxf = (float)v1x + (blend * (float)(v2x - v1x));
+      const float vyf = (float)v1y + (blend * (float)(v2y - v1y));
+      const float vzf = (float)v1z + (blend * (float)(v2z - v1z));
+
+      /* Interpolate lighting */
+      const float delta_light = shadedots[v2light] - shadedots[v1light];
+      l = ambientlight < 0 ? 255 : (unsigned char)(((shadedots[v1light] + (blend * delta_light)) * shadelight) * 255);
+
+      *submission_pointer++ = (glvert_fast_t){.flags = VERTEX,
+                                              .vert = {vxf, vyf, vzf},
+                                              .texture = {tu, tv},
+                                              .color = {.packed = PACK_BGRA8888(l, l, l, 255)}, .pad0 = {0}};
+      // New iters
+      tex_iter += texture_stride;
+      vert_iter += vertex_stride;
     } while (--c);
-    gVertexFastBuffer[i - 1].flags = VERTEX_EOL;
+    (*(submission_pointer - 1)).flags = VERTEX_EOL;
+
+    order += 2 * count;
+    verts1 += count;
+    verts2 += count;
+
     glDrawArrays(GL_TRIANGLE_STRIP, 0, count);
+
+#ifdef GL_EXT_dreamcast_direct_buffer
+    glDisable(GL_DIRECT_BUFFER_KOS);
+#endif
+#ifdef PARANOID
+    if (count > 32)
+      printf("%s:%d drew: %d\n", __FILE__, __LINE__, count);
+#endif
   }
 
   glDisableClientState(GL_COLOR_ARRAY);
@@ -499,13 +656,7 @@ void GL_DrawAliasShadow(aliashdr_t *paliashdr, int posenum) {
   glEnableClientState(GL_COLOR_ARRAY);
   glDisableClientState(GL_TEXTURE_COORD_ARRAY);
   glDisable(GL_CULL_FACE);
-  //glDisable(GL_BLEND);
   glEnable(GL_BLEND);
-
-  // texture coordinates come from the draw list
-  glVertexPointer(3, GL_FLOAT, sizeof(glvert_fast_t), &gVertexFastBuffer[0].vert);
-  glTexCoordPointer(2, GL_FLOAT, sizeof(glvert_fast_t), &gVertexFastBuffer[0].texture);
-  glColorPointer(4, GL_UNSIGNED_BYTE, sizeof(glvert_fast_t), &gVertexFastBuffer[0].color);
 
   int c;
 
@@ -514,19 +665,43 @@ void GL_DrawAliasShadow(aliashdr_t *paliashdr, int posenum) {
     if (!count)
       break;
 
+    glvert_fast_t *submission_pointer = &r_batchedtempverts[0];
+
+#ifdef GL_EXT_dreamcast_direct_buffer
+    glEnable(GL_DIRECT_BUFFER_KOS);
+    glDirectBufferReserve_INTERNAL_KOS(count, (int *)&submission_pointer, GL_TRIANGLE_STRIP);
+#endif
+
+    glVertexPointer(3, GL_FLOAT, sizeof(glvert_fast_t), &submission_pointer->vert);
+    glTexCoordPointer(2, GL_FLOAT, sizeof(glvert_fast_t), &submission_pointer->texture);
+#ifdef WIN98
+    glColorPointer(4, GL_UNSIGNED_BYTE, sizeof(glvert_fast_t), &submission_pointer->color);
+#else
+    glColorPointer(GL_BGRA, GL_UNSIGNED_BYTE, sizeof(glvert_fast_t), &submission_pointer->color);
+#endif
+
     for (c = 0; c < count; c++) {
       height -= 0.001f;
       const float x = verts->v[0] * paliashdr->scale[0] + paliashdr->scale_origin[0];
       const float y = verts->v[1] * paliashdr->scale[1] + paliashdr->scale_origin[1];
       const float z = verts->v[2] * paliashdr->scale[2] + paliashdr->scale_origin[2];
-      gVertexFastBuffer[c] = (glvert_fast_t){.flags = VERTEX, .vert = {x - shadevector[0] * (z + lheight), y - shadevector[1] * (z + lheight), height}, .texture = {0, 0}, .color = {0, 0, 0, 128}, .pad0 = {0}};
+      *submission_pointer++ = (glvert_fast_t){.flags = VERTEX, .vert = {x - shadevector[0] * (z + lheight), y - shadevector[1] * (z + lheight), height}, .texture = {0, 0}, .color = {.packed = PACK_BGRA8888(0, 0, 0, 128)}, .pad0 = {0}};
       order += 2;
       verts++;
     }
 
-    gVertexFastBuffer[c - 1].flags = VERTEX_EOL;
+    (*(submission_pointer - 1)).flags = VERTEX_EOL;
     glDrawArrays(GL_TRIANGLE_STRIP, 0, count);
   }
+
+  #ifdef PARANOID
+  if (count > 192)
+    printf("%s:%d drew: %d\n", __FILE__, __LINE__, count);
+  #endif
+
+#ifdef GL_EXT_dreamcast_direct_buffer
+  glDisable(GL_DIRECT_BUFFER_KOS);
+#endif
 
   glEnable(GL_CULL_FACE);
   glEnable(GL_TEXTURE_2D);
@@ -679,7 +854,7 @@ void R_DrawAliasModel(entity_t *e) {
   shadedots = r_avertexnormal_dots[((int)(e->angles[1] * (SHADEDOT_QUANT / 360.0))) & (SHADEDOT_QUANT - 1)];
   shadelight = shadelight / 200.0;
 
-#ifdef _arch_dreamcast
+#if defined(_arch_dreamcast) && defined(ENABLE_DC_MATH)
   fsincos(-e->angles[1], &shadevector[1], &shadevector[0]);
 #else
   //float an = DEG2RAD(e->angles[1]);
@@ -704,7 +879,6 @@ void R_DrawAliasModel(entity_t *e) {
 
   glPushMatrix();
   /* Old */
-  //R_RotateForEntity(e);
   // fenix@io.com: model transform interpolation
   if (r_interpolate_pos.value) {
     R_BlendedRotateForEntity(e);
@@ -712,7 +886,7 @@ void R_DrawAliasModel(entity_t *e) {
     R_RotateForEntity(e);
   }
 
-  if (!strcmp(clmodel->name, "progs/eyes.mdl") && gl_doubleeyes.value) {
+  if (__builtin_expect(!strcmp(clmodel->name, "progs/eyes.mdl") && gl_doubleeyes.value, 0)) {
     glTranslatef(paliashdr->scale_origin[0], paliashdr->scale_origin[1], paliashdr->scale_origin[2] - (22 + 8));
     // float size of eyes, since they are really hard to see in gl
     glScalef(paliashdr->scale[0] * 2, paliashdr->scale[1] * 2, paliashdr->scale[2] * 2);
@@ -729,8 +903,12 @@ void R_DrawAliasModel(entity_t *e) {
   if (currententity->colormap != vid.colormap && !gl_nocolors.value) {
     i = currententity - cl_entities;
     if (i >= 1 && i <= cl.maxclients /* && !strcmp (currententity->model->name, "progs/player.mdl") */)
-      GL_Bind(playertextures - 1 + i);
+      GL_Bind(playertextures[i-1]);
   }
+
+  /* Entities are filtered linear because mipamps arent guaranteed*/
+  glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+  glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
   if (gl_smoothmodels.value)
     glShadeModel(GL_SMOOTH);
@@ -742,7 +920,6 @@ void R_DrawAliasModel(entity_t *e) {
   glEnable(GL_CULL_FACE);
   glCullFace(GL_FRONT);
   /* Old */
-  //R_SetupAliasFrame(currententity->frame, paliashdr);
   // fenix@io.com: model animation interpolation
   if (r_interpolate_anim.value) {
     R_SetupAliasBlendedFrame(currententity->frame, paliashdr, currententity);
@@ -752,9 +929,8 @@ void R_DrawAliasModel(entity_t *e) {
 
   glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE);
 
-  glShadeModel(GL_FLAT);
-  if (gl_affinemodels.value)
-    glHint(GL_PERSPECTIVE_CORRECTION_HINT, GL_NICEST);
+  glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, _backup_min_filter);
+  glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, _backup_max_filter);
 
   glPopMatrix();
 
@@ -782,18 +958,24 @@ void R_DrawEntitiesOnList(void) {
   if (!r_drawentities.value)
     return;
 
+  extern int gl_filter_min;
+  extern int gl_filter_max;
+
+  _backup_min_filter = gl_filter_min;
+  _backup_max_filter = gl_filter_max;
+
   // draw sprites seperately, because of alpha blending
   for (i = 0; i < cl_numvisedicts; i++) {
     currententity = cl_visedicts[i];
 
     switch (currententity->model->type) {
       case mod_alias:
-        //@Note: Controls drawing of ALL entities
+        //@Note: Controls drawing of ALL Living entities
         R_DrawAliasModel(currententity);
         break;
 
       case mod_brush:
-        //@Note: Control drawing of world
+        //@Note: Controls drawing of level entities (doors, panels)
         R_DrawBrushModel(currententity);
         break;
 
@@ -814,39 +996,75 @@ void R_DrawEntitiesOnList(void) {
     }
   }
 }
-
 /*
 =============
 R_DrawViewModel
 =============
 */
-void R_DrawViewModel(void) {
-  if (!r_drawviewmodel.value)
-    return;
+void R_DrawViewModel (void)
+{
+	float		ambient[4], diffuse[4];
+	int			j;
+	int			lnum;
+	vec3_t		dist;
+	float		add;
+	dlight_t	*dl;
+	int			ambientlight, shadelight;
 
-  if (chase_active.value)
-    return;
+	if (!r_drawviewmodel.value || chase_active.value)
+		return;
 
-  if (envmap)
-    return;
+	if (!r_drawentities.value)
+		return;
 
-  if (!r_drawentities.value)
-    return;
+	if (cl.items & IT_INVISIBILITY)
+		return;
 
-  if (cl.items & IT_INVISIBILITY)
-    return;
+	if (cl.stats[STAT_HEALTH] <= 0)
+		return;
 
-  if (cl.stats[STAT_HEALTH] <= 0)
-    return;
+	currententity = &cl.viewent;
+	if (!currententity->model)
+		return;
+  
+	j = R_LightPoint (currententity->origin);
 
-  currententity = &cl.viewent;
-  if (!currententity->model)
-    return;
+	if (j < 24)
+		j = 24;		// allways give some light on gun
+	ambientlight = j;
+	shadelight = j;
 
-  // hack the depth range to prevent view model from poking into walls
-  glDepthRange(gldepthmin, gldepthmin + 0.3 * (gldepthmax - gldepthmin));
+// add dynamic lights		
+	for (lnum=0 ; lnum<MAX_DLIGHTS ; lnum++)
+	{
+		dl = &cl_dlights[lnum];
+		if (!dl->radius)
+			continue;
+		if (!dl->radius)
+			continue;
+		if (dl->die < cl.time)
+			continue;
+
+		VectorSubtract (currententity->origin, dl->origin, dist);
+		add = dl->radius - Length(dist);
+		if (add > 0)
+			ambientlight += add;
+	}
+
+	ambient[0] = ambient[1] = ambient[2] = ambient[3] = (float)ambientlight / 128;
+	diffuse[0] = diffuse[1] = diffuse[2] = diffuse[3] = (float)shadelight / 128;
+
+// hack the depth range to prevent view model from poking into walls
+  float save1 = r_interpolate_anim.value;
+  float save2 = r_interpolate_pos.value;
+  r_interpolate_anim.value = r_interpolate_pos.value = 0;
+
+  glDepthRange(gldepthmin, gldepthmin + 0.1f*(gldepthmax-gldepthmin));
   R_DrawAliasModel(currententity);
   glDepthRange(gldepthmin, gldepthmax);
+
+  r_interpolate_anim.value = save1;
+  r_interpolate_pos.value = save2;
 }
 
 /*
@@ -860,42 +1078,68 @@ void R_PolyBlend(void) {
   if (!v_blend[3])
     return;
 
-#ifndef _arch_dreamcast
-  float temp = v_blend[0];
-  v_blend[0] = v_blend[2];
-  v_blend[2] = temp;
-#endif
-
-  glvert_fast_t vertex[6] = {
-      (glvert_fast_t){.flags = VERTEX, .vert = {0, 0, 0}, .texture = {0, 0}, .color = {(int)(v_blend[2] * 255), (int)(v_blend[1] * 255), (int)(v_blend[0] * 255), (int)(v_blend[3] * 255)}, .pad0 = {0}},
-      (glvert_fast_t){.flags = VERTEX, .vert = {640, 0, 0}, .texture = {0, 0}, .color = {(int)(v_blend[2] * 255), (int)(v_blend[1] * 255), (int)(v_blend[0] * 255), (int)(v_blend[3] * 255)}, .pad0 = {0}},
-      (glvert_fast_t){.flags = VERTEX_EOL, .vert = {0, 480, 0}, .texture = {0, 0}, .color = {(int)(v_blend[2] * 255), (int)(v_blend[1] * 255), (int)(v_blend[0] * 255), (int)(v_blend[3] * 255)}, .pad0 = {0}},
-      (glvert_fast_t){.flags = VERTEX, .vert = {0, 480, 0}, .texture = {0, 0}, .color = {(int)(v_blend[2] * 255), (int)(v_blend[1] * 255), (int)(v_blend[0] * 255), (int)(v_blend[3] * 255)}, .pad0 = {0}},
-      (glvert_fast_t){.flags = VERTEX, .vert = {640, 0, 0}, .texture = {0, 0}, .color = {(int)(v_blend[2] * 255), (int)(v_blend[1] * 255), (int)(v_blend[0] * 255), (int)(v_blend[3] * 255)}, .pad0 = {0}},
-      (glvert_fast_t){.flags = VERTEX_EOL, .vert = {640, 480, 0}, .texture = {0, 0}, .color = {(int)(v_blend[2] * 255), (int)(v_blend[1] * 255), (int)(v_blend[0] * 255), (int)(v_blend[3] * 255)}, .pad0 = {0}},
-  };
-
-#ifndef _arch_dreamcast
-  temp = v_blend[0];
-  v_blend[0] = v_blend[2];
-  v_blend[2] = temp;
-#endif
-
-  glDisable(GL_ALPHA_TEST);
   glDisable(GL_TEXTURE_2D);
-  glDisable(GL_DEPTH_TEST);
+  glDepthMask(GL_FALSE);
   glEnable(GL_BLEND);
+  glLoadIdentity();
+
+  glRotatef(-90, 1, 0, 0);  // put Z going up
+  glRotatef(90, 0, 0, 1);   // put Z going up
+  glvert_fast_t quadvert[4];
+  /* 1----2
+	   |    |
+		 |    |
+		 4----3
+		 Strip: 1423
+		 2Tris: 124423
+ 	*/
+  //Vertex 1
+  //Quad vertex
+  quadvert[0] = (glvert_fast_t){.flags = VERTEX,
+                                .vert = {10, -100, 100},
+                                .texture = {0, 1},
+                                .color = {.array = {(uint8_t)(v_blend[2] * 255), (uint8_t)(v_blend[1] * 255), (uint8_t)(v_blend[0] * 255), (uint8_t)(v_blend[3] * 255)}},
+                                .pad0 = {0}};
+
+  //Vertex 4
+  //Quad vertex
+  quadvert[1] = (glvert_fast_t){.flags = VERTEX,
+                                .vert = {10, -100, -100},
+                                .texture = {0, 1},
+                                .color = {.array = {(uint8_t)(v_blend[2] * 255), (uint8_t)(v_blend[1] * 255), (uint8_t)(v_blend[0] * 255), (uint8_t)(v_blend[3] * 255)}},
+                                .pad0 = {0}};
+
+  //Vertex 2
+  //Quad vertex
+  quadvert[2] = (glvert_fast_t){.flags = VERTEX,
+                                .vert = {10, 100, 100},
+                                .texture = {0, 1},
+                                .color = {.array = {(uint8_t)(v_blend[2] * 255), (uint8_t)(v_blend[1] * 255), (uint8_t)(v_blend[0] * 255), (uint8_t)(v_blend[3] * 255)}},
+                                .pad0 = {0}};
+
+  //Vertex 3
+  //Quad vertex
+  quadvert[3] = (glvert_fast_t){.flags = VERTEX_EOL,
+                                .vert = {10, 100, -100},
+                                .texture = {0, 1},
+                                .color = {.array = {(uint8_t)(v_blend[2] * 255), (uint8_t)(v_blend[1] * 255), (uint8_t)(v_blend[0] * 255), (uint8_t)(v_blend[3] * 255)}},
+                                .pad0 = {0}};
 
   glDisableClientState(GL_TEXTURE_COORD_ARRAY);
   glEnableClientState(GL_COLOR_ARRAY);
-  glVertexPointer(3, GL_FLOAT, sizeof(glvert_fast_t), &vertex[0].vert);
-  glTexCoordPointer(2, GL_FLOAT, sizeof(glvert_fast_t), &vertex[0].texture);
-  glColorPointer(4, GL_UNSIGNED_BYTE, sizeof(glvert_fast_t), &vertex[0].color);
-  glDrawArrays(GL_TRIANGLES, 0, 6);
-  glDisable(GL_BLEND);
-  glEnable(GL_TEXTURE_2D);
+  glVertexPointer(3, GL_FLOAT, sizeof(glvert_fast_t), &quadvert[0].vert);
+  glTexCoordPointer(2, GL_FLOAT, sizeof(glvert_fast_t), &quadvert[0].texture);
+#ifdef WIN98
+  glColorPointer(4, GL_UNSIGNED_BYTE, sizeof(glvert_fast_t), &quadvert[0].color);
+#else
+  glColorPointer(GL_BGRA, GL_UNSIGNED_BYTE, sizeof(glvert_fast_t), &quadvert[0].color);
+#endif
+  glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
   glDisableClientState(GL_COLOR_ARRAY);
   glEnableClientState(GL_TEXTURE_COORD_ARRAY);
+  glDepthMask(GL_TRUE);
+
+  glEnable(GL_TEXTURE_2D);
 }
 
 int SignbitsForPlane(mplane_t *out) {
@@ -924,13 +1168,13 @@ void R_SetFrustum(void) {
     VectorSubtract(vpn, vup, frustum[3].normal);
   } else {
     // rotate VPN right by FOV_X/2 degrees
-    RotatePointAroundVector(frustum[0].normal, vup, vpn, -(90 - r_refdef.fov_x / 2));
+    RotatePointAroundVector(frustum[0].normal, vup, vpn, -(90 - r_refdef.fov_x * 0.5f));
     // rotate VPN left by FOV_X/2 degrees
-    RotatePointAroundVector(frustum[1].normal, vup, vpn, 90 - r_refdef.fov_x / 2);
+    RotatePointAroundVector(frustum[1].normal, vup, vpn, 90 - r_refdef.fov_x * 0.5f);
     // rotate VPN up by FOV_X/2 degrees
-    RotatePointAroundVector(frustum[2].normal, vright, vpn, 90 - r_refdef.fov_y / 2);
+    RotatePointAroundVector(frustum[2].normal, vright, vpn, 90 - r_refdef.fov_y * 0.5f);
     // rotate VPN down by FOV_X/2 degrees
-    RotatePointAroundVector(frustum[3].normal, vright, vpn, -(90 - r_refdef.fov_y / 2));
+    RotatePointAroundVector(frustum[3].normal, vright, vpn, -(90 - r_refdef.fov_y * 0.5f));
   }
 
   for (i = 0; i < 4; i++) {
@@ -972,9 +1216,8 @@ void R_SetupFrame(void) {
   c_alias_polys = 0;
 }
 
-void MYgluPerspective(GLdouble fovy, GLdouble aspect,
-                      GLdouble zNear, GLdouble zFar) {
-  GLdouble xmin, xmax, ymin, ymax;
+void MYgluPerspective(GLfloat fovy, GLfloat aspect, GLfloat zNear, GLfloat zFar) {
+  GLfloat xmin, xmax, ymin, ymax;
 
   ymax = zNear * tanf(fovy * M_PI / 360.0f);
   ymin = -ymax;
@@ -1025,25 +1268,40 @@ void R_SetupGL(void) {
 
   glViewport(glx + x, gly + y2, w, h);
   screenaspect = (float)r_refdef.vrect.width / r_refdef.vrect.height;
-  //float yfov = 2*atan((float)r_refdef.vrect.height/r_refdef.vrect.width)*180/M_PI;
-  //gluPerspective (yfov,  screenaspect,  4,  4096);
-  MYgluPerspective(r_refdef.fov_y, screenaspect, 4, 4096);
+  #if 0
+  //float yfov = 2 * atanf((float)r_refdef.vrect.height / r_refdef.vrect.width) * 180 / M_PI;
+  //gluPerspective(yfov, screenaspect, 4, 4096);
+  //MYgluPerspective(r_refdef.fov_y, screenaspect, 4, 4096);
+  #endif
+  MYgluPerspective(r_refdef.fov_y, screenaspect,  4, 4096);
 
-  glEnable(GL_CULL_FACE);
+  //
+  // set drawing parms
+  //
+  if (gl_cull.value)
+    glEnable(GL_CULL_FACE);
+  else
+    glDisable(GL_CULL_FACE);
   glCullFace(GL_FRONT);
 
   glMatrixMode(GL_MODELVIEW);
   glLoadIdentity();
+  //return; //@Note: what is this here for?!?
 
-  glRotatef(-90, 1, 0, 0);  // put Z going up
-  glRotatef(90, 0, 0, 1);   // put Z going up
-  glRotatef(-r_refdef.viewangles[2], 1, 0, 0);
-  glRotatef(-r_refdef.viewangles[0], 0, 1, 0);
-  glRotatef(-r_refdef.viewangles[1], 0, 0, 1);
-  glTranslatef(-r_refdef.vieworg[0], -r_refdef.vieworg[1], -r_refdef.vieworg[2]);
+  mat4 model_temp = GLM_MAT4_IDENTITY_INIT;
+
+  glm_rotate_x(model_temp, DEG2RAD(-90.0f), model_temp);  // put Z going up
+  glm_rotate_z(model_temp, DEG2RAD(90), model_temp);      // put Z going up
+
+  glm_rotate_x(model_temp, DEG2RAD(-r_refdef.viewangles[2]), model_temp);
+  glm_rotate_y(model_temp, DEG2RAD(-r_refdef.viewangles[0]), model_temp);
+  glm_rotate_z(model_temp, DEG2RAD(-r_refdef.viewangles[1]), model_temp);
+
+  glm_translate(model_temp, (vec3){-r_refdef.vieworg[0], -r_refdef.vieworg[1], -r_refdef.vieworg[2]});
+
+  glLoadMatrixf((float *)model_temp);
 
   glDisable(GL_BLEND);
-  glDisable(GL_ALPHA_TEST);
   glEnable(GL_DEPTH_TEST);
 }
 
@@ -1055,6 +1313,7 @@ r_refdef must be set before the first call
 ================
 */
 void R_RenderScene(void) {
+
   R_SetupFrame();
 
   R_SetFrustum();
@@ -1063,6 +1322,7 @@ void R_RenderScene(void) {
 
   R_MarkLeaves();  // done here so we know if we're in water
 
+  /*@Note: controls world geometry drawing */
   R_DrawWorld();  // adds static entities to the list
 
   S_ExtraUpdate();  // don't let sound get messed up if going slow
@@ -1074,10 +1334,6 @@ void R_RenderScene(void) {
   R_RenderDlights();
 
   R_DrawParticles();
-
-#ifdef GLTEST
-  Test_Draw();
-#endif
 }
 
 /*
@@ -1085,119 +1341,54 @@ void R_RenderScene(void) {
 R_Clear
 =============
 */
-void R_Clear(void) {
-  //@Note glClear doesn't do anything anyways, dont call it
-  if (r_mirroralpha.value != 1.0) {
-#ifndef _arch_dreamcast
-    if (gl_clear.value)
-      glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-    else
-      glClear(GL_DEPTH_BUFFER_BIT);
-#endif
-    gldepthmin = 0;
-    gldepthmax = 0.5;
-    glDepthFunc(GL_LEQUAL);
-  } else if (gl_ztrick.value) {
-    static int trickframe;
-#ifndef _arch_dreamcast
-    if (gl_clear.value)
-      glClear(GL_COLOR_BUFFER_BIT);
-#endif
-
-    trickframe++;
-    if (trickframe & 1) {
-      gldepthmin = 0;
-      gldepthmax = 0.49999;
-      glDepthFunc(GL_LEQUAL);
-    } else {
-      gldepthmin = 1;
-      gldepthmax = 0.5;
-      glDepthFunc(GL_GEQUAL);
-    }
-  } else {
-#ifndef _arch_dreamcast
-    if (gl_clear.value)
-      glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-    else
-      glClear(GL_DEPTH_BUFFER_BIT);
-#endif
-    gldepthmin = 0;
-    gldepthmax = 1;
-    glDepthFunc(GL_LEQUAL);
-  }
-
-  glDepthRange(gldepthmin, gldepthmax);
-}
-
-/*
-=============
-R_Mirror
-=============
-*/
-#if 0
-void R_Mirror (void)
+void R_Clear (void)
 {
-
-	float		d;
-	msurface_t	*s;
-	entity_t	*ent;
-
-	if (!mirror)
-		return;
-
-	memcpy (r_base_world_matrix, r_world_matrix, sizeof(r_base_world_matrix));
-
-	d = DotProduct (r_refdef.vieworg, mirror_plane->normal) - mirror_plane->dist;
-	VectorMA (r_refdef.vieworg, -2*d, mirror_plane->normal, r_refdef.vieworg);
-
-	d = DotProduct (vpn, mirror_plane->normal);
-	VectorMA (vpn, -2*d, mirror_plane->normal, vpn);
-
-	r_refdef.viewangles[0] = -asin (vpn[2])/M_PI*180;
-	r_refdef.viewangles[1] = atan2 (vpn[1], vpn[0])/M_PI*180;
-	r_refdef.viewangles[2] = -r_refdef.viewangles[2];
-
-	ent = &cl_entities[cl.viewentity];
-	if (cl_numvisedicts < MAX_VISEDICTS)
+  #if 0
+	if (r_mirroralpha.value != 1.0)
 	{
-		cl_visedicts[cl_numvisedicts] = ent;
-		cl_numvisedicts++;
+		if (gl_clear.value)
+			glClear (GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+		else
+			glClear (GL_DEPTH_BUFFER_BIT);
+		gldepthmin = 0;
+		gldepthmax = 0.5;
+		glDepthFunc (GL_LEQUAL);
 	}
+	else if (gl_ztrick.value)
+	{
+		static int trickframe;
 
-	gldepthmin = 0.5;
-	gldepthmax = 1;
-	glDepthRange (gldepthmin, gldepthmax);
-	glDepthFunc (GL_LEQUAL);
+		if (gl_clear.value)
+			glClear (GL_COLOR_BUFFER_BIT);
 
-	R_RenderScene ();
-	R_DrawWaterSurfaces ();
-
-	gldepthmin = 0;
-	gldepthmax = 0.5;
-	glDepthRange (gldepthmin, gldepthmax);
-	glDepthFunc (GL_LEQUAL);
-
-	// blend on top
-	glEnable (GL_BLEND);
-	glMatrixMode(GL_PROJECTION);
-	if (mirror_plane->normal[2])
-		glScalef (1,-1,1);
+		trickframe++;
+		if (trickframe & 1)
+		{
+			gldepthmin = 0;
+			gldepthmax = 0.49999;
+			glDepthFunc (GL_LEQUAL);
+		}
+		else
+		{
+			gldepthmin = 1;
+			gldepthmax = 0.5;
+			glDepthFunc (GL_GEQUAL);
+		}
+	}
 	else
-		glScalef (-1,1,1);
-	glCullFace(GL_FRONT);
-	glMatrixMode(GL_MODELVIEW);
+	{
+  #endif
+		if (gl_clear.value)
+			glClear (GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+		else
+			glClear (GL_DEPTH_BUFFER_BIT);
+		gldepthmin = 0;
+		gldepthmax = 1;
+		glDepthFunc (GL_LEQUAL);
+	//}
 
-	glLoadMatrixf (r_base_world_matrix);
-
-	glColor4f (1,1,1,r_mirroralpha.value);
-	s = cl.worldmodel->textures[mirrortexturenum]->texturechain;
-	for ( ; s ; s=s->texturechain)
-		R_RenderBrushPoly (s);
-	cl.worldmodel->textures[mirrortexturenum]->texturechain = NULL;
-	glDisable (GL_BLEND);
-	glColor4f (1,1,1,1);
+	glDepthRange (gldepthmin, gldepthmax);
 }
-#endif
 
 /*
 ================
@@ -1238,12 +1429,11 @@ void R_RenderView(void) {
 	glFogf(GL_FOG_END, 512.0);
 	glEnable(GL_FOG);
 ********************************************/
+  //return; //@Note: what is this here for?!?
 
   R_RenderScene();
-  r_interpolate_pos.value = !r_interpolate_pos.value;
   R_DrawViewModel();
-  r_interpolate_pos.value = !r_interpolate_pos.value;
-  R_DrawWaterSurfaces(); /* @Todo: Maybe unneeded */
+  R_DrawWaterSurfaces();
 
   //  More fog right here :)
   //	glDisable(GL_FOG);
@@ -1255,7 +1445,7 @@ void R_RenderView(void) {
 		R_Mirror ();
 	*/
 
-  //R_PolyBlend (); /*@NOTE: HACK! */
+  R_PolyBlend(); /*@NOTE: HACK! */
 
   if (r_speeds.value) {
     //		glFinish ();

@@ -21,9 +21,9 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 #include "quakedef.h"
 
-int			wad_numlumps;
-lumpinfo_t	*wad_lumps;
-byte		*wad_base;
+static int wad_numlumps;
+static lumpinfo_t	*wad_lumps;
+static byte	* __attribute__((aligned(32))) wad_base;
 
 void SwapPic (qpic_t *pic);
 
@@ -69,7 +69,7 @@ void W_LoadWadFile (char *filename)
 {
 	lumpinfo_t		*lump_p;
 	wadinfo_t		*header;
-	unsigned		i;
+	int		i;
 	int				infotableofs;
 	
 	wad_base = COM_LoadHunkFile (filename);

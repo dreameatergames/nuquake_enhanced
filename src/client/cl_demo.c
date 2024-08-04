@@ -328,15 +328,20 @@ void CL_FinishTimeDemo (void)
 {
 	int		frames;
 	float	time;
-	
+
 	cls.timedemo = false;
-	
+
 // the first frame didn't count
 	frames = (host_framecount - cls.td_startframe) - 1;
 	time = realtime - cls.td_starttime;
 	if (!time)
 		time = 1;
-	Con_Printf ("%i frames %5.1f seconds %5.1f fps\n", frames, time, frames/time);
+
+	char str_time[32], str_fps[32];
+	ftoa(time, str_time, 5, 1);
+	ftoa(frames/time, str_fps, 5, 1);
+	Con_Printf ("%i frames %s seconds %s fps\n", frames, str_time, str_fps);
+	//Con_Printf ("%i frames %5.1f seconds %5.1f fps\n", frames, time, frames/time);
 }
 
 /*

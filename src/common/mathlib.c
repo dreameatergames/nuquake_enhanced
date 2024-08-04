@@ -8,7 +8,7 @@ of the License, or (at your option) any later version.
 
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 See the GNU General Public License for more details.
 
@@ -30,7 +30,7 @@ int nanmask = 255 << 23;
 /*-----------------------------------------------------------------*/
 
 void ProjectPointOnPlane(vec3_t dst, const vec3_t p, const vec3_t normal) {
-#ifdef _arch_dreamcast
+#if defined(_arch_dreamcast) && defined(ENABLE_DC_MATH)
   float d;
   float inv_denom;
 
@@ -132,7 +132,7 @@ void RotatePointAroundVector(vec3_t dst, const vec3_t dir, const vec3_t point, f
   memset(zrot, 0, sizeof(zrot));
   /*zrot[0][0] = zrot[1][1] = */
   zrot[2][2] = 1.0F;
-#ifdef _arch_dreamcast
+#if defined(_arch_dreamcast) && defined(ENABLE_DC_MATH)
   fsincos(degrees, &zrot[0][1], &zrot[0][0]);
   fsincos(degrees, &zrot[1][0], &zrot[1][1]);
   zrot[1][0] *= -1.0f;
@@ -352,7 +352,7 @@ int BoxOnPlaneSide(const vec3_t emins, const vec3_t emaxs, mplane_t *p) {
 void AngleVectors(vec3_t angles, vec3_t forward, vec3_t right, vec3_t up) {
   float sr, sp, sy, cr, cp, cy;
 
-#ifdef _arch_dreamcast
+#if defined(_arch_dreamcast) && defined(ENABLE_DC_MATH)
   fsincos(angles[YAW], &sy, &cy);
   fsincos(angles[PITCH], &sp, &cp);
   fsincos(angles[ROLL], &sr, &cr);
@@ -391,7 +391,7 @@ int VectorCompare(vec3_t v1, vec3_t v2) {
 }
 
 void VectorMA(vec3_t veca, float scale, vec3_t vecb, vec3_t vecc) {
-#ifdef _arch_dreamcast
+#if defined(_arch_dreamcast) && defined(ENABLE_DC_MATH)
   vecc[0] = MATH_fmac(vecb[0], scale, veca[0]);
   vecc[1] = MATH_fmac(vecb[1], scale, veca[1]);
   vecc[2] = MATH_fmac(vecb[2], scale, veca[2]);
@@ -402,26 +402,9 @@ void VectorMA(vec3_t veca, float scale, vec3_t vecb, vec3_t vecc) {
 #endif
 }
 
-void _VectorSubtract(vec3_t veca, vec3_t vecb, vec3_t out) {
-  out[0] = veca[0] - vecb[0];
-  out[1] = veca[1] - vecb[1];
-  out[2] = veca[2] - vecb[2];
-}
-
-void _VectorAdd(vec3_t veca, vec3_t vecb, vec3_t out) {
-  out[0] = veca[0] + vecb[0];
-  out[1] = veca[1] + vecb[1];
-  out[2] = veca[2] + vecb[2];
-}
-
-void _VectorCopy(vec3_t in, vec3_t out) {
-  out[0] = in[0];
-  out[1] = in[1];
-  out[2] = in[2];
-}
 
 vec_t Length(vec3_t v) {
-#ifdef _arch_dreamcast
+#if defined(_arch_dreamcast) && defined(ENABLE_DC_MATH)
   return MATH_Fast_Sqrt(v[0] * v[0] + v[1] * v[1] + v[2] * v[2]);
 #else
   int i;

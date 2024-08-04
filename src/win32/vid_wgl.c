@@ -62,12 +62,10 @@ lmode_t	lowresmodes[] = {
 	{512, 384},
 };
 
-const char *gl_vendor;
-const char *gl_renderer;
-const char *gl_version;
-const char *gl_extensions;
-
-glvert_fast_t gVertexFastBuffer[VERTEXARRAYSIZE];
+const GLubyte *gl_vendor;
+const GLubyte *gl_renderer;
+const GLubyte *gl_version;
+const GLubyte *gl_extensions;
 
 PFNGLACTIVETEXTUREARBPROC glActiveTextureARB;
 PFNGLCLIENTACTIVETEXTUREARBPROC glClientActiveTextureARB;
@@ -78,10 +76,7 @@ int VCR_Init (void)
 }
 
 void VID_HandlePause(qboolean pause) {(void)pause;}
-qboolean isDreamcast = false;
 cvar_t	gl_lighting = {"gl_lighting", "1"};
-
-qboolean		DDActive;
 
 static vmode_t	modelist[MAX_MODE_LIST];
 static int		nummodes;
@@ -130,7 +125,7 @@ modestate_t	modestate = MS_UNINIT;
 void VID_MenuDraw (void);
 void VID_MenuKey (int key);
 
-LONG WINAPI MainWndProc (HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
+LRESULT WINAPI MainWndProc (HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
 void AppActivate(BOOL fActive, BOOL minimize);
 char *VID_GetModeDescription (int mode);
 void ClearAllStates (void);
@@ -494,8 +489,7 @@ void CheckTextureExtensions (void)
 	}
 
 /* load library and get procedure adresses for texture extension API */
-	if ((bindTexFunc = (BINDTEXFUNCPTR)
-		wglGetProcAddress((LPCSTR) "glBindTextureEXT")) == NULL)
+	if ((bindTexFunc = (BINDTEXFUNCPTR) ((void*)wglGetProcAddress((LPCSTR) "glBindTextureEXT"))) == NULL)
 	{
 		Sys_Error ("GetProcAddress for BindTextureEXT failed");
 		return;
@@ -505,8 +499,8 @@ void CheckTextureExtensions (void)
 void CheckArrayExtensions (void)
 {
 	char		*tmp;
-	glActiveTextureARB = (PFNGLACTIVETEXTUREARBPROC) wglGetProcAddress("glActiveTextureARB");
-	glClientActiveTextureARB = (PFNGLCLIENTACTIVETEXTUREARBPROC) wglGetProcAddress("glClientActiveTextureARB");
+	glActiveTextureARB = (PFNGLACTIVETEXTUREARBPROC) ((void*)wglGetProcAddress("glActiveTextureARB"));
+	glClientActiveTextureARB = (PFNGLCLIENTACTIVETEXTUREARBPROC) ((void*)wglGetProcAddress("glClientActiveTextureARB"));
 
 	/* check for texture extension */
 	tmp = (char *)glGetString(GL_EXTENSIONS);
@@ -531,13 +525,6 @@ void CheckArrayExtensions (void)
 	Sys_Error ("Vertex array extension not present");
 }
 
-//int		texture_mode = GL_NEAREST;
-//int		texture_mode = GL_NEAREST_MIPMAP_NEAREST;
-//int		texture_mode = GL_NEAREST_MIPMAP_LINEAR;
-int		texture_mode = GL_LINEAR;
-//int		texture_mode = GL_LINEAR_MIPMAP_NEAREST;
-//int		texture_mode = GL_LINEAR_MIPMAP_LINEAR;
-
 int		texture_extension_number = 1;
 
 void CheckMultiTextureExtensions(void)
@@ -553,9 +540,9 @@ void CheckMultiTextureExtensions(void)
    if (COM_CheckParm("-nomtexarb"))
       ARB = false;
    else
-      ARB = strstr (gl_extensions, "GL_ARB_multitexture ") != NULL;
+      ARB = strstr ((char*)gl_extensions, "GL_ARB_multitexture ") != NULL;
 
-   SGIS = strstr (gl_extensions, "GL_SGIS_multitexture ") != NULL;
+   SGIS = strstr ((char*)gl_extensions, "GL_SGIS_multitexture ") != NULL;
 
    if (ARB || SGIS)
    {
@@ -578,22 +565,22 @@ GL_Init
 */
 void GL_Init (void)
 {
-	gl_vendor = (char *)glGetString (GL_VENDOR);
+	gl_vendor = glGetString (GL_VENDOR);
 //	Con_Printf ("GL_VENDOR: %s\n", gl_vendor);
-	gl_renderer = (char *)glGetString (GL_RENDERER);
+	gl_renderer = glGetString (GL_RENDERER);
 //	Con_Printf ("GL_RENDERER: %s\n", gl_renderer);
 
-	gl_version = (char *)glGetString (GL_VERSION);
+	gl_version = glGetString (GL_VERSION);
 //	Con_Printf ("GL_VERSION: %s\n", gl_version);
-	gl_extensions = (char *)glGetString (GL_EXTENSIONS);
+	gl_extensions = glGetString (GL_EXTENSIONS);
 //	Con_Printf ("GL_EXTENSIONS: %s\n", gl_extensions);
 
 //	Con_Printf ("%s %s\n", gl_renderer, gl_version);
 
-    if (_strnicmp(gl_renderer,"PowerVR",7)==0)
+    if (_strnicmp((char*)gl_renderer,"PowerVR",7)==0)
          fullsbardraw = true;
 
-    if (_strnicmp(gl_renderer,"Permedia",8)==0)
+    if (_strnicmp((char*)gl_renderer,"Permedia",8)==0)
          isPermedia = true;
 
 	CheckTextureExtensions ();
@@ -604,7 +591,7 @@ void GL_Init (void)
 	glCullFace(GL_FRONT);
 	glEnable(GL_TEXTURE_2D);
 
-	glEnable(GL_ALPHA_TEST);
+	//glEnable(GL_ALPHA_TEST);
 	glAlphaFunc(GL_GREATER, 0.666);
 
 	glPolygonMode (GL_FRONT_AND_BACK, GL_FILL);
@@ -669,13 +656,13 @@ void GL_EndRendering (void)
 
 void	VID_SetPalette (unsigned char *palette)
 {
-	byte	*pal;
+	byte* restrict pal;
 	unsigned r,g,b;
 	unsigned v;
 	int     r1, g1, b1;
 	int		j, k, l;
 	unsigned short i;
-	unsigned	*table;
+	unsigned int* restrict table;
 
 //
 // 8 8 8 encoding
@@ -708,7 +695,7 @@ void	VID_SetPalette (unsigned char *palette)
 		r = ((i & 0x1F) << 3)+4;
 		g = ((i & 0x03E0) >> 2)+4;
 		b = ((i & 0x7C00) >> 7)+4;
-		pal = (unsigned char *)d_8to24table;
+		pal = (unsigned char * restrict)d_8to24table;
 		for (v=0,k=0,l=10000*10000; v<256; v++,pal+=4) {
 			r1 = r-pal[0];
 			g1 = g-pal[1];
@@ -723,14 +710,10 @@ void	VID_SetPalette (unsigned char *palette)
 	}
 }
 
-BOOL	gammaworks;
-
 void	VID_ShiftPalette (unsigned char *palette)
 {
 	(void)palette;
 //	VID_SetPalette (palette);
-
-//	gammaworks = SetDeviceGammaRamp (maindc, ramps);
 }
 
 
@@ -972,7 +955,7 @@ void AppActivate(BOOL fActive, BOOL minimize)
 
 
 /* main window procedure */
-LONG WINAPI MainWndProc (
+LRESULT WINAPI MainWndProc (
     HWND    hWnd,
     UINT    uMsg,
     WPARAM  wParam,
@@ -1477,7 +1460,7 @@ void VID_Init8bitPalette()
 		return;
 
 	glColorTableEXT = (void *)wglGetProcAddress("glColorTableEXT");
-    if (glColorTableEXT || strstr(gl_extensions, "GL_EXT_shared_texture_palette"))
+    if (glColorTableEXT || strstr((char*)gl_extensions, "GL_EXT_shared_texture_palette"))
 		return;
 
 	Con_SafePrintf("8-bit GL extensions enabled.\n");
@@ -1502,8 +1485,8 @@ static void Check_Gamma (unsigned char *pal)
 	int		i;
 
 	if ((i = COM_CheckParm("-gamma")) == 0) {
-		if ((gl_renderer && strstr(gl_renderer, "Voodoo")) ||
-			(gl_vendor && strstr(gl_vendor, "3Dfx")))
+		if ((gl_renderer && strstr((char*)gl_renderer, "Voodoo")) ||
+			(gl_vendor && strstr((char*)gl_vendor, "3Dfx")))
 			vid_gamma = 1;
 		else
 			vid_gamma = 0.7; // default to 0.7 on non-3dfx hardware

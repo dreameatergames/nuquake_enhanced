@@ -138,6 +138,12 @@ void Q_memcpy (void *dest, const void *src, int count)
 			((byte *)dest)[i] = ((byte *)src)[i];
 }
 
+//Spike: for renderer/server isolation
+void Cbuf_Waited(void)
+{
+	cmd_wait = false;
+}
+
 /*
 ============
 Cbuf_Execute
@@ -511,7 +517,7 @@ void Cmd_AddCommand(char *cmd_name, xcommand_t function) {
     }
   }
 
-  cmd = Hunk_Alloc(sizeof(cmd_function_t));
+  cmd = Hunk_AllocName (sizeof(cmd_function_t), "cmd");
   cmd->name = cmd_name;
   cmd->function = function;
   cmd->next = cmd_functions;
@@ -593,7 +599,7 @@ void Cmd_ExecuteString(char *text, cmd_source_t src) {
 
   // check cvars
   if (!Cvar_Command())
-    Con_Printf("Unknown command \"%s\"\n", Cmd_Argv(0));
+    Con_DPrintf("Unknown command \"%s\"\n", Cmd_Argv(0));
 }
 
 /*

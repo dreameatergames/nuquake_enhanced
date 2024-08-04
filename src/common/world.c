@@ -202,7 +202,6 @@ SV_CreateAreaNode
 areanode_t *SV_CreateAreaNode (int depth, vec3_t mins, vec3_t maxs)
 {
 	areanode_t	*anode;
-	vec3_t		size;
 	vec3_t		mins1, maxs1, mins2, maxs2;
 
 	anode = &sv_areanodes[sv_numareanodes];
@@ -218,8 +217,13 @@ areanode_t *SV_CreateAreaNode (int depth, vec3_t mins, vec3_t maxs)
 		return anode;
 	}
 	
-	VectorSubtract (maxs, mins, size);
-	if (size[0] > size[1])
+	const float size_0 = maxs[0]-mins[0];
+	const float size_1 = maxs[1]-mins[1];
+
+	/* something broke on pipelining for dreamcast */
+	anode->axis = 0;
+
+	if (size_0 > size_1)
 		anode->axis = 0;
 	else
 		anode->axis = 1;
@@ -394,10 +398,10 @@ void SV_LinkEdict (edict_t *ent, qboolean touch_triggers)
 		max = 0;
 		for (i=0 ; i<3 ; i++)
 		{
-			v =fabs( ent->v.mins[i]);
+			v =FABS( ent->v.mins[i]);
 			if (v > max)
 				max = v;
-			v =fabs( ent->v.maxs[i]);
+			v =FABS( ent->v.maxs[i]);
 			if (v > max)
 				max = v;
 		}
@@ -480,8 +484,6 @@ POINT TESTING IN HULLS
 ===============================================================================
 */
 
-#if	!id386
-
 /*
 ==================
 SV_HullPointContents
@@ -514,8 +516,6 @@ int SV_HullPointContents (hull_t *hull, int num, vec3_t p)
 	
 	return num;
 }
-
-#endif	// !id386
 
 
 /*
@@ -624,18 +624,11 @@ qboolean SV_RecursiveHullCheck (hull_t *hull, int num, float p1f, float p2f, vec
 		t1 = DotProduct (plane->normal, p1) - plane->dist;
 		t2 = DotProduct (plane->normal, p2) - plane->dist;
 	}
-	
-#if 1
+
 	if (t1 >= 0 && t2 >= 0)
 		return SV_RecursiveHullCheck (hull, node->children[0], p1f, p2f, p1, p2, trace);
 	if (t1 < 0 && t2 < 0)
 		return SV_RecursiveHullCheck (hull, node->children[1], p1f, p2f, p1, p2, trace);
-#else
-	if ( (t1 >= DIST_EPSILON && t2 >= DIST_EPSILON) || (t2 > t1 && t1 >= 0) )
-		return SV_RecursiveHullCheck (hull, node->children[0], p1f, p2f, p1, p2, trace);
-	if ( (t1 <= -DIST_EPSILON && t2 <= -DIST_EPSILON) || (t2 < t1 && t1 <= 0) )
-		return SV_RecursiveHullCheck (hull, node->children[1], p1f, p2f, p1, p2, trace);
-#endif
 
 // put the crosspoint DIST_EPSILON pixels on the near side
 	if (t1 < 0)
@@ -646,34 +639,29 @@ qboolean SV_RecursiveHullCheck (hull_t *hull, int num, float p1f, float p2f, vec
 		frac = 0;
 	if (frac > 1)
 		frac = 1;
-		
+
 	midf = p1f + (p2f - p1f)*frac;
 	for (i=0 ; i<3 ; i++)
 		mid[i] = p1[i] + frac*(p2[i] - p1[i]);
 
-	side = (t1 < 0);
+
+	/* something broke on pipelining for dreamcast */
+	side = (t1 < 0.0);
+	const int num2 = node->children[side];
+	const int num3 = node->children[side^1];
 
 // move up to the node
-	if (!SV_RecursiveHullCheck (hull, node->children[side], p1f, midf, p1, mid, trace) )
+	if (!SV_RecursiveHullCheck (hull, num2, p1f, midf, p1, mid, trace) )
 		return false;
 
-#ifdef PARANOID
-	if (SV_HullPointContents (hull, mid, node->children[side])
-	== CONTENTS_SOLID)
-	{
-		Con_Printf ("mid PointInHullSolid\n");
-		return false;
-	}
-#endif
-	
-	if (SV_HullPointContents (hull, node->children[side^1], mid)
+	if (SV_HullPointContents (hull, num3, mid)
 	!= CONTENTS_SOLID)
 // go past the node
-		return SV_RecursiveHullCheck (hull, node->children[side^1], midf, p2f, mid, p2, trace);
-	
+		return SV_RecursiveHullCheck (hull, num3, midf, p2f, mid, p2, trace);
+
 	if (trace->allsolid)
 		return false;		// never got out of the solid area
-		
+
 //==================
 // the other side of the node is solid, this is the impact point
 //==================
@@ -738,58 +726,8 @@ trace_t SV_ClipMoveToEntity (edict_t *ent, vec3_t start, vec3_t mins, vec3_t max
 	VectorSubtract (start, offset, start_l);
 	VectorSubtract (end, offset, end_l);
 
-#ifdef QUAKE2
-	// rotate start and end into the models frame of reference
-	if (ent->v.solid == SOLID_BSP && 
-	(ent->v.angles[0] || ent->v.angles[1] || ent->v.angles[2]) )
-	{
-		vec3_t	a;
-		vec3_t	forward, right, up;
-		vec3_t	temp;
-
-		AngleVectors (ent->v.angles, forward, right, up);
-
-		VectorCopy (start_l, temp);
-		start_l[0] = DotProduct (temp, forward);
-		start_l[1] = -DotProduct (temp, right);
-		start_l[2] = DotProduct (temp, up);
-
-		VectorCopy (end_l, temp);
-		end_l[0] = DotProduct (temp, forward);
-		end_l[1] = -DotProduct (temp, right);
-		end_l[2] = DotProduct (temp, up);
-	}
-#endif
-
 // trace a line through the apropriate clipping hull
 	SV_RecursiveHullCheck (hull, hull->firstclipnode, 0, 1, start_l, end_l, &trace);
-
-#ifdef QUAKE2
-	// rotate endpos back to world frame of reference
-	if (ent->v.solid == SOLID_BSP && 
-	(ent->v.angles[0] || ent->v.angles[1] || ent->v.angles[2]) )
-	{
-		vec3_t	a;
-		vec3_t	forward, right, up;
-		vec3_t	temp;
-
-		if (trace.fraction != 1)
-		{
-			VectorSubtract (vec3_origin, ent->v.angles, a);
-			AngleVectors (a, forward, right, up);
-
-			VectorCopy (trace.endpos, temp);
-			trace.endpos[0] = DotProduct (temp, forward);
-			trace.endpos[1] = -DotProduct (temp, right);
-			trace.endpos[2] = DotProduct (temp, up);
-
-			VectorCopy (trace.plane.normal, temp);
-			trace.plane.normal[0] = DotProduct (temp, forward);
-			trace.plane.normal[1] = -DotProduct (temp, right);
-			trace.plane.normal[2] = DotProduct (temp, up);
-		}
-	}
-#endif
 
 // fix trace up by the offset
 	if (trace.fraction != 1)

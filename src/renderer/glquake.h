@@ -22,30 +22,39 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 #include <stdint.h>
 
-#ifdef _WIN32
+#if defined(_WIN32)
 #include <windows.h>
-#include <GL/gl.h>
-#include <GL/glext.h>
-#include <GL/glu.h>
+#endif
+#ifdef _arch_dreamcast
 
-#else
 #ifndef BUILD_LIBGL
+#include <GL/gl.h>
+//#include <GL/glu.h> //@Note: unneeded anymore
 #include <GL/glkos.h>
 #include <GL/glext.h>
-
 #else
+#include "gl.h"
 #include "glkos.h"
 #include "glext.h"
 #endif
+
+extern uint32_t pvr_mem_available(void);
+extern void malloc_stats(void);
+extern void pvr_mem_stats(void);
+#else
+#include <GL/gl.h>
+#include <GL/glext.h>
 #endif
 
-#ifndef BUILD_LIBGL
-#include <GL/gl.h>
-#include <GL/glu.h>
+#ifdef _arch_dreamcast
+#define MAX_LIGHTMAPS 64
 #else
-#include "gl.h"
-#include "glu.h"
+#define	MAX_LIGHTMAPS	64
 #endif
+
+//#define PACK_BGRA8888(b, g, r, a) ((uint32_t)(((uint8_t)(b) << 24) + ((uint8_t)(g) << 16) + ((uint8_t)(r) << 8) + (uint8_t)(a)))
+#define PACK_BGRA8888(a, r, g, b) ((uint32_t)(((uint8_t)(b) << 24) + ((uint8_t)(g) << 16) + ((uint8_t)(r) << 8) + (uint8_t)(a)))
+#define VTX_COLOR_WHITE .color = { .packed = PACK_BGRA8888(255,255,255,255)}
 
 typedef struct __attribute__((packed, aligned(4))) vec3f_gl {
   float x, y, z;
@@ -55,8 +64,9 @@ typedef struct __attribute__((packed, aligned(4))) uv_float {
   float u, v;
 } uv_float;
 
-typedef struct __attribute__((packed, aligned(1))) color_uc {
-  unsigned char b, g, r, a;
+typedef union color_uc {
+  unsigned char array[4];
+  unsigned int packed;
 } color_uc;
 
 typedef struct __attribute__((packed, aligned(4))) glvert_fast_t {
@@ -70,15 +80,10 @@ typedef struct __attribute__((packed, aligned(4))) glvert_fast_t {
   } pad0;
 } glvert_fast_t;
 
-#define VERTEXARRAYSIZE 2048
-#define VERTEXARRAYLIMIT VERTEXARRAYSIZE - 6
-
-extern glvert_fast_t gVertexFastBuffer[VERTEXARRAYSIZE];
-
 void GL_BeginRendering(int *x, int *y, int *width, int *height);
 void GL_EndRendering(void);
 
-#ifdef _WIN32
+#if defined(_WIN32) || defined(__linux__)
 // Function prototypes for the Texture Object Extension routines
 typedef GLboolean(APIENTRY *ARETEXRESFUNCPTR)(GLsizei, const GLuint *,
                                               const GLboolean *);
@@ -95,19 +100,16 @@ extern DELTEXFUNCPTR delTexFunc;
 extern TEXSUBIMAGEPTR TexSubImage2DFunc;
 #endif
 
-extern int texture_extension_number;
-extern int texture_mode;
-
 extern float gldepthmin, gldepthmax;
 
-void GL_Upload32(unsigned *data, int width, int height, qboolean mipmap, qboolean alpha);
-void GL_Upload8(byte *data, int width, int height, qboolean mipmap, qboolean alpha);
-int GL_LoadTexture(char *identifier, int width, int height, byte *data, qboolean mipmap, qboolean alpha);
-int GL_FindTexture(char *identifier);
+void GL_Upload32 (unsigned *data, int width, int height, uint8_t flags);
+void GL_Upload8 (byte *data, int width, int height, uint8_t flags);
+int GL_LoadTexture (char *identifier, int width, int height, byte *data, uint8_t flags);
+int GL_FindTexture (char *identifier);
 
 extern int glx, gly, glwidth, glheight;
 
-#ifdef _WIN32
+#if defined(_WIN32)
 extern PROC glArrayElementEXT;
 extern PROC glColorPointerEXT;
 extern PROC glTexturePointerEXT;
@@ -132,6 +134,12 @@ void glDepthRange(GLclampf n, GLclampf f);
 #define SKYMASK (SKYSIZE - 1)
 
 #define BACKFACE_EPSILON 0.01f
+
+#define TEX_NONE					0
+#define TEX_MIP						2
+#define TEX_ALPHA					4
+#define	TEX_WORLD					8 //R00k
+#define ISSKYTEX(name)		((name)[0] == 's' && (name)[1] == 'k' && (name)[2] == 'y')
 
 void R_TimeRefresh_f(void);
 void R_ReadPointFile_f(void);
@@ -215,10 +223,10 @@ extern texture_t *r_notexture_mip;
 extern int d_lightstylevalue[256];  // 8.8 fraction of base light value
 
 extern qboolean envmap;
-extern int currenttexture;
-extern int cnttextures[2];
-extern int particletexture;
-extern int playertextures;
+extern unsigned int currenttexture;
+extern unsigned int cnttextures[2];
+extern unsigned int particletexture;
+extern unsigned int playertextures[16];
 
 extern int skytexturenum;  // index in cl.loadmodel, not gl texture object
 
@@ -241,7 +249,6 @@ extern cvar_t r_interpolate_pos;
 extern cvar_t gl_clear;
 extern cvar_t gl_cull;
 extern cvar_t gl_poly;
-extern cvar_t gl_texsort;
 extern cvar_t gl_smoothmodels;
 extern cvar_t gl_affinemodels;
 extern cvar_t gl_polyblend;
@@ -258,23 +265,29 @@ extern int gl_alpha_format;
 extern cvar_t gl_max_size;
 extern cvar_t gl_playermip;
 
-extern int mirrortexturenum;  // quake texturenum, not gltexturenum
+extern unsigned int mirrortexturenum;  // quake texturenum, not gltexturenum
 extern qboolean mirror;
 extern mplane_t *mirror_plane;
 
 extern float r_world_matrix[16];
 
-extern const char *gl_vendor;
-extern const char *gl_renderer;
-extern const char *gl_version;
-extern const char *gl_extensions;
+extern const GLubyte *gl_vendor;
+extern const GLubyte *gl_renderer;
+extern const GLubyte *gl_version;
+extern const GLubyte *gl_extensions;
 
 void R_TranslatePlayerSkin(int playernum);
-void GL_Bind(int texnum);
+/*
+#define GL_Bind(texnum) \
+  do { printf(__FILE__ ":" STRINGIZE(__LINE__) "\n"); \
+  GL_Bind_(texnum); } \
+  while(0)
+*/
+void GL_Bind(unsigned int texnum);
 
-extern int char_texture;
+extern unsigned int char_texture;
 
-#ifndef _WIN32
+#if !defined(_WIN32) && !defined(__linux__)
 #define APIENTRY
 #define TEXTURE0_SGIS GL_TEXTURE0_ARB
 #define TEXTURE1_SGIS GL_TEXTURE1_ARB
@@ -287,21 +300,23 @@ extern GLenum gl_Texture1;
 #define TEXTURE1_SGIS gl_Texture1
 #endif
 
-typedef void(APIENTRY *lpMTexFUNC)(GLenum, GLfloat, GLfloat);
-typedef void(APIENTRY *lpSelTexFUNC)(GLenum);
+#ifndef _arch_dreamcast
+typedef void (APIENTRY *lpMTexFUNC) (GLenum, GLfloat, GLfloat);
+typedef void (APIENTRY *lpSelTexFUNC) (GLenum);
 extern lpMTexFUNC qglMTexCoord2fSGIS;
 extern lpSelTexFUNC qglSelectTextureSGIS;
+#endif
 
 extern qboolean gl_mtexable;
 
-//mrneo240, matches GLdc for the moment
-#define MAX_POLYGON_SIZE 16  //could be 18
 #ifndef MAX
 #define MAX(a, b) (((a) > (b)) ? (a) : (b))
 #endif
 #ifndef MIN
 #define MIN(a, b) (((a) < (b)) ? (a) : (b))
 #endif
+
+#define bound(a, b, c) ((a) >= (c) ? (a) : (b) < (a) ? (a) : (b) > (c) ? (c) : (b)) // by joe
 
 #define glTexParameterf(target, pname, param) glTexParameteri(target, pname, param)
 //End
@@ -312,7 +327,7 @@ void GL_EnableMultitexture(void);
 extern float sintablef[17];
 extern float costablef[17];
 
-#define DEG2RAD(a) (a * 0.01745329251994329576923690768489f)
+#define DEG2RAD(a) ((a) * 0.01745329251994329576923690768489f)
 
 #define TOP_MARGIN 24
 #define BOTTOM_MARGIN 24

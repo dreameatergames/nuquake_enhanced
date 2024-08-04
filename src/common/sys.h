@@ -41,13 +41,13 @@ void Sys_mkdir (char *path);
 //
 void Sys_DebugLog(char *file, char *fmt, ...);
 
-void Sys_Error (char *error, ...);
+void Sys_Error (char *error, ...) __attribute__ ((noreturn));
 // an error will cause the entire program to exit
 
 void Sys_Printf (char *fmt, ...);
 // send text to the console
 
-void Sys_Quit (void);
+void Sys_Quit (void) __attribute__ ((noreturn));
 
 float Sys_FloatTime (void);
 

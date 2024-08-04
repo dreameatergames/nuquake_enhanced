@@ -80,7 +80,7 @@ void Host_Status_f (void)
 	print ("host:    %s\n", Cvar_VariableString ("hostname"));
 	memset(temp, 0, 128); 
 	strcat(temp, "version: "); // len: 9
-	//ftoa(VERSION, temp+9, 4, 2);
+	ftoa(VERSION, temp+9, 4, 2);
 	print("%s\n", temp);
 	
 	//print ("version: %4.2f\n", VERSION);
@@ -722,7 +722,7 @@ void Host_Version_f (void)
 	char temp[32];
 	memset(temp, 0, 32); 
 	strcat(temp, "Version "); // len: 9
-	//ftoa(VERSION, temp+8, 4, 2);
+	ftoa(VERSION, temp+8, 4, 2);
 	Con_Printf ("%s\n", temp);
 	//Con_Printf ("Version %4.2f\n", VERSION);
 	Con_Printf ("Exe: "__TIME__" "__DATE__"\n");

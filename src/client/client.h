@@ -81,9 +81,6 @@ typedef struct
 	float	decay;				// drop this each second
 	float	minlight;			// don't add when contributing less
 	int		key;
-#ifdef QUAKE2
-	qboolean	dark;			// subtracts light instead of adding
-#endif
 } dlight_t;
 
 

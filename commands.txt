@@ -1,0 +1,4 @@
+lxdream-nitro -A null -b -u -C build_cdi/pc_chroot/ -e build_dc/nuquake.elf
+
+rm -rf builddir_dc/
+meson setup  builddir_dc --cross-file sh4-dreamcast-kos

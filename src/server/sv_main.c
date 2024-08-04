@@ -124,13 +124,13 @@ void SV_StartSound (edict_t *entity, int channel, const char *sample, int volume
 	int			ent;
 	
 	if (volume < 0 || volume > 255)
-		Con_DPrintf ("SV_StartSound: volume = %i", volume);
+		Sys_Error ("SV_StartSound: volume = %i", volume);
 
 	if (attenuation < 0 || attenuation > 4)
-		Con_DPrintf ("SV_StartSound: attenuation = %f", attenuation);
+		Sys_Error ("SV_StartSound: attenuation = %f", attenuation);
 
 	if (channel < 0 || channel > 7)
-		Con_DPrintf ("SV_StartSound: channel = %i", channel);
+		Sys_Error ("SV_StartSound: channel = %i", channel);
 
 	if (sv.datagram.cursize > MAX_DATAGRAM-16)
 		return;	
@@ -143,7 +143,7 @@ void SV_StartSound (edict_t *entity, int channel, const char *sample, int volume
     
     if ( sound_num == MAX_SOUNDS || !sv.sound_precache[sound_num] )
     {
-        Con_DPrintf ("SV_StartSound: %s not precacheed\n", sample);
+        Con_Printf ("SV_StartSound: %s not precacheed\n", sample);
         return;
     }
     
@@ -318,7 +318,7 @@ void SV_CheckForNewClients (void)
 			if (!svs.clients[i].active)
 				break;
 		if (i == svs.maxclients)
-			Con_DPrintf ("Host_CheckForNewClients: no free clients");
+			Sys_Error ("Host_CheckForNewClients: no free clients");
 		
 		svs.clients[i].netconnection = ret;
 		SV_ConnectClient (i);	
@@ -462,7 +462,7 @@ void SV_WriteEntitiesToClient (edict_t	*clent, sizebuf_t *msg)
 
 		if (msg->maxsize - msg->cursize < 16)
 		{
-			Con_DPrintf ("packet overflow\n");
+			Con_Printf ("packet overflow\n");
 			return;
 		}
 
@@ -910,7 +910,7 @@ int SV_ModelIndex (const char *name)
 		if (!strcmp(sv.model_precache[i], name))
 			return i;
 	if (i==MAX_MODELS || !sv.model_precache[i])
-		Con_DPrintf ("SV_ModelIndex: model %s not precached", name);
+		Sys_Error ("SV_ModelIndex: model %s not precached", name);
 	return i;
 }
 
@@ -1125,7 +1125,7 @@ void SV_SpawnServer (char *server)
 	sv.worldmodel = Mod_ForName (sv.modelname, false);
 	if (!sv.worldmodel)
 	{
-		Con_DPrintf ("Couldn't spawn server %s\n", sv.modelname);
+		Con_Printf ("Couldn't spawn server %s\n", sv.modelname);
 		sv.active = false;
 		return;
 	}

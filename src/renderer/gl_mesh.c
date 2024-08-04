@@ -195,14 +195,15 @@ Generate a list of trifans or strips
 for the model, which holds for all frames
 ================
 */
+static int bestverts[1024];
+static int besttris[1024];
 void BuildTris (void)
 {
 	int		i, j, k;
 	int		startv;
 	float	s, t;
 	int		len, bestlen;//, besttype;
-	int		bestverts[1024];
-	int		besttris[1024];
+
 	//int		type;
 
 	//
@@ -253,6 +254,7 @@ void BuildTris (void)
 
 		for (j=0 ; j<bestlen+2 ; j++)
 		{
+			int		tmp;
 			// emit a vertex into the reorder buffer
 			k = bestverts[j];
 			vertexorder[numorder++] = k;
@@ -265,14 +267,16 @@ void BuildTris (void)
 			s = (s + 0.5) / pheader->skinwidth;
 			t = (t + 0.5) / pheader->skinheight;
 
-			*(float *)&commands[numcommands++] = s;
-			*(float *)&commands[numcommands++] = t;
+			memcpy (&tmp, &s, 4);
+			commands[numcommands++] = tmp;
+			memcpy (&tmp, &t, 4);
+			commands[numcommands++] = tmp;
 		}
 	}
 
 	commands[numcommands++] = 0;		// end of list marker
 
-	Con_DPrintf ("%3i tri %3i vert %3i cmd\n", pheader->numtris, numorder, numcommands);
+	//Con_DPrintf ("%3i tri %3i vert %3i cmd\n", pheader->numtris, numorder, numcommands);
 
 	allverts += numorder;
 	alltris += pheader->numtris;
@@ -298,12 +302,11 @@ void GL_MakeAliasModelDisplayLists (model_t *m, aliashdr_t *hdr)
 	// save the data out
 	paliashdr->poseverts = numorder;
 
-	cmds = Hunk_Alloc (numcommands * 4);
+	cmds = Hunk_AllocName (numcommands * 4, "gl_cmds");
 	paliashdr->commands = (byte *)cmds - (byte *)paliashdr;
 	memcpy (cmds, commands, numcommands * 4);
 
-	verts = Hunk_Alloc (paliashdr->numposes * paliashdr->poseverts 
-		* sizeof(trivertx_t) );
+	verts = Hunk_AllocName (paliashdr->numposes * paliashdr->poseverts * sizeof(trivertx_t), "gl_verts");
 	paliashdr->posedata = (byte *)verts - (byte *)paliashdr;
 	for (i=0 ; i<paliashdr->numposes ; i++)
 		for (j=0 ; j<numorder ; j++)

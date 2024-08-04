@@ -36,4 +36,4 @@ void M_Draw (void);
 void M_ToggleMenu_f (void);
 
 enum menu_state {m_none, m_main, m_singleplayer, m_load, m_save, m_multiplayer, m_setup, m_net, m_options, m_video, m_vmu, m_developer, m_keys, m_help, m_quit, m_serialconfig, m_modemconfig, m_lanconfig, m_gameoptions, m_maplist , m_search, m_mod_loader, m_slist};
-//extern enum menu_state m_state;
+extern enum menu_state m_state;

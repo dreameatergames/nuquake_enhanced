@@ -485,11 +485,11 @@ void ED_Print (edict_t *ed)
 
 	if (ed->free)
 	{
-		Con_DPrintf ("FREE\n");
+		Con_Printf ("FREE\n");
 		return;
 	}
 
-	Con_SafePrintf("\nEDICT %i:\n", NUM_FOR_EDICT(ed)); //johnfitz -- was Con_DPrintf
+	Con_SafePrintf("\nEDICT %i:\n", NUM_FOR_EDICT(ed)); //johnfitz -- was Con_Printf
 	for (i = 1; i < progs->numfielddefs; i++)
 	{
 		d = &pr_fielddefs[i];
@@ -511,11 +511,11 @@ void ED_Print (edict_t *ed)
 		if (j == type_size[type])
 			continue;
 
-		Con_SafePrintf ("%s", name); //johnfitz -- was Con_DPrintf
+		Con_SafePrintf ("%s", name); //johnfitz -- was Con_Printf
 		while (l++ < 15)
-			Con_SafePrintf (" "); //johnfitz -- was Con_DPrintf
+			Con_SafePrintf (" "); //johnfitz -- was Con_Printf
 
-		Con_SafePrintf ("%s\n", PR_ValueString(d->type, (eval_t *)v)); //johnfitz -- was Con_DPrintf
+		Con_SafePrintf ("%s\n", PR_ValueString(d->type, (eval_t *)v)); //johnfitz -- was Con_Printf
 	}
 	#endif
 }
@@ -600,7 +600,7 @@ void ED_PrintEdicts (void)
 	if (!sv.active)
 		return;
 
-	Con_DPrintf ("%i entities\n", sv.num_edicts);
+	Con_Printf ("%i entities\n", sv.num_edicts);
 	for (i = 0; i < sv.num_edicts; i++)
 		ED_PrintNum (i);
 }
@@ -622,7 +622,7 @@ static void ED_PrintEdict_f (void)
 	i = atoi (Cmd_Argv(1));
 	if (i < 0 || i >= sv.num_edicts)
 	{
-		Con_DPrintf("Bad edict number\n");
+		Con_Printf("Bad edict number\n");
 		return;
 	}
 	ED_PrintNum (i);
@@ -658,11 +658,11 @@ static void ED_Count (void)
 			step++;
 	}
 
-	Con_DPrintf ("num_edicts:%3i\n", sv.num_edicts);
-	Con_DPrintf ("active    :%3i\n", active);
-	Con_DPrintf ("view      :%3i\n", models);
-	Con_DPrintf ("touch     :%3i\n", solid);
-	Con_DPrintf ("step      :%3i\n", step);
+	Con_Printf ("num_edicts:%3i\n", sv.num_edicts);
+	Con_Printf ("active    :%3i\n", active);
+	Con_Printf ("view      :%3i\n", models);
+	Con_Printf ("touch     :%3i\n", solid);
+	Con_Printf ("step      :%3i\n", step);
 }
 
 
@@ -707,7 +707,7 @@ void ED_WriteGlobals (gzFile f)
 		sprintf (tmp_buf,"\"%s\" ", name);
 		gzwrite(f, tmp_buf, strlen(tmp_buf));
 		//fprintf (f, "\"%s\"\n", PR_UglyValueString(type, (eval_t *)&pr_globals[def->ofs]));
-		sprintf (tmp_buf,"\"%s\"\n", PR_UglyValueString(type, (eval_t *)&pr_globals[def->ofs]));		
+		sprintf (tmp_buf,"\"%s\"\n", PR_UglyValueString(type, (eval_t *)&pr_globals[def->ofs]));
 		gzwrite(f, tmp_buf, strlen(tmp_buf));
 	}
 	//	fprintf (f,"}\n");
@@ -747,7 +747,7 @@ const char *ED_ParseGlobals (const char *data)
 		key = ED_FindGlobal (keyname);
 		if (!key)
 		{
-			Con_DPrintf ("'%s' is not a global\n", keyname);
+			Con_Printf ("'%s' is not a global\n", keyname);
 			continue;
 		}
 
@@ -867,7 +867,7 @@ static qboolean ED_ParseEpair (void *base, ddef_t *key, const char *s)
 		func = ED_FindFunction (s);
 		if (!func)
 		{
-			Con_DPrintf ("Can't find function %s\n", s);
+			Con_Printf ("Can't find function %s\n", s);
 			return false;
 		}
 		*(func_t *)d = func - pr_functions;
@@ -955,7 +955,7 @@ const char *ED_ParseEdict (const char *data, edict_t *ent)
 		{
 			//johnfitz -- HACK -- suppress error becuase fog/sky/alpha fields might not be mentioned in defs.qc
 			if (strncmp(keyname, "sky", 3) && strcmp(keyname, "fog") && strcmp(keyname, "alpha"))
-				Con_DPrintf ("\"%s\" is not a field\n", keyname); //johnfitz -- was Con_DPrintf
+				Con_DPrintf ("\"%s\" is not a field\n", keyname); //johnfitz -- was Con_Printf
 			continue;
 		}
 
@@ -1040,7 +1040,7 @@ void ED_LoadFromFile (const char *data)
 //
 		if (!ent->v.classname)
 		{
-			Con_SafePrintf ("No classname for:\n"); //johnfitz -- was Con_DPrintf
+			Con_SafePrintf ("No classname for:\n"); //johnfitz -- was Con_Printf
 			ED_Print (ent);
 			ED_Free (ent);
 			continue;
@@ -1051,7 +1051,7 @@ void ED_LoadFromFile (const char *data)
 
 		if (!func)
 		{
-			Con_SafePrintf ("No spawn function for:\n"); //johnfitz -- was Con_DPrintf
+			Con_SafePrintf ("No spawn function for:\n"); //johnfitz -- was Con_Printf
 			ED_Print (ent);
 			ED_Free (ent);
 			continue;
@@ -1061,7 +1061,9 @@ void ED_LoadFromFile (const char *data)
 		PR_ExecuteProgram (func - pr_functions);
 	}
 
+#ifdef DEBUG
 	Con_DPrintf ("%i entities inhibited\n", inhibit);
+#endif
 }
 
 
@@ -1182,7 +1184,8 @@ char *MK_cleanftos (float f)
 	else
 	{
 		char s[256];
-		strcpy(s, va("%f", f));
+		//strcpy(s, va("%f", f));
+		ftoa(f, s, 12, 5);//@Note: minor change
 		for (i = strlen(s)-1 ; i >= 0 ; i--)
 		{
 			if (s[i]!='0' && s[i]!='.')

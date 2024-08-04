@@ -14,64 +14,37 @@
 #include "glquake.h"
 
 // these could go in a vertexbuffer/indexbuffer pair
-#define MAX_BATCHED_SURFVERTEXES 4096
+#define MAX_BATCHED_TEMPVERTEXES (2048)
+#define MAX_BATCHED_SURFVERTEXES (2048)
+#define MAX_BATCHED_TEXTVERTEXES (4096)
 
 #define VERTEX_EOL 0xf0000000
 #define VERTEX 0xe0000000
 
-extern glvert_fast_t r_batchedfastvertexes[];
-extern glvert_fast_t r_batchedfastvertexes_text[];
+extern glvert_fast_t r_batchedtempverts[MAX_BATCHED_TEMPVERTEXES];
+extern glvert_fast_t r_batchedfastvertexes[MAX_BATCHED_SURFVERTEXES];
+extern glvert_fast_t r_batchedfastvertexes_text[MAX_BATCHED_TEXTVERTEXES];
 
 extern int text_size;
 
-extern unsigned int r_numsurfvertexes;
-extern unsigned int r_numsurfvertexes_text;
-
-inline void R_BeginBatchingFastSurfaces()
-{
-   r_numsurfvertexes = 0;
-}
-
-inline void R_BeginBatchingSurfacesQuad()
-{
-   r_numsurfvertexes_text = 0;
-}
+void R_BeginBatchingFastSurfaces();
+void R_BeginBatchingSurfacesQuad();
 
 void R_EndBatchingSurfacesQuads(void);
 void R_EndBatchingFastSurfaces(void);
 
 void R_BatchSurface(glpoly_t *p);
 void R_BatchSurfaceLightmap(glpoly_t *p);
+void R_BatchSurfaceQuadText(int x, int y, float frow, float fcol, float size);
 
-inline void R_BatchSurfaceQuadText(int x, int y, float frow, float fcol, float size)
-{
+extern glvert_fast_t *_tempBufferAddress;
 
-   if (r_numsurfvertexes_text + 6 >= MAX_BATCHED_SURFVERTEXES*2)
-      R_EndBatchingSurfacesQuads();
+static inline glvert_fast_t *R_GetDirectBufferAddress() {
+  return _tempBufferAddress;
+}
 
-   //Vertex 1
-   //Quad vertex
-   r_batchedfastvertexes_text[r_numsurfvertexes_text++] = (glvert_fast_t){.flags = VERTEX, .vert = {x, y, 0}, .texture = {fcol, frow}, .color = {255, 255, 255, 255}, .pad0 = {0}};
-
-   //Vertex 2
-   //Quad vertex
-   r_batchedfastvertexes_text[r_numsurfvertexes_text++] = (glvert_fast_t){.flags = VERTEX, .vert = {x + text_size, y, 0}, .texture = {fcol + size, frow}, .color = {255, 255, 255, 255}, .pad0 = {0}};
-
-   //Vertex 4
-   //Quad vertex
-   r_batchedfastvertexes_text[r_numsurfvertexes_text++] = (glvert_fast_t){.flags = VERTEX_EOL, .vert = {x, y + text_size, 0}, .texture = {fcol, frow + size}, .color = {255, 255, 255, 255}, .pad0 = {0}};
-
-   //Vertex 4
-   //Quad vertex
-   r_batchedfastvertexes_text[r_numsurfvertexes_text++] = (glvert_fast_t){.flags = VERTEX, .vert = {x, y + text_size, 0}, .texture = {fcol, frow + size}, .color = {255, 255, 255, 255}, .pad0 = {0}};
-
-   //Vertex 2
-   //Quad vertex
-   r_batchedfastvertexes_text[r_numsurfvertexes_text++] = (glvert_fast_t){.flags = VERTEX, .vert = {x + text_size, y, 0}, .texture = {fcol + size, frow}, .color = {255, 255, 255, 255}, .pad0 = {0}};
-
-   //Vertex 3
-   //Quad vertex
-   r_batchedfastvertexes_text[r_numsurfvertexes_text++] = (glvert_fast_t){.flags = VERTEX_EOL, .vert = {x + text_size, y + text_size, 0}, .texture = {fcol + size, frow + size}, .color = {255, 255, 255, 255}, .pad0 = {0}};
+static inline void R_SetDirectBufferAddress(glvert_fast_t *address) {
+  _tempBufferAddress = address;
 }
 
 #endif /* __GL_BATCHER__ */

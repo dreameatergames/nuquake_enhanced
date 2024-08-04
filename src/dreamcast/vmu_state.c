@@ -68,6 +68,7 @@ LOAD / SAVE GAME
 // BlackAura (08-12-2002) - Replacing fscanf
 // -----------------------------------------
 
+static char sbuf[32768];
 static void DC_ScanString(FILE *file, char *string)
 {
 	char newchar;
@@ -82,14 +83,12 @@ static void DC_ScanString(FILE *file, char *string)
 
 static int DC_ScanInt(FILE *file)
 {
-	char sbuf[32768];
 	DC_ScanString(file, sbuf);
 	return atoi(sbuf);
 }
 
 static float DC_ScanFloat(FILE *file)
 {
-	char sbuf[32768];
 	DC_ScanString(file, sbuf);
 	return atof(sbuf);
 }
@@ -98,7 +97,7 @@ static float DC_ScanFloat(FILE *file)
 ===============
 Host_SavegameComment
 
-Writes a SAVEGAME_COMMENT_LENGTH character comment describing the current 
+Writes a SAVEGAME_COMMENT_LENGTH character comment describing the current
 ===============
 */
 void Host_SavegameComment(char *text)
@@ -127,10 +126,11 @@ void Host_SavegameComment(char *text)
 Host_Savegame_f
 ===============
 */
+static char w_buf[40000];
 void Host_Savegame_f(void)
 {
 	char name[256], comment[SAVEGAME_COMMENT_LENGTH + 1], *ptr, *file_buf;
-	char w_buf[40000], buffer[8];
+	char buffer[8];
 	uint16 crc;
 	int i, filesize, total;
 	gzFile f1;
@@ -243,7 +243,7 @@ void Host_Savegame_f(void)
 		}
 	}
 
-	
+
 	ED_WriteGlobals(f1);
 
 	for (i = 0; i < sv.num_edicts; i++)
@@ -269,7 +269,7 @@ void Host_Savegame_f(void)
 		total++;
 	}
 
-	file_buf = (char *)malloc(total + 1);
+	file_buf = (char *)Hunk_TempAlloc(total + 1);
 	if (file_buf == NULL)
 	{
 		Con_Printf("ERROR: not enough memory.\n");
@@ -289,11 +289,11 @@ void Host_Savegame_f(void)
 	ptr = file_buf;
 	char desc[17];
 	snprintf(desc,17,"\x12%s   GAME", VMU_NAME);
-	for (i=1; i < 17; i++) 
-    { 
-        if (desc[i]=='_') 
-            desc[i] = ' '; 
-    } 
+	for (i=1; i < 17; i++)
+    {
+        if (desc[i]=='_')
+            desc[i] = ' ';
+    }
 
 	memcpy(ptr, desc, 16);
 	ptr += 16; // VM desc
@@ -439,9 +439,10 @@ extern size_t zlib_getlength(const char*filename);
 Host_Loadgame_f
 ===============
 */
+static char str[32768];
 void Host_Loadgame_f(void)
 {
-	char name[MAX_OSPATH], mapname[MAX_QPATH], str[32768], *compressed_buf, *uncompressed_buf;
+	char name[MAX_OSPATH], mapname[MAX_QPATH],  *compressed_buf, *uncompressed_buf;
 	const char *start;
 	float time, tfloat, spawn_parms[NUM_SPAWN_PARMS];
 	int entnum, version, i, r, uncompressed_size, offset = 0, head_len;
@@ -545,7 +546,7 @@ void Host_Loadgame_f(void)
 	//	Con_Printf ("VMS header's length: %d.\n", head_len);
 
 	// Reading compressed game
-	compressed_buf = (char *)malloc(compressed_size + 1);
+	compressed_buf = (char *)Hunk_TempAlloc(compressed_size + 1);
 	if (compressed_buf == NULL)
 	{
 		Con_Printf("ERROR: not enough memory.\n");
@@ -564,7 +565,6 @@ void Host_Loadgame_f(void)
 	if (!f1)
 	{
 		Con_Printf("ERROR: couldn't open.\n");
-		free(compressed_buf);
 		return;
 	}
 
@@ -577,7 +577,6 @@ void Host_Loadgame_f(void)
 	if (!f2)
 	{
 		Con_Printf("ERROR: couldn't open.\n");
-		free(compressed_buf);
 		fs_unlink("/ram/compressed.gz");
 		return;
 	}
@@ -585,11 +584,10 @@ void Host_Loadgame_f(void)
 	uncompressed_size = zlib_getlength("/ram/compressed.gz");
 	printf("uncompressed_size=%d;\n", uncompressed_size);
 
-	uncompressed_buf = (char *)malloc(uncompressed_size + 1);
+	uncompressed_buf = (char *)Hunk_TempAlloc(uncompressed_size + 1);
 	if (uncompressed_buf == NULL)
 	{
 		Con_Printf("ERROR: not enough memory.\n");
-		free(compressed_buf);
 		fs_unlink("/ram/compressed.gz");
 		gzclose(f2);
 		return;
@@ -604,7 +602,6 @@ void Host_Loadgame_f(void)
 	if (!f1)
 	{
 		Con_Printf("ERROR: couldn't open.\n");
-		free(compressed_buf);
 		fs_unlink("/ram/compressed.gz");
 		return;
 	}
@@ -618,9 +615,7 @@ void Host_Loadgame_f(void)
 	if (!f)
 	{
 		Con_Printf("ERROR: couldn't open.\n");
-		free(compressed_buf);
 		fs_unlink("/ram/compressed.gz");
-		free(uncompressed_buf);
 		fs_unlink("/ram/uncompressed.sav");
 		return;
 	}
@@ -629,9 +624,7 @@ void Host_Loadgame_f(void)
 	if (version != SAVEGAME_VERSION)
 	{
 		Con_Printf("Savegame is version %i, not %i\n", version, SAVEGAME_VERSION);
-		free(compressed_buf);
 		fs_unlink("/ram/compressed.gz");
-		free(uncompressed_buf);
 		fs_unlink("/ram/uncompressed.sav");
 		fclose(f);
 		return;
@@ -659,13 +652,11 @@ void Host_Loadgame_f(void)
 	CL_Disconnect_f();
 
 	SV_SpawnServer(mapname);
-	
+
 	if (!sv.active)
 	{
 		Con_Printf("Couldn't load map\n");
-		free(compressed_buf);
 		fs_unlink("/ram/compressed.gz");
-		free(uncompressed_buf);
 		fs_unlink("/ram/uncompressed.sav");
 		fclose(f);
 		return;
@@ -746,9 +737,7 @@ void Host_Loadgame_f(void)
 		Host_Reconnect_f();
 	}
 
-	free(compressed_buf);
 	fs_unlink("/ram/compressed.gz");
-	free(uncompressed_buf);
 	fs_unlink("/ram/uncompressed.sav");
 }
 

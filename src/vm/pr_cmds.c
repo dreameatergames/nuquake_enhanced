@@ -70,7 +70,7 @@ void PF_error (void)
 	edict_t	*ed;
 
 	s = PF_VarString(0);
-	Con_DPrintf ("======SERVER ERROR in %s:\n%s\n",
+	Con_Printf ("======SERVER ERROR in %s:\n%s\n",
 			PR_GetString(pr_xfunction->s_name), s);
 	ed = PROG_TO_EDICT(pr_global_struct->self);
 	ED_Print (ed);
@@ -94,7 +94,7 @@ void PF_objerror (void)
 	edict_t	*ed;
 
 	s = PF_VarString(0);
-	Con_DPrintf ("======OBJECT ERROR in %s:\n%s\n",
+	Con_Printf ("======OBJECT ERROR in %s:\n%s\n",
 			PR_GetString(pr_xfunction->s_name), s);
 	ed = PROG_TO_EDICT(pr_global_struct->self);
 	ED_Print (ed);
@@ -144,7 +144,7 @@ void SetMinMaxSize (edict_t *e, float *min, float *max, qboolean rotate)
 	vec3_t	rmin, rmax;
 	float	bounds[2][3];
 	float	xvector[2], yvector[2];
-	
+
 	vec3_t	base, transformed;
 	int		i, j, k, l;
 
@@ -162,15 +162,15 @@ void SetMinMaxSize (edict_t *e, float *min, float *max, qboolean rotate)
 	else
 	{
 	// find min / max for rotations
-		
 
-		#ifdef _arch_dreamcast
+
+#if defined(_arch_dreamcast) && defined(ENABLE_DC_MATH)
 		float s_ang, c_ang;
 		fsincos(e->v.angles[1], &s_ang, &c_ang);
 		xvector[0] = yvector[1] = c_ang;
 		xvector[1] = s_ang;
 		yvector[0] = -s_ang;
-		#else
+#else
 		const float *angles = e->v.angles;
 		const float a = angles[1]/180 * M_PI;
 
@@ -178,7 +178,7 @@ void SetMinMaxSize (edict_t *e, float *min, float *max, qboolean rotate)
 		xvector[1] = SIN(a);
 		yvector[0] = -SIN(a);
 		yvector[1] = COS(a);
-		#endif
+#endif
 
 		VectorCopy (min, bounds[0]);
 		VectorCopy (max, bounds[1]);
@@ -316,7 +316,7 @@ void PF_sprint (void)
 
 	if (entnum < 1 || entnum > svs.maxclients)
 	{
-		Con_DPrintf ("tried to sprint to a non-client\n");
+		Con_Printf ("tried to sprint to a non-client\n");
 		return;
 	}
 
@@ -347,7 +347,7 @@ void PF_centerprint (void)
 
 	if (entnum < 1 || entnum > svs.maxclients)
 	{
-		Con_DPrintf ("tried to sprint to a non-client\n");
+		Con_Printf ("tried to sprint to a non-client\n");
 		return;
 	}
 
@@ -522,7 +522,7 @@ void PF_ambientsound (void)
 
 	if (!*check)
 	{
-		Con_DPrintf ("no precache: %s\n", samp);
+		Con_Printf ("no precache: %s\n", samp);
 		return;
 	}
 
@@ -569,13 +569,17 @@ void PF_sound (void)
 	attenuation = G_FLOAT(OFS_PARM4);
 
 	if (volume < 0 || volume > 255)
-		Con_DPrintf ("SV_StartSound: volume = %i", volume);
+		Sys_Error ("SV_StartSound: volume = %i", volume);
 
-	if (attenuation < 0 || attenuation > 4)
-		Con_DPrintf ("SV_StartSound: attenuation = %f", attenuation);
+	if (attenuation < 0 || attenuation > 4){
+		char temp[12];
+		ftoa(attenuation, temp, 0, 3);
+		Sys_Error ("SV_StartSound: attenuation = %s", temp);
+		//Sys_Error ("SV_StartSound: attenuation = %f", attenuation);
+	}
 
 	if (channel < 0 || channel > 7)
-		Con_DPrintf ("SV_StartSound: channel = %i", channel);
+		Sys_Error ("SV_StartSound: channel = %i", channel);
 
 	SV_StartSound (entity, channel, sample, volume, attenuation);
 }
@@ -589,7 +593,7 @@ break()
 */
 void PF_break (void)
 {
-Con_DPrintf ("break statement\n");
+Con_Printf ("break statement\n");
 *(int *)-4 = 0;	// dump to debugger
 //	PR_RunError ("break statement");
 }
@@ -929,8 +933,11 @@ void PF_ftos (void)
 	s = PR_GetTempString();
 	if (v == (int)v)
 		sprintf (s, "%d",(int)v);
-	else
-		sprintf (s, "%5.1f",v);
+	else {
+		ftoa(v, s, 5, 1);
+		//sprintf (s, "%5.1f",v);
+	}
+
 	G_INT(OFS_RETURN) = PR_SetEngineString(s);
 }
 
@@ -945,7 +952,12 @@ void PF_vtos (void)
 {
 	char *s;
 	s = PR_GetTempString();
-	sprintf (s, "'%5.1f %5.1f %5.1f'", G_VECTOR(OFS_PARM0)[0], G_VECTOR(OFS_PARM0)[1], G_VECTOR(OFS_PARM0)[2]);
+	char t1[8], t2[8], t3[8];
+	ftoa(G_VECTOR(OFS_PARM0)[0], t1, 5, 1);
+	ftoa(G_VECTOR(OFS_PARM0)[1], t2, 5, 1);
+	ftoa(G_VECTOR(OFS_PARM0)[2], t3, 5, 1);
+	sprintf (s, "'%s %s %s'", t1, t2, t3);
+	// sprintf (s, "'%5.1f %5.1f %5.1f'", G_VECTOR(OFS_PARM0)[0], G_VECTOR(OFS_PARM0)[1], G_VECTOR(OFS_PARM0)[2]);
 G_INT(OFS_RETURN) = PR_SetEngineString(s);
 }
 
@@ -1163,16 +1175,16 @@ void PF_walkmove (void)
 		return;
 	}
 
-	#ifdef _arch_dreamcast
+#if defined(_arch_dreamcast) && defined(ENABLE_DC_MATH)
 	float c_yaw, s_yaw;
 	fsincos(yaw, &s_yaw, &c_yaw);
 	move[0] = c_yaw*dist;
 	move[1] = s_yaw*dist;
-	#else
+#else
 	yaw = yaw*M_PI*2 / 360;
 	move[0] = COS(yaw)*dist;
 	move[1] = SIN(yaw)*dist;
-	#endif
+#endif
 
 	move[2] = 0;
 
@@ -1264,7 +1276,7 @@ void PF_rint (void)
 }
 void PF_floor (void)
 {
-	G_FLOAT(OFS_RETURN) = FLOOR(G_FLOAT(OFS_PARM0));
+	G_FLOAT(OFS_RETURN) = floorf(G_FLOAT(OFS_PARM0));
 }
 void PF_ceil (void)
 {

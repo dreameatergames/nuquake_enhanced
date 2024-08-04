@@ -24,9 +24,20 @@ typedef unsigned char 		byte;
 #define BYTE_DEFINED 1
 #endif
 
+// Start:	970 frames  17.7 seconds  54.9 fps
+// End:		970 frames  17.2 seconds  56.3 fps
+#ifdef NO_RESTRICT
+#define __restrict
+#else
+#endif
+
 #define STRINGIFY(x) #x
 #define TOSTRING(x) STRINGIFY(x)
+#define LINE_STRING TOSTRING(__LINE__)
 #define INFO_MSG(x) printf("%s %s\n", __FILE__ ":" TOSTRING(__LINE__), x)
+
+// align value to N-byte boundary
+#define ALIGN(VAL_, ALIGNMENT_) (((VAL_) + ((ALIGNMENT_) - 1)) & ~((ALIGNMENT_) - 1))
 
 #undef true
 #undef false
@@ -34,7 +45,17 @@ typedef unsigned char 		byte;
 #define true 1
 #define false 0
 
+#undef	min
+#undef	max
+#define	q_min(a, b)	(((a) < (b)) ? (a) : (b))
+#define	q_max(a, b)	(((a) > (b)) ? (a) : (b))
+#define	CLAMP(_minval, x, _maxval)		\
+	((x) < (_minval) ? (_minval) :		\
+	 (x) > (_maxval) ? (_maxval) : (x))
+
 typedef char	qboolean;
+
+void ftoa(float n, char* str, int length, int afterpoint);
 
 //typedef enum {false, true}	qboolean;
 

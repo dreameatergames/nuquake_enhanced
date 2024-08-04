@@ -155,33 +155,33 @@ void PR_PrintStatement (dstatement_t *s)
 	
 	if ( (unsigned)s->op < sizeof(pr_opnames)/sizeof(pr_opnames[0]))
 	{
-		Con_DPrintf ("%s ",  pr_opnames[s->op]);
+		Con_Printf ("%s ",  pr_opnames[s->op]);
 		i = strlen(pr_opnames[s->op]);
 		for ( ; i<10 ; i++)
-			Con_DPrintf (" ");
+			Con_Printf (" ");
 	}
 		
 	if (s->op == OP_IF || s->op == OP_IFNOT)
-		Con_DPrintf ("%sbranch %i",PR_GlobalString(s->a),s->b);
+		Con_Printf ("%sbranch %i",PR_GlobalString(s->a),s->b);
 	else if (s->op == OP_GOTO)
 	{
-		Con_DPrintf ("branch %i",s->a);
+		Con_Printf ("branch %i",s->a);
 	}
 	else if ( (unsigned)(s->op - OP_STORE_F) < 6)
 	{
-		Con_DPrintf ("%s",PR_GlobalString(s->a));
-		Con_DPrintf ("%s", PR_GlobalStringNoContents(s->b));
+		Con_Printf ("%s",PR_GlobalString(s->a));
+		Con_Printf ("%s", PR_GlobalStringNoContents(s->b));
 	}
 	else
 	{
 		if (s->a)
-			Con_DPrintf ("%s",PR_GlobalString(s->a));
+			Con_Printf ("%s",PR_GlobalString(s->a));
 		if (s->b)
-			Con_DPrintf ("%s",PR_GlobalString(s->b));
+			Con_Printf ("%s",PR_GlobalString(s->b));
 		if (s->c)
-			Con_DPrintf ("%s", PR_GlobalStringNoContents(s->c));
+			Con_Printf ("%s", PR_GlobalStringNoContents(s->c));
 	}
-	Con_DPrintf ("\n");
+	Con_Printf ("\n");
 	#endif
 }
 
@@ -198,7 +198,7 @@ void PR_StackTrace (void)
 	
 	if (pr_depth == 0)
 	{
-		Con_DPrintf ("<NO STACK>\n");
+		Con_Printf ("<NO STACK>\n");
 		return;
 	}
 	
@@ -209,10 +209,10 @@ void PR_StackTrace (void)
 		
 		if (!f)
 		{
-			Con_DPrintf ("<NO FUNCTION>\n");
+			Con_Printf ("<NO FUNCTION>\n");
 		}
 		else
-			Con_DPrintf ("%12s : %s\n", PR_GetString(f->s_file), PR_GetString(f->s_name));		
+			Con_Printf ("%12s : %s\n", PR_GetString(f->s_file), PR_GetString(f->s_name));		
 	}
 	#endif
 }
@@ -248,7 +248,7 @@ void PR_Profile_f (void)
 		if (best)
 		{
 			if (num < 10)
-				Con_DPrintf ("%7i %s\n", best->profile, PR_GetString(best->s_name));
+				Con_Printf ("%7i %s\n", best->profile, PR_GetString(best->s_name));
 			num++;
 			best->profile = 0;
 		}
@@ -274,7 +274,7 @@ void PR_RunError (char *error, ...)
 
 	PR_PrintStatement (pr_statements + pr_xstatement);
 	PR_StackTrace ();
-	Con_DPrintf ("%s\n", string);
+	Con_Printf ("%s\n", string);
 	
 	pr_depth = 0;		// dump the stack so host_error can shutdown functions
 
@@ -340,7 +340,7 @@ int PR_LeaveFunction (void)
 	int		i, c;
 
 	if (pr_depth <= 0)
-		Con_DPrintf ("prog stack underflow");
+		Sys_Error ("prog stack underflow");
 
 // restore locals from the stack
 	c = pr_xfunction->locals;

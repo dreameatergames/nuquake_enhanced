@@ -29,7 +29,7 @@ char	*cvar_null_string = "";
 Cvar_FindVar
 ============
 */
-cvar_t *Cvar_FindVar (char *var_name)
+cvar_t *Cvar_FindVar (const char *var_name)
 {
 	cvar_t	*var;
 	
@@ -45,7 +45,7 @@ cvar_t *Cvar_FindVar (char *var_name)
 Cvar_VariableValue
 ============
 */
-float	Cvar_VariableValue (char *var_name)
+float	Cvar_VariableValue (const char *var_name)
 {
 	cvar_t	*var;
 	
@@ -61,7 +61,7 @@ float	Cvar_VariableValue (char *var_name)
 Cvar_VariableString
 ============
 */
-char *Cvar_VariableString (char *var_name)
+char *Cvar_VariableString (const char *var_name)
 {
 	cvar_t *var;
 	
@@ -77,7 +77,7 @@ char *Cvar_VariableString (char *var_name)
 Cvar_CompleteVariable
 ============
 */
-char *Cvar_CompleteVariable (char *partial)
+char *Cvar_CompleteVariable (const char *partial)
 {
 	cvar_t		*cvar;
 	int			len;
@@ -101,7 +101,7 @@ char *Cvar_CompleteVariable (char *partial)
 Cvar_Set
 ============
 */
-void Cvar_Set (char *var_name, char *value)
+void Cvar_Set (const char *var_name, const char *value)
 {
 	cvar_t	*var;
 	qboolean changed;
@@ -127,7 +127,7 @@ void Cvar_Set (char *var_name, char *value)
 	}
 	//Heffo - Cvar Callback Function
 	if(var->Cvar_Changed)
-		var->Cvar_Changed();
+		var->Cvar_Changed(var);
 	//Heffo - Cvar Callback Function
 }
 
@@ -136,11 +136,11 @@ void Cvar_Set (char *var_name, char *value)
 Cvar_SetValue
 ============
 */
-void Cvar_SetValue (char *var_name, float value)
+void Cvar_SetValue (const char *var_name, float value)
 {
 	char	val[32];
-	
-	sprintf (val, "%f",value);
+	ftoa(value, val, 5, 4);
+	//sprintf (val, "%f",value);
 	Cvar_Set (var_name, val);
 }
 
@@ -182,7 +182,7 @@ void Cvar_RegisterVariable (cvar_t *variable)
 }
 
 //mankrip & Heffo - Cvar Callback Function - begin
-void Cvar_RegisterVariableWithCallback (cvar_t *variable, void *function)
+void Cvar_RegisterVariableWithCallback (cvar_t *variable, void (*function) (cvar_t*))
 {
 // first check to see if it has already been defined
 	if (Cvar_FindVar (variable->name))
@@ -241,9 +241,14 @@ with the archive flag set to true.
 void Cvar_WriteVariables (FILE *f)
 {
 	cvar_t	*var;
-	
+	char buf[256];
+
 	for (var = cvar_vars ; var ; var = var->next)
 		if (var->archive)
-			fprintf (f, "%s \"%s\"\n", var->name, var->string);
+			//fprintf (f, "%s \"%s\"\n", var->name, var->string);
+			{
+				const int size = snprintf (buf, 256, "%s \"%s\"\n", var->name, var->string);
+				fwrite(buf, size, 1, f);
+			}
 }
 

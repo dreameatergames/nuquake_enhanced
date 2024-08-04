@@ -42,35 +42,26 @@ void R_ClearParticles(void);
 void R_InitLights(void);
 void GL_BuildLightmaps(void);
 qboolean VID_Is8bit(void);
-void GL_Upload8_EXT(byte *data, int width, int height, qboolean mipmap, qboolean alpha);
 
-cvar_t mipbias = {"mipbias", "-4"};
+cvar_t mipbias = {"mipbias", "-7"};
 
 /* Used for generating the lightmap multiple ways for debugging */
 void VID_GenerateLighting(qboolean alpha) {
 #ifdef _arch_dreamcast
-  extern unsigned char *lightingPalette;
+  static unsigned int *lightingPalette = NULL;
+  if(!lightingPalette)
+    lightingPalette = (unsigned int *)Z_Malloc(256 * sizeof(uint32_t));
 
-  lightingPalette = (unsigned char *)Z_Malloc(256 * 4);
-  int i, j;
-
-  for (i = 0; i < 16; i++) {
-    for (j = 0; j < 16; j++) {
+  for (int i = 0; i < 16; i++) {
+    for (int j = 0; j < 16; j++) {
       if (alpha) {
-        lightingPalette[(i * 16 + j) * 4] = 0x0;
-        lightingPalette[(i * 16 + j) * 4 + 1] = 0x0;
-        lightingPalette[(i * 16 + j) * 4 + 2] = 0x0;
-        lightingPalette[(i * 16 + j) * 4 + 3] = i * 16 + j;
+        lightingPalette[i * 16 + j] = (i * 16 + j) << 24 | 0x0 << 16 | 0x0 << 8 | 0x0;
       } else {
-        lightingPalette[(i * 16 + j) * 4] = i * 16 + j;
-        lightingPalette[(i * 16 + j) * 4 + 1] = i * 16 + j;
-        lightingPalette[(i * 16 + j) * 4 + 2] = i * 16 + j;
-        lightingPalette[(i * 16 + j) * 4 + 3] = 0xFF;
+        lightingPalette[i * 16 + j] = 0XFF << 24 | (i * 16 + j) << 16 | (i * 16 + j) << 8 | (i * 16 + j);
       }
     }
   }
   glColorTableEXT(GL_SHARED_TEXTURE_PALETTE_1_KOS, GL_RGBA8, 256, GL_RGBA, GL_UNSIGNED_BYTE, (void *)lightingPalette);
-  Z_Free(lightingPalette);
 #else
   (void)alpha;
 #endif
@@ -94,7 +85,6 @@ void VID_ChangeLightmapFilter_f(void) {
 }
 
 void VID_Gamma_f(void) {
-  
 #if _arch_dreamcast
   extern unsigned char *newPalette;
   static float vid_gamma = 1.0;
@@ -104,10 +94,8 @@ void VID_Gamma_f(void) {
 
   if (Cmd_Argc() == 2) {
     vid_gamma = atoff(Cmd_Argv(1));
-    printf("VID_Gamma %f\n", vid_gamma);
-
     for (i = 0; i < 768; i++) {
-      f = powf((host_basepal[i] + 1) * (1.0f/256.0f), vid_gamma);
+      f = powf((host_basepal[i] + 1) * (1.0f / 256.0f), vid_gamma);
       inf = f * 255 + 0.5f;
       if (inf < 0)
         inf = 0;
@@ -118,7 +106,7 @@ void VID_Gamma_f(void) {
 
     VID_SetPalette(palette);
     glColorTableEXT(GL_SHARED_TEXTURE_PALETTE_EXT, GL_RGBA8, 256, GL_RGBA, GL_UNSIGNED_BYTE, (void *)newPalette);
-    Z_Free(newPalette);
+    //Z_Free(newPalette);
     Cvar_SetValue("gamma", vid_gamma);
   }
 #endif
@@ -131,7 +119,7 @@ glScaleF
 */
 void glScaleF(float x, float y, float z) {
   glScalef(x, y, z);
-  extern void M_PrintWhite (int cx, int cy, char *str);
+  extern void M_PrintWhite(int cx, int cy, char *str);
   M_PrintWhite(LEFT_MARGIN, 240 - BOTTOM_MARGIN, "\x6e\x6f\x74\x20\x66\x6f\x72\x20\x64\x69\x73\x74\x72\x69\x62\x75\x74\x69\x6f\x6e\x20\x74\x6f");
   M_PrintWhite(LEFT_MARGIN, 240 - (BOTTOM_MARGIN / 2), "\x22\x44\x72\x65\x61\x6d\x63\x61\x73\x74\x20\x4f\x6e\x6c\x69\x6e\x65\x22\x20\x6f\x72\x20\x22\x53\x65\x67\x61\x4e\x65\x74\x22");
 }
@@ -166,7 +154,7 @@ void R_InitTextures(void) {
   }
 }
 
-byte dottexture[8][8] =
+byte __attribute__((aligned(32))) dottexture[8][8] =
     {
         {0, 1, 1, 0, 0, 0, 0, 0},
         {1, 1, 1, 1, 0, 0, 0, 0},
@@ -179,12 +167,12 @@ byte dottexture[8][8] =
 };
 void R_InitParticleTexture(void) {
   int x, y;
-  byte data[8][8][4];
+  byte __attribute__((aligned(32))) data[8][8][4];
 
   //
   // particle texture
   //
-  particletexture = texture_extension_number++;
+  glGenTextures(1, (GLuint*)&particletexture);
   GL_Bind(particletexture);
 
   for (x = 0; x < 8; x++) {
@@ -224,8 +212,8 @@ void R_Init(void) {
 #ifndef _arch_dreamcast
   Cmd_AddCommand("timerefresh", R_TimeRefresh_f);
   Cmd_AddCommand("envmap", R_Envmap_f);
-#endif
   Cmd_AddCommand("pointfile", R_ReadPointFile_f);
+#endif
 
   Cvar_RegisterVariable(&r_norefresh);
   Cvar_RegisterVariable(&r_lightmap);
@@ -243,12 +231,8 @@ void R_Init(void) {
 
   Cvar_RegisterVariable(&gl_finish);
   Cvar_RegisterVariable(&gl_clear);
-  Cvar_RegisterVariable(&gl_texsort);
 
   Cvar_RegisterVariable(&mipbias);
-
-  if (gl_mtexable)
-    Cvar_SetValue("gl_texsort", 0.0);
 
   Cvar_RegisterVariable(&gl_cull);
   Cvar_RegisterVariable(&gl_smoothmodels);
@@ -263,6 +247,9 @@ void R_Init(void) {
 
   Cvar_RegisterVariable(&gl_doubleeyes);
 
+  extern cvar_t r_sky;
+  Cvar_RegisterVariable(&r_sky);
+
   R_InitParticles();
   R_InitParticleTexture();
   R_InitLights();
@@ -271,8 +258,7 @@ void R_Init(void) {
   Test_Init();
 #endif
 
-  playertextures = texture_extension_number;
-  texture_extension_number += 16;
+  glGenTextures(16, (GLuint*)playertextures);
 }
 
 /*
@@ -282,6 +268,7 @@ R_TranslatePlayerSkin
 Translates a skin texture by the per-player color lookup
 ===============
 */
+static byte __attribute__((aligned(32))) translated[320 * 200];
 void R_TranslatePlayerSkin(int playernum) {
   int top, bottom;
   byte translate[256];
@@ -333,9 +320,7 @@ void R_TranslatePlayerSkin(int playernum) {
 
   // because this happens during gameplay, do it fast
   // instead of sending it through gl_upload 8
-  GL_Bind(playertextures + playernum);
-
-  byte translated[320 * 200];
+  GL_Bind(playertextures[playernum]);
 
   if (s > 320 * 200) {
     return;
@@ -349,7 +334,7 @@ void R_TranslatePlayerSkin(int playernum) {
   }
 
   // don't mipmap these, because it takes too long
-  GL_Upload8(translated, paliashdr->skinwidth, paliashdr->skinheight, false, false);
+  GL_Upload8(translated, paliashdr->skinwidth, paliashdr->skinheight, TEX_NONE);
 }
 
 /*
@@ -401,7 +386,7 @@ For program optimization
 ====================
 */
 void R_TimeRefresh_f(void) {
-#ifndef _arch_dreamcast
+#if 0
   int i;
   float start, stop, time;
 

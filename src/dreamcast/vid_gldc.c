@@ -8,7 +8,7 @@ of the License, or (at your option) any later version.
 
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 See the GNU General Public License for more details.
 
@@ -17,25 +17,22 @@ along with this program; if not, write to the Free Software
 Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 */
-// vid_null.c -- null video driver to aid porting efforts
+// vid_gldc.c -- video driver for dreamcast using KOS and GLdc
 
 #include "quakedef.h"
 
 #include <dc/pvr.h>
 #include <dc/sq.h>
 
-glvert_fast_t gVertexFastBuffer[VERTEXARRAYSIZE];
+viddef_t vid; // global video state
 
-viddef_t vid;  // global video state
-
-#define BASEWIDTH 640
-#define BASEHEIGHT 480
+int BASEWIDTH = 640;
+int BASEHEIGHT = 480;
 
 unsigned int d_8to24table[256];
 unsigned char d_15to8table[65536];
 unsigned char *newPalette;
 unsigned char backupPalette[256 * 3];
-unsigned char *lightingPalette;
 char st[80];
 
 /* Cvars we set to give default acceptable performance */
@@ -48,30 +45,26 @@ extern cvar_t gl_clear;
 extern cvar_t snd_noextraupdate;
 extern cvar_t r_wateralpha;
 
-int texture_extension_number = 1;
-
 float gldepthmin, gldepthmax;
 
 /* Custom Cvars we are Adding */
 cvar_t gl_ztrick = {"gl_ztrick", "0"};
 cvar_t gl_lighting = {"gl_lighting", "1"};
 
-const char *gl_vendor;
-const char *gl_renderer;
-const char *gl_version;
-const char *gl_extensions;
+const GLubyte *gl_vendor;
+const GLubyte *gl_renderer;
+const GLubyte *gl_version;
+const GLubyte *gl_extensions;
 
 qboolean is8bit = true;
-qboolean isPermedia = false;
-qboolean isDreamcast = true;
-qboolean gl_mtexable = false;
 
 extern void VID_GenerateLighting(qboolean alpha);
 void VID_GenerateLighting_f(void);
 void VID_ChangeLightmapFilter_f(void);
 void VID_Gamma_f(void);
 
-void VID_SetPalette(unsigned char *palette) {
+void VID_SetPalette(unsigned char *palette)
+{
   byte *pal;
   uint8_t r, g, b;
   unsigned v;
@@ -90,7 +83,8 @@ void VID_SetPalette(unsigned char *palette) {
   //
   pal = palette;
   table = d_8to24table;
-  for (i = 0; i < 256; i++) {
+  for (i = 0; i < 256; i++)
+  {
     r = pal[0];
     g = pal[1];
     b = pal[2];
@@ -101,11 +95,12 @@ void VID_SetPalette(unsigned char *palette) {
     v = (255 << 24) + (r << 0) + (g << 8) + (b << 16);
     *table++ = v;
   }
-  d_8to24table[255] &= 0xFFFFFF;  // 255 is transparent
+  d_8to24table[255] &= 0xFFFFFF; // 255 is transparent
   newPalettePack[255] = 0x00FFFFFF;
 
   // JACK: 3D distance calcs - k is last closest, l is the distance.
-  for (i = 0; i < (1 << 15); i++) {
+  for (i = 0; i < (1 << 15); i++)
+  {
     /* Maps
 		000000000000000
 		000000000011111 = Red  = 0x1F
@@ -116,12 +111,14 @@ void VID_SetPalette(unsigned char *palette) {
     g = ((i & 0x03E0) >> 2) + 4;
     b = ((i & 0x7C00) >> 7) + 4;
     pal = (unsigned char *)d_8to24table;
-    for (v = 0, k = 0, bestdist = 10000 * 10000; v < 256; v++, pal += 4) {
+    for (v = 0, k = 0, bestdist = 10000 * 10000; v < 256; v++, pal += 4)
+    {
       r1 = (int)r - (int)pal[0];
       g1 = (int)g - (int)pal[1];
       b1 = (int)b - (int)pal[2];
       dist = (r1 * r1) + (g1 * g1) + (b1 * b1);
-      if (dist < bestdist) {
+      if (dist < bestdist)
+      {
         k = v;
         bestdist = dist;
       }
@@ -130,12 +127,14 @@ void VID_SetPalette(unsigned char *palette) {
   }
 }
 
-void VID_ShiftPalette(unsigned char *palette) {
+void VID_ShiftPalette(unsigned char *palette)
+{
   (void)palette;
   //	VID_SetPalette(palette);
 }
 
-void VID_Init8bitPalette(void) {
+void VID_Init8bitPalette(void)
+{
   Con_SafePrintf("... Using GL_EXT_shared_texture_palette\n");
   glEnable(GL_SHARED_TEXTURE_PALETTE_EXT);
   glColorTableEXT(GL_SHARED_TEXTURE_PALETTE_EXT, GL_RGBA8, 256, GL_RGBA, GL_UNSIGNED_BYTE, (void *)newPalette);
@@ -144,17 +143,13 @@ void VID_Init8bitPalette(void) {
   is8bit = true;
 }
 
-void VID_Shutdown(void) {
+void VID_Shutdown(void)
+{
 }
 
-qboolean VID_Is8bit(void) {
+qboolean VID_Is8bit(void)
+{
   return is8bit;
-}
-
-void CheckMultiTextureExtensions(void) {
-  qglMTexCoord2fSGIS = (void *)&glMultiTexCoord2fARB;
-  qglSelectTextureSGIS = (void *)&glActiveTextureARB;
-  gl_mtexable = true;
 }
 
 extern int gl_filter_min;
@@ -165,8 +160,9 @@ extern int gl_filter_max;
 GL_Init
 ===============
 */
-void GL_Init(void) {
-	gl_vendor = (char *)glGetString (GL_VENDOR);
+void GL_Init(void)
+{
+  gl_vendor = glGetString(GL_VENDOR);
   Con_Printf("GL_VENDOR: %s\n", gl_vendor);
   gl_renderer = glGetString(GL_RENDERER);
   Con_Printf("GL_RENDERER: %s\n", gl_renderer);
@@ -177,9 +173,6 @@ void GL_Init(void) {
 
   Con_Printf("\nThanks to everyone EXCEPT Saturn-Tan!\n\n");
   Con_Printf("\n%s\n\n", st);
-
-  if (gl_mtexable)
-    CheckMultiTextureExtensions();
 
   glClearColor(1, 1, 1, 1);
   glEnable(GL_TEXTURE_2D);
@@ -206,18 +199,15 @@ void GL_Init(void) {
   glEnableClientState(GL_TEXTURE_COORD_ARRAY);
 }
 
-void VID_Aspect_f(void) {
+void VID_Aspect_f(void)
+{
   if (Cmd_Argc() < 1)
     return;
 
-  if (atoi(Cmd_Argv(1))) {
-    /* Widescreen */
-    vid.aspect = ((float)853.0 / (float)480.0) * (320.0 / 240.0);
-  } else {
-    /* 4:3 */
-    vid.aspect = ((float)vid.height / (float)vid.width) * (320.0 / 240.0);
-    //vid.aspect = 4.0f/3.0f;
-  }
+  int w = atoi(Cmd_Argv(1));
+  /* 4:3  = 640x480 */
+  vid.aspect = ((float)vid.height / (float)w) * (320.0 / 240.0);
+  BASEWIDTH = w;
   extern void V_CalcRefdef(void);
   V_CalcRefdef();
 }
@@ -228,7 +218,8 @@ GL_BeginRendering
 
 =================
 */
-void GL_BeginRendering(int *x, int *y, int *width, int *height) {
+void GL_BeginRendering(int *x, int *y, int *width, int *height)
+{
   *x = 0;
   *y = 0;
   *width = BASEWIDTH;
@@ -236,13 +227,17 @@ void GL_BeginRendering(int *x, int *y, int *width, int *height) {
   glEnable(GL_NEARZ_CLIPPING_KOS);
 }
 
-void GL_EndRendering(void) {
+extern void glKosSwapBuffers_NO_PT(void);
+void GL_EndRendering(void)
+{
   /* I believe this mirrors the Windows driver, otherwise status bar flicker */
   Sbar_Changed();
+  //glKosSwapBuffers_NO_PT();
   glKosSwapBuffers();
 }
 
-void VID_Cvar_Update(void) {
+void VID_Cvar_Update(void)
+{
   //Cvar Changes
   gl_smoothmodels.value = 1;
   gl_affinemodels.value = 1;
@@ -254,7 +249,8 @@ void VID_Cvar_Update(void) {
   //show_fps.value = 1;
 }
 
-void VID_Init(unsigned char *palette) {
+void VID_Init(unsigned char *palette)
+{
   Cvar_RegisterVariable(&gl_ztrick);
   Cvar_RegisterVariable(&gl_lighting);
 
@@ -266,7 +262,7 @@ void VID_Init(unsigned char *palette) {
   vid.width = vid.conwidth = BASEWIDTH;
   vid.height = vid.conheight = BASEHEIGHT;
 
-#if 0  //Widescreen
+#if 0 //Widescreen
   vid.aspect = ((float)853.0 / (float)480.0) * (320.0 / 240.0);
 #else
   vid.aspect = ((float)vid.height / (float)vid.width) * (320.0 / 240.0);
@@ -289,7 +285,7 @@ void VID_Init(unsigned char *palette) {
 
   VID_Init8bitPalette();
 
-  vid.recalc_refdef = true;  // force a surface cache flush
+  vid.recalc_refdef = true; // force a surface cache flush
 
   VID_Cvar_Update();
 }

@@ -1,9 +1,9 @@
 #include "vmuheader.h"
 
 struct vmuheader vmuheader = {
-	"RIZZO SAVE      ", // char desc_vm[16];
+	"QUAKE SAVE      ", // char desc_vm[16];
 	"" , // char desc_dc[32];
-	"RIZZO", // char application[16];
+	"QUAKE", // char application[16];
 	1, // uint16le n_icons;
 	0, // uint16le anime_speed;
 	0, // uint16le eyecache;

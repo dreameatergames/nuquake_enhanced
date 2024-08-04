@@ -36,7 +36,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #define	TYP_SOUND		67
 #define	TYP_MIPTEX		68
 
-typedef struct
+typedef struct __attribute__((aligned(32)))
 {
 	int			width, height;
 	byte		data[4];			// variably sized
@@ -61,10 +61,6 @@ typedef struct
 	char		pad1, pad2;
 	char		name[16];				// must be null terminated
 } lumpinfo_t;
-
-extern	int			wad_numlumps;
-extern	lumpinfo_t	*wad_lumps;
-extern	byte		*wad_base;
 
 void	W_LoadWadFile (char *filename);
 void	W_CleanupName (char *in, char *out);

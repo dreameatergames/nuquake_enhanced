@@ -3,7 +3,7 @@
  * Path: d:\Dev\Dreamcast\UB_SHARE\clean_nuQuake\src\dreamcast
  * Created Date: Monday, September 16th 2019, 8:41:40 am
  * Author: Hayden Kowalchuk
- * 
+ *
  * Copyright (c) 2019 HaydenKow
  */
 
@@ -30,9 +30,12 @@ void BitmapLoad(char *path, GLuint *temp_tex);
 void glScaleF(float x, float y, float z);
 void GL_Set2D(void);
 
-extern int char_texture;
+extern uint32_t pvr_mem_available(void);
+extern void malloc_stats(void);
 
-static char gamecmd[6];
+extern unsigned int char_texture;
+
+static char gamecmd[7];
 static char *gamedir = "id1";
 static int current_page = 0;
 
@@ -122,10 +125,10 @@ static int load_mod_list(char *curdir) {
 
     if (is_dir) {
       struct dirent *de2;
-#ifdef _arch_dreamcast
-      sprintf(dir_name, "%s%s%s", curdir, "/", de->d_name);
-#else
+#if defined(_WIN32)
       sprintf(dir_name, "%s%s%s", curdir, "\\", de->d_name);
+#else
+      sprintf(dir_name, "%s%s%s", curdir, "/", de->d_name);
 #endif
       DIR *dir = opendir(dir_name);
       de2 = NULL;
@@ -249,8 +252,8 @@ GLuint texture[1];
 
 /* Image type - contains height, width, and data */
 struct Image {
-  unsigned long sizeX;
-  unsigned long sizeY;
+  uint32_t sizeX;
+  uint32_t sizeY;
   char *data;
 };
 typedef struct Image Image;
@@ -259,8 +262,8 @@ typedef struct Image Image;
 // See http://www.dcs.ed.ac.uk/~mxr/gfx/2d/BMP.txt for more info.
 int ImageLoad(char *filename, Image *image) {
   FILE *file;
-  unsigned long size;         // size of the image in bytes.
-  unsigned long i;            // standard counter.
+  unsigned int size;         // size of the image in bytes.
+  unsigned int i;            // standard counter.
   unsigned short int planes;  // number of planes in image (must be 1)
   unsigned short int bpp;     // number of bits per pixel (must be 24)
   char temp;                  // temporary color storage for bgr-rgb conversion.
@@ -338,9 +341,14 @@ int ImageLoad(char *filename, Image *image) {
 void BitmapLoad(char *path, GLuint *temp_tex) {
   // Load Texture
   Image *image1;
+  void *ptr;
 
   // allocate space for texture
-  image1 = (Image *)malloc(sizeof(Image));
+  if(posix_memalign(&ptr, 32, sizeof(Image)) != 0){
+    printf("Error allocating space for image");
+    exit(0);
+  }
+  image1 = (Image*)ptr;
   if (image1 == NULL) {
     printf("Error allocating space for image");
     exit(0);
@@ -360,11 +368,13 @@ void BitmapLoad(char *path, GLuint *temp_tex) {
   // border 0 (normal), rgb color data, unsigned byte data, and finally the data itself.
   glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, image1->sizeX, image1->sizeY, 0, GL_RGB, GL_UNSIGNED_BYTE, image1->data);
   free(image1->data);
-  free(image1);
+  free(ptr);
 }
 
 /* floats for x rotation, y rotation, z rotation */
 float xrot, yrot, zrot;
+
+extern void MYgluPerspective(GLfloat fovy, GLfloat aspect, GLfloat zNear, GLfloat zFar);
 
 /* A general OpenGL initialization function.  Sets all of the initial parameters. */
 void InitGL(int Width, int Height)  // We call this right after our OpenGL window is created.
@@ -379,23 +389,21 @@ void InitGL(int Width, int Height)  // We call this right after our OpenGL windo
   glEnable(GL_TEXTURE_2D);
   glClearColor(0.0f, 0.5f, 0.5f, 0.0f);  // This Will Clear The Background Color To Black
   glClearDepth(1.0);                     // Enables Clearing Of The Depth Buffer
-  glColor3f(1.0f, 1.0f, 1.0f);           // Sets Color to white
-  //glDepthFunc(GL_LESS);				  	// The Type Of Depth Test To Do
-  //glEnable(GL_DEPTH_TEST); 				// Enables Depth Testing
-  //glShadeModel(GL_SMOOTH);			  	// Enables Smooth Color Shading
 
   glViewport(0, 0, Width, Height);  // Reset The Current Viewport And Perspective Transformation
 
   glMatrixMode(GL_PROJECTION);
   glLoadIdentity();  // Reset The Projection Matrix
 
-  gluPerspective(45.0f, (GLfloat)Width / (GLfloat)Height, 0.1f, 100.0f);  // Calculate The Aspect Ratio Of The Window
+  //gluPerspective(45.0f, (GLfloat)Width / (GLfloat)Height, 0.1f, 100.0f);  // Calculate The Aspect Ratio Of The Window
+  MYgluPerspective(45.0f, (GLfloat)Width / (GLfloat)Height, 0.1f, 100.0f);  // Calculate The Aspect Ratio Of The Window
 
   glMatrixMode(GL_MODELVIEW);
 }
 
 /* The main drawing function. */
 void DrawGLScene() {
+  //gamelist->n_games = 36;
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);  // Clear The Screen And The Depth Buffer
   glLoadIdentity();                                    // Reset The View
 
@@ -431,13 +439,17 @@ void DrawGLScene() {
   M_Print(LEFT_MARGIN, TOP_MARGIN, "Available Games:");
 
   for (int i = 0; i < MIN(gamelist->n_games - (current_page * GAMES_PER_PAGE), GAMES_PER_PAGE); i++) {
-    char name[32];
+    char name[64];
     y += 12;
+
     game_t *current_game = get_game_object(i + (current_page * GAMES_PER_PAGE));
     sprintf(name,
             "%s"
             "%s",
             (mod_cursor == i) ? "\xd" : " ", current_game->dirname);
+
+
+    //sprintf(name, "game entry %d", (i + 1) + (current_page * GAMES_PER_PAGE));
 
     if (mod_cursor == i) {
       if (flashing++ < 15) {
@@ -448,18 +460,18 @@ void DrawGLScene() {
       flashing %= 30;
 
       //Draw image
-      if (current_game->texture) {
+      /*if (current_game->texture) {
         glBindTexture(GL_TEXTURE_2D, current_game->texture);
         DrawQuad(320, TOP_MARGIN, 128, 128, 0, 1, 1, -1);
         glBindTexture(GL_TEXTURE_2D, texture[0]);
-      }
+      }*/
     } else {
       M_PrintWhite(LEFT_MARGIN, y, name);
     }
   }
 
   if (pages > 1) {
-    strncpy(page + 1 + (int)(((float)(bar_length / (float)pages) + 1) * current_page), "\x83", 1);
+    memcpy(page + 1 + (int)(((float)(bar_length / (float)pages) + 1) * current_page), "\x83", 1);
     M_PrintWhite(LEFT_MARGIN, 180, page);
   }
   glPopMatrix();
@@ -470,7 +482,10 @@ void DrawGLScene() {
 static char cmdline[256];
 char *menu(int *argc, char **argv, char **basedirs, int num_dirs) {
 #ifdef _arch_dreamcast
-  printf("GL Mem left:%u\n", (unsigned int)pvr_mem_available());
+  printf("PVR Mem left:%u\n", (unsigned int)pvr_mem_available());
+#ifdef GL_EXT_dreamcast_yalloc
+  printf("GL Mem left:%u\n", (unsigned int)glGetFreeVRAM_INTERNAL_KOS());
+#endif
   malloc_stats();
 #endif
 
@@ -486,6 +501,7 @@ char *menu(int *argc, char **argv, char **basedirs, int num_dirs) {
   }
 
   if (gamelist->n_games > 1) {
+  //if (true) {
     //Setup
     InitGL(640, 480);
 
@@ -497,8 +513,7 @@ char *menu(int *argc, char **argv, char **basedirs, int num_dirs) {
     vid.height = glheight;
 
     key_dest = key_menu;
-    extern int m_state;
-    m_state = 21; /*m_mod_loader*/
+    m_state = m_mod_loader;
 
     //Enabled Needed things for text
     glEnableClientState(GL_VERTEX_ARRAY);
@@ -521,13 +536,30 @@ char *menu(int *argc, char **argv, char **basedirs, int num_dirs) {
     m_state = 0;
   } else {
     selected_mod = 0;
+    game_t *base = get_game_object(selected_mod);
+    /* Check for cmdline arguments */
+#ifdef _arch_dreamcast
+    char cmd_file[128];
+    sprintf(cmd_file, "%s%s%s", base->dirname, "/", "cmdline.txt");
+#else
+    char cmd_file[256];
+    sprintf(cmd_file, "%s%s%s", base->dirname, "\\", "cmdline.txt");
+#endif
+  printf("Checking %s\n", cmd_file);
+    memset(base->cmdline, '\0', sizeof(base->cmdline));
+    if (Sys_FileTime(cmd_file) == 1) {
+      FILE *cmdfile = fopen(cmd_file, "r");
+      fread(base->cmdline, 128, 1, cmdfile);
+      fclose(cmdfile);
+    }
+    printf("read: %s\n", base->cmdline);
   }
 
   memset(cmdline, 0, 256);
 
   gamedir = get_game_object(selected_mod)->dirname;
   memset(gamecmd, '\0', sizeof(gamecmd));
-  if( (!strcasecmp(gamedir, "rogue")) || (!strcasecmp(gamedir, "hipnotic")) ){
+  if ((!strcasecmp(gamedir, "rogue")) || (!strcasecmp(gamedir, "hipnotic"))) {
     strcat(gamecmd, "-");
   } else if (!strcasecmp(gamedir, "id1")) {
     gamedir = " ";
@@ -558,7 +590,10 @@ char *menu(int *argc, char **argv, char **basedirs, int num_dirs) {
   free_gamelist();
 
 #ifdef _arch_dreamcast
-  printf("GL Mem left:%u\n", (unsigned int)pvr_mem_available());
+  printf("PVR Mem left:%u\n", (unsigned int)pvr_mem_available());
+#ifdef GL_EXT_dreamcast_yalloc
+  printf("GL Mem left:%u\n", (unsigned int)glGetFreeVRAM_INTERNAL_KOS());
+#endif
   malloc_stats();
 #endif
 

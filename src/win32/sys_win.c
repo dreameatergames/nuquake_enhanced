@@ -29,6 +29,11 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "resource.h"
 #include "conproc.h"
 
+/*@Note: Directx Version
+The latest version to support Windows 98 SE is version 9.0c, up to 08 Dec 2006.
+Beyond this point, 9.0c was maintained up until 16 Mar 2009, you won't be able to install this version.
+*/
+
 #define MINIMUM_WIN_MEMORY		0x0880000
 #define MAXIMUM_WIN_MEMORY		0x1000000
 
@@ -188,45 +193,25 @@ int     Sys_FileTime (char *path)
 
 int	Sys_FileTime (char *path)
 {
-	#if __MINGW32__
-struct __stat64 stat_buf;
-int rc = __stat64(path, &stat_buf);
-return rc == 0 ? 1 : -1;
-
-#else
- struct stat stat_buf;
- int rc = stat(path, &stat_buf);
- return rc == 0 ? 1 : -1;
- #endif
-	//struct stat   buffer;   
-  	//return ((stat (path, &buffer) == 0) ? 1 : -1);
-
+#if __MINGW32__
 	/*
-	FILE	*f;
-	int		retval;
-
-	f = fopen(path, "rb");
-
-	if (f)
-	{
-		fclose(f);
-		retval = 1;
-	}
-	else
-	{
-		retval = -1;
-	}
-	return retval;
+	struct __stat64 stat_buf;
+	int rc = __stat64(path, &stat_buf);
+	return rc == 0 ? 1 : -1;
 	*/
+	struct stat stat_buf;
+	int rc = stat(path, &stat_buf);
+	return rc == 0 ? 1 : -1;
+#else
+	struct stat stat_buf;
+	int rc = stat(path, &stat_buf);
+	return rc == 0 ? 1 : -1;
+#endif
 }
 
 void Sys_mkdir (char *path)
 {
-#ifdef _WIN32
 	_mkdir (path);
-#else
-	mkdir (path, 0777);
-#endif
 }
 
 
@@ -267,7 +252,6 @@ void Sys_Init (void)
 	else
 		WinNT = false;
 }
-
 
 void Sys_Error (char *error, ...)
 {
@@ -351,17 +335,12 @@ void Sys_Printf (char *fmt, ...)
 {
 	va_list		argptr;
 	char		text[1024];
-	DWORD		dummy;
 
-	if (isDedicated)
-	{
-		va_start (argptr,fmt);
-		vsprintf (text, fmt, argptr);
-		va_end (argptr);
+	va_start (argptr,fmt);
+	vsprintf (text, fmt, argptr);
+	va_end (argptr);
 
-		WriteFile(houtput, text, strlen (text), &dummy, NULL);
-		FlushFileBuffers(houtput);
-	}
+	printf("%s", text);
 }
 
 void Sys_Quit (void)
@@ -529,7 +508,7 @@ void Sys_SendKeyEvents (void)
 WinMain
 ==================
 */
-void SleepUntilInput (int time)
+static inline void SleepUntilInput (int time)
 {
 	(void)time;
 }
@@ -584,7 +563,7 @@ int WINAPI WinMain (HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLin
 	char **_argv;
 
 	VID_Init(NULL);
-
+	
 	#if 1
 	//Display Mod Menu
 	char *args[10] = {"quake", NULL};
@@ -592,7 +571,7 @@ int WINAPI WinMain (HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLin
 	_argv = args; 
 	
 	/* Only show if Font Present */
-	if(Sys_FileTime("font.bmp") == 1 ){
+	if(!strstr(lpCmdLine, "-game") && Sys_FileTime("font.bmp") == 1 ){
 		basedir = menu(&argc,_argv,basedirs, 2);
 	} else {
 		basedir = ".";
@@ -631,14 +610,41 @@ int WINAPI WinMain (HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLin
 
 		}
 	}
+	/* Read from file too */
+	char cmd_file[256];
+	char cmd_temp[128];
+	sprintf(cmd_file, "%s%s%s", basedir, "\\id1\\", "cmdline.txt");
+	memset(cmd_temp, '\0', sizeof(cmd_temp));
+	if (Sys_FileTime(cmd_file) == 1) {
+		FILE *cmdfile = fopen(cmd_file, "r");
+		fread(cmd_temp, 128, 1, cmdfile);
+		fclose(cmdfile);
+	}
+	int i = argc;
+  {
+    char *s = cmd_temp;
+    while (*s) {
+      _argv[i++] = s;
+      while (*s && *s != ' ')
+        s++;
+      if (*s == ' ') {
+        *s++ = 0;
+        while (*s == ' ')
+          s++;
+      }
+    }
+  }
+  _argv[i] = NULL;
+  argc = i;
+
 	for(int i = 0; i < argc; i++ ){
 		argv[parms.argc] = _argv[i];
 		parms.argc++;
 	}
 	parms.argv = argv;
-
+	
 	COM_InitArgv (parms.argc, parms.argv);
-
+	
 	parms.argc = com_argc;
 	parms.argv = com_argv;
 
@@ -734,12 +740,12 @@ int WINAPI WinMain (HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLin
 		else
 		{
 		// yield the CPU for a little while when paused, minimized, or not the focus
-			if ((cl.paused && (!ActiveApp && !DDActive)) || Minimized)
+			if ((cl.paused && (!ActiveApp)) || Minimized)
 			{
 				SleepUntilInput (PAUSE_SLEEP);
 				block_drawing = true;		// no point in bothering to draw
 			}
-			else if (!ActiveApp && !DDActive)
+			else if (!ActiveApp)
 			{
 				SleepUntilInput (NOT_FOCUS_SLEEP);
 			}

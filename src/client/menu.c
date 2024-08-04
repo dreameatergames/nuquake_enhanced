@@ -8,7 +8,7 @@ of the License, or (at your option) any later version.
 
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 See the GNU General Public License for more details.
 
@@ -145,7 +145,7 @@ void M_DrawCharacter (int cx, int line, int num)
 void M_Print (int cx, int cy, char *str)
 {
 	GL_OverscanAdjust(&cx, &cy);
-	extern int char_texture;
+
 	GL_Bind (char_texture);
 
 	R_BeginBatchingSurfacesQuad ();
@@ -180,7 +180,7 @@ void M_Print (int cx, int cy, char *str)
 void M_PrintWhite (int cx, int cy, char *str)
 {
 	GL_OverscanAdjust(&cx, &cy);
-	extern int char_texture;
+
 	GL_Bind (char_texture);
 
 	R_BeginBatchingSurfacesQuad ();
@@ -204,7 +204,7 @@ void M_PrintWhite (int cx, int cy, char *str)
 		frow = row*0.0625;
 		fcol = col*0.0625;
 		size = 0.0625;
-		
+
 		R_BatchSurfaceQuadText(cx + ((vid.width - 320)>>1), cy, frow, fcol, size);
 		str++;
 		cx += text_size;
@@ -265,7 +265,6 @@ void M_DrawTransPicTranslate (int x, int y, qpic_t *pic)
 }
 
 void DrawQuad(float x, float y, float w, float h, float u, float v, float uw, float vh);
-void DrawQuad_NoTex(float x, float y, float w, float h);
 typedef struct
 {
 	int		texnum;
@@ -278,7 +277,7 @@ void M_DrawTextBox (int x, int y, int width, int lines)
 	qpic_t	*p;
 	int		cx, cy;
 	int		n;
-	
+
 	// draw left side
 	cx = x;
 	cy = y;
@@ -317,20 +316,18 @@ void M_DrawTextBox (int x, int y, int width, int lines)
 	cx += text_size;
 	cy = y;
 	extern qpic_t *draw_backtile;
-	GL_Bind (*(int *)((void*)draw_backtile->data));
-	glDisable(GL_ALPHA_TEST);
+  int *temp = (int *)draw_backtile->data;
+  GL_Bind(*temp);
 	glEnable (GL_BLEND);
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-	glColor4f (1,1,1,1);
 
 	int tx = cx + ((vid.width - 320)>>1);
 	int ty = cy+8;
 	GL_OverscanAdjust(&x, &y);
-	
+
 	DrawQuad(tx,ty, (width*8)+8, lines*8, 56/64.0, 27/64.0, 320/64.0, 240/64.0);
-	glColor4f (1,1,1,1);
 	glDisable(GL_BLEND);
-	
+
 	while (width > 0)
 	{
 		cy = y;
@@ -451,7 +448,7 @@ void M_Main_Draw (void)
 		M_DrawPic (72, 32, Draw_CachePic ("gfx/mainmenu.lmp") );
 	}
 
-	f = (int)(host_time * 10)%6;
+	f = (int)(realtime * 10)%6;
 
 	M_DrawTransPic (54, 32 + m_main_cursor * 20,Draw_CachePic( va("gfx/menudot%i.lmp", f+1 ) ) );
 }
@@ -520,10 +517,6 @@ void M_Main_Key (int key)
 				if (!SCR_ModalMessage("Are you sure you want to\nstart a new game?\n"))
 					break;
 				key_dest = key_game;
-				#if defined(_arch_dreamcast) && defined(DEBUG)
-				pvr_mem_stats();
-				printf("GL Mem left:%u\n", pvr_mem_available());
-				#endif
 				if (sv.active)
 					Cbuf_AddText ("disconnect\n");
 				Cbuf_AddText ("maxplayers 1\n");
@@ -537,11 +530,11 @@ void M_Main_Key (int key)
 			case 2:
 				M_Menu_Save_f ();
 				break;
-				
+
 			case 3:
 				M_Menu_Load_f ();
 				break;
-			
+
 			case 4:
 				M_Menu_Options_f ();
 				break;
@@ -608,7 +601,7 @@ void M_SinglePlayer_Draw (void)
 	M_DrawPic ( (320-p->width)/2, 4, p);
 	M_DrawTransPic (72, 32, Draw_CachePic ("gfx/sp_menu.lmp") );
 
-	f = (int)(host_time * 10)%6;
+	f = (int)(realtime * 10)%6;
 
 	M_DrawTransPic (54, 32 + m_singleplayer_cursor * 20,Draw_CachePic( va("gfx/menudot%i.lmp", f+1 ) ) );
 }
@@ -646,10 +639,6 @@ void M_SinglePlayer_Key (int key)
 				if (!SCR_ModalMessage("Are you sure you want to\nstart a new game?\n"))
 					break;
 			key_dest = key_game;
-			#ifdef _arch_dreamcast
-			//pvr_mem_stats();
-			//printf("GL Mem left:%u\n", pvr_mem_available());
-			#endif
 			if (sv.active)
 				Cbuf_AddText ("disconnect\n");
 			Cbuf_AddText ("maxplayers 1\n");
@@ -702,7 +691,7 @@ void M_Load_Key (int k)
 	case K_ESCAPE:
 			if(sw91){
 				M_Menu_Main_f ();
-			} else 
+			} else
 				M_Menu_SinglePlayer_f ();
 		break;
 
@@ -753,12 +742,12 @@ void M_Save_Key (int k)
 	case K_ESCAPE:
 			if(sw91){
 				M_Menu_Main_f ();
-			} else 
+			} else
 				M_Menu_SinglePlayer_f ();
 		break;
 
 	case K_SPACE:
-	{ 
+	{
 		#ifdef _arch_dreamcast
 		if(vm_dev == NULL){
 			M_Menu_SinglePlayer_f ();
@@ -832,7 +821,7 @@ void M_MultiPlayer_Draw (void)
 	M_DrawPic ( (320-p->width)/2, 4, p);
 	M_DrawTransPic (72, 32, Draw_CachePic ("gfx/mp_menu.lmp") );
 
-	f = (int)(host_time * 10)%6;
+	f = (int)(realtime * 10)%6;
 
 	M_DrawTransPic (54, 32 + m_multiplayer_cursor * 20,Draw_CachePic( va("gfx/menudot%i.lmp", f+1 ) ) );
 
@@ -1180,7 +1169,7 @@ void M_Net_Draw (void)
 	M_Print (f, 158, net_helpMessage[m_net_cursor*4+2]);
 	M_Print (f, 166, net_helpMessage[m_net_cursor*4+3]);
 
-	f = (int)(host_time * 10)%6;
+	f = (int)(realtime * 10)%6;
 	M_DrawTransPic (54, 32 + m_net_cursor * 20,Draw_CachePic( va("gfx/menudot%i.lmp", f+1 ) ) );
 }
 
@@ -1278,7 +1267,7 @@ void M_Menu_Options_f (void)
 }
 
 
-void M_AdjustSliders (int dir)
+static void M_AdjustSliders (int dir)
 {
 	S_LocalSound ("misc/menu3.wav");
 
@@ -1298,7 +1287,15 @@ void M_AdjustSliders (int dir)
 			v_gamma.value = 0.5f;
 		if (v_gamma.value > 1.5f)
 			v_gamma.value = 1.5f;
-		Cbuf_AddText (va("vid_gamma %f\n",v_gamma.value));
+
+		char temp[24];
+		temp[0] = '\0';
+		strcat(temp, "vid_gamma ");
+		ftoa(v_gamma.value, temp+10, 0, 3);
+		strcat(temp, "\n");
+		Cbuf_AddText (temp);
+		Con_Printf("%s", temp);
+		//Cbuf_AddText (va("vid_gamma %f\n",v_gamma.value));
 		break;
 	case 5:	// mouse speed
 		sensitivity.value += dir * 0.5f;
@@ -1466,7 +1463,7 @@ void M_Options_Draw (void)
 	if(developer.value)
 		M_Print (16, 144, "            Developer");
 /* speud - new options end */
-	
+
 
 // cursor
 	M_DrawCharacter (200, 32 + options_cursor*8, 12+((int)(realtime*4)&1));
@@ -1475,7 +1472,7 @@ void M_Options_Draw (void)
 
 void M_Options_Key (int k)
 {
-	
+
 	switch (k)
 	{
 	case K_SPACE:
@@ -1497,7 +1494,7 @@ void M_Options_Key (int k)
 		case 2:
 			Cbuf_AddText ("exec default.cfg\n");
 			break;
-			
+
 #if 0
 #if defined(_WIN32) || defined(__linux__)
 		case 12:
@@ -1797,12 +1794,12 @@ void M_Developer_Draw (void)
 	M_DrawPlaque ("gfx/p_option.lmp", true);
 	extern glmode_t modes[];
 
-	y += text_size; M_Print (16, y, "       r_drawviewmodel"); M_DrawCheckbox (220, y, r_drawviewmodel.value);
+	y += text_size; M_Print (16, y, "          gl_polyblend"); M_DrawCheckbox (220, y, gl_polyblend.value);
 	y += text_size; M_Print (16, y, "             crosshair"); M_DrawCheckbox (220, y, 0);
 	y += text_size; M_Print (16, y, "        r_drawentities"); M_DrawCheckbox (220, y, r_drawentities.value);
-	y += text_size; M_Print (16, y, "          r_fullbright"); M_DrawCheckbox (220, y, r_fullbright.value);
-	y += text_size; M_Print (16, y, "          gl_polyblend"); M_DrawCheckbox (220, y, gl_polyblend.value);
+	y += text_size; M_Print (16, y, "    r_interpolate_anim"); M_DrawCheckbox (220, y, r_interpolate_anim.value);
 	y += text_size; M_Print (16, y, "             r_dynamic"); M_DrawCheckbox (220, y, r_dynamic.value);
+	y += text_size; M_Print (16, y, "         gl_flashblend"); M_DrawCheckbox (220, y, gl_flashblend.value);
 	y += text_size; M_Print (16, y, "                   god");
 	y += text_size; M_Print (16, y, "                   fly");
 	y += text_size; M_Print (16, y, "                noclip");
@@ -1827,7 +1824,7 @@ void M_Developer_Change (int dir)
 	switch (developer_cursor)
 	{
 	case 0:
-		Cvar_SetValue ("r_drawviewmodel", !r_drawviewmodel.value);
+		Cvar_SetValue ("gl_polyblend", !gl_polyblend.value);
 		break;
 	case 1:
 		{
@@ -1840,13 +1837,15 @@ void M_Developer_Change (int dir)
 		Cvar_SetValue ("r_drawentities", !r_drawentities.value);
 		break;
 	case 3:
-		Cvar_SetValue ("r_fullbright", !r_fullbright.value);
+	/*@Note: change this back! */
+		//Cvar_SetValue ("r_fullbright", !r_fullbright.value);
+		Cvar_SetValue ("r_interpolate_anim", !r_interpolate_anim.value);
 		break;
 	case 4:
-		Cvar_SetValue ("gl_polyblend", !gl_polyblend.value);
+		Cvar_SetValue ("r_dynamic", !r_dynamic.value);
 		break;
 	case 5:
-		Cvar_SetValue ("r_dynamic", !r_dynamic.value);
+		Cvar_SetValue ("gl_flashblend", !gl_flashblend.value);
 		break;
 	case 6:
 		Cbuf_AddText ("god\n");
@@ -1879,7 +1878,7 @@ void M_Developer_Change (int dir)
 	}
 }
 
-void M_AdjustDevSliders(int dir) 
+void M_AdjustDevSliders(int dir)
 {
 	S_LocalSound ("misc/menu3.wav");
 	switch (developer_cursor)
@@ -1995,14 +1994,14 @@ int		m_quit_prevstate;
 qboolean	wasInMenus;
 
 #ifndef	_WIN32
-char *quitMessage [] = 
+char *quitMessage [] =
 {
 /* .........1.........2.... */
   "  Are you gonna quit    ",
   "  this game just like   ",
   "   everything else?     ",
   "                        ",
- 
+
   " Milord, methinks that  ",
   "   thou art a lowly     ",
   " quitter. Is this true? ",
@@ -2017,22 +2016,22 @@ char *quitMessage [] =
   "   for trying to quit!  ",
   "     Press Y to get     ",
   "      smacked out.      ",
- 
+
   " Press Y to quit like a ",
   "   big loser in life.   ",
   "  Press N to stay proud ",
   "    and successful!     ",
- 
+
   "   If you press Y to    ",
   "  quit, I will summon   ",
   "  Satan all over your   ",
   "      hard drive!       ",
- 
+
   "  Um, Asmodeus dislikes ",
   " his children trying to ",
   " quit. Press Y to return",
   "   to your Tinkertoys.  ",
- 
+
   "  If you quit now, I'll ",
   "  throw a blanket-party ",
   "   for you next time!   ",
@@ -3266,7 +3265,7 @@ void M_GameOptions_Key (int key)
 
 #ifdef _arch_dreamcast
 #include <sys/dirent.h>
-#else 
+#else
 #include <dirent.h>
 #endif
 
@@ -3314,6 +3313,9 @@ int isFile(const struct dirent *nombre) {
    return isFile;
 }
 
+/* @note: maybe not needed anymore on dreamcast*/
+#ifndef _ALPHASORT_PROVIDED
+
 #if defined(_WIN32)
 #include <stdlib.h>
 #include <sys/types.h>
@@ -3327,11 +3329,11 @@ int scandir(const char *dir, struct dirent ***namelist,
             int (*select)(const struct dirent *),
             int (*compar)(const void *, const void *)) {
 #else
-int alphasort(const struct dirent **a, const struct dirent **b) {
+int dc_alphasort(const struct dirent **a, const struct dirent **b) {
   return (strcasecmp( (*(const struct dirent **)(a))->d_name, (*(const struct dirent **)(b))->d_name));
 }
 
-int _scandir(const char *dir, struct dirent ***namelist,
+int dc_scandir(const char *dir, struct dirent ***namelist,
             int(*select)(const struct dirent *),
             int(*compar)(const struct dirent **, const struct dirent **)) {
 #endif
@@ -3365,6 +3367,7 @@ int _scandir(const char *dir, struct dirent ***namelist,
 
   return(i);
 }
+#endif
 
 void M_Menu_MapList_f(void)
 {
@@ -3385,11 +3388,11 @@ void M_Menu_MapList_f(void)
 			#else
 			extern char			gamepath[256];
 			#endif
-			
+
 			char *test = va("%s/maps", gamepath);
 			#ifdef _arch_dreamcast
-			numFiles = _scandir(test, &nombres, isFile, alphasort);
-			#else 
+			numFiles = scandir(test, &nombres, isFile, dc_alphasort);
+			#else
 			numFiles = scandir(test, &nombres, isFile, alphasort);
 			#endif
 		}
@@ -3417,7 +3420,7 @@ void M_Menu_MapList_f(void)
 			}
 
 			if (!com_modified)
-        	{	
+        	{
             char names[44][20] = {"\x1D\x1E\x1E\x1E\x1E\x1E\x1E\x1E\x1E\x1E\x1E\x1E\x1F\x00",
                                   "\x10 Episode one \x11",
                                   "start",
@@ -3837,7 +3840,7 @@ void M_Draw (void)
 	case m_video:
 		M_Video_Draw ();
 		break;
-	
+
 	/* speud - begin */
 	case m_vmu:
 		M_Vmu_Draw ();
@@ -3871,7 +3874,7 @@ void M_Draw (void)
 	case m_gameoptions:
 		M_GameOptions_Draw ();
 		break;
-	
+
 	case m_maplist:
 		M_MapList_Draw ();
 		break;

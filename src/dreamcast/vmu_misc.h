@@ -14,8 +14,8 @@ extern maple_device_t *vm_dev;
 
 //uint8 lcd_icons[3][5][48 * 32];
 
-#define APP_NAME "nuRizzo         "  // 16 characters
-#define VMU_NAME "NURIZZO_"          // 8 characters
+#define APP_NAME "nuQuake         "  // 16 characters
+#define VMU_NAME "NUQUAKE_"          // 8 characters
 
 void VMU_init();
 int VMU_GetFreeblocks();

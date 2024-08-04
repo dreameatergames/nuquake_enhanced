@@ -1,7 +1,0 @@
-* text=auto
-
-# Set .c, .h, .cnf, and Makefiles to all be text.
-*.c text
-*.h text
-Makefile text
-*.cnf text

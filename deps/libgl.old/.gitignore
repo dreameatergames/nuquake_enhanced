@@ -1,8 +1,0 @@
-*.o
-.*.swp
-*~
-*.a
-*.elf
-*.img
-dc-build.sh
-.buildconfig

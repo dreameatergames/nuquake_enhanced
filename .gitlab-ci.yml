@@ -13,8 +13,8 @@ build:sh4-gcc:
     - make -f Makefile.dc
   artifacts:
     paths:
-    - build_dc/glquake.elf
-    - build_dc/glquake
+    - build_dc/nuquake.elf
+    - build_dc/nuquake
     - build_dc/1ST_READ.BIN
 
 build:windows-x64-mingw:
@@ -24,7 +24,7 @@ build:windows-x64-mingw:
     - mingw64-make -f Makefile.win
   artifacts:
     paths:
-    - build_win/glquake.exe
+    - build_win/nuquake.exe
 
 publish-tags:
   stage: publish
@@ -32,4 +32,4 @@ publish-tags:
   only:
     - tags
   script:
-    - gitlab-release --message 'ADD TEMPLATE HERE'  build_dc/glquake.elf  build_dc/glquake  build_dc/1ST_READ.BIN   build_win/glquake.exe
+    - gitlab-release --message 'ADD TEMPLATE HERE'  build_dc/nuquake.elf  build_dc/nuquake  build_dc/1ST_READ.BIN   build_win/nuquake.exe

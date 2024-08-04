@@ -36,9 +36,20 @@ __BEGIN_DECLS
 #define GL_CW               0x0900
 #define GL_CCW              0x0901
 
+#define GL_NONE             0
+#define GL_FRONT_LEFT       0x0400
+#define GL_FRONT_RIGHT      0x0401
+#define GL_BACK_LEFT        0x0402
+#define GL_BACK_RIGHT       0x0403
 #define GL_FRONT            0x0404
 #define GL_BACK             0x0405
+#define GL_LEFT             0x0406
+#define GL_RIGHT            0x0407
 #define GL_FRONT_AND_BACK   0x0408
+#define GL_AUX0             0x0409
+#define GL_AUX1             0x040A
+#define GL_AUX2             0x040B
+#define GL_AUX3             0x040C
 #define GL_CULL_FACE        0x0B44
 #define GL_CULL_FACE_MODE   0x0B45
 #define GL_FRONT_FACE       0x0B46
@@ -184,6 +195,14 @@ __BEGIN_DECLS
 #define GL_SCISSOR_BIT                          0x00080000
 #define GL_ALL_ATTRIB_BITS                      0x000FFFFF
 
+/* Clip planes */
+#define GL_CLIP_PLANE0      0x3000
+#define GL_CLIP_PLANE1      0x3001
+#define GL_CLIP_PLANE2      0x3002
+#define GL_CLIP_PLANE3      0x3003
+#define GL_CLIP_PLANE4      0x3004
+#define GL_CLIP_PLANE5      0x3005
+
 /* Fog */
 #define GL_FOG              0x0004      /* capability bit */
 #define GL_FOG_MODE         0x0B65
@@ -291,7 +310,7 @@ __BEGIN_DECLS
 #define GL_4_BYTES                              0x1409
 
 /* ErrorCode */
-#define GL_NO_ERROR                       0
+#define GL_NO_ERROR                       ((GLenum) 0)
 #define GL_INVALID_ENUM                   0x0500
 #define GL_INVALID_VALUE                  0x0501
 #define GL_INVALID_OPERATION              0x0502
@@ -340,7 +359,7 @@ __BEGIN_DECLS
 #define GL_UNSIGNED_SHORT_5_6_5_REV     0x8364
 #define GL_UNSIGNED_SHORT_4_4_4_4_REV   0x8365
 #define GL_UNSIGNED_SHORT_1_5_5_5_REV   0x8366
-
+#define GL_UNSIGNED_INT_8_8_8_8_REV     0x8367
 #define GL_UNSIGNED_INT_2_10_10_10_REV  0x8368
 
 #define GL_COLOR_INDEX                    0x1900
@@ -352,6 +371,32 @@ __BEGIN_DECLS
 #define GL_RGBA                           0x1908
 #define GL_LUMINANCE                      0x1909
 #define GL_LUMINANCE_ALPHA                0x190A
+
+#define GL_R3_G3_B2                    0x2A10
+
+#define GL_ALPHA4                    0x803B
+#define GL_ALPHA8                    0x803C
+#define GL_ALPHA12                    0x803D
+#define GL_ALPHA16                    0x803E
+
+#define GL_LUMINANCE4                  0x803F
+#define GL_LUMINANCE8                  0x8040
+#define GL_LUMINANCE12                  0x8041
+#define GL_LUMINANCE16                  0x8042
+
+#define GL_LUMINANCE4_ALPHA4              0x8043
+#define GL_LUMINANCE6_ALPHA2              0x8044
+#define GL_LUMINANCE8_ALPHA8              0x8045
+#define GL_LUMINANCE12_ALPHA4              0x8046
+#define GL_LUMINANCE12_ALPHA12              0x8047
+#define GL_LUMINANCE16_ALPHA16              0x8048
+
+#define GL_INTENSITY4                  0x804A
+#define GL_INTENSITY8                  0x804B
+#define GL_INTENSITY12                  0x804C
+#define GL_INTENSITY16                  0x804D
+
+#define GL_BGR                            0x80E0
 #define GL_BGRA                           0x80E1
 #define GL_INTENSITY                      0x8049
 #define GL_RGB4                           0x804F
@@ -367,6 +412,14 @@ __BEGIN_DECLS
 #define GL_RGB10_A2                       0x8059
 #define GL_RGBA12                         0x805A
 #define GL_RGBA16                         0x805B
+
+#define GL_R8                      0x8229
+#define GL_RG8                      0x822B
+#define GL_RG                      0x8227
+#define GL_R16                      0x822A
+#define GL_RG16                      0x822C
+#define GL_COMPRESSED_RED                0x8225
+#define GL_COMPRESSED_RG                0x8226
 
 /* Polygons */
 #define GL_POINT				0x1B00
@@ -412,6 +465,9 @@ __BEGIN_DECLS
 #define GL_LINE_SMOOTH                    0x0B20
 #define GL_ALPHA_TEST                     0x0BC0
 #define GL_STENCIL_TEST                   0x0B90
+#define GL_STENCIL_WRITEMASK              0x0B98
+#define GL_INDEX_WRITEMASK                0x0C21
+#define GL_COLOR_WRITEMASK                0x0C23
 #define GL_UNPACK_SWAP_BYTES              0x0CF0
 #define GL_UNPACK_LSB_FIRST               0x0CF1
 #define GL_UNPACK_ROW_LENGTH              0x0CF2
@@ -428,8 +484,8 @@ __BEGIN_DECLS
 #define GLAPI extern
 #define APIENTRY
 
-GLAPI void APIENTRY glFlush();
-GLAPI void APIENTRY glFinish();
+GLAPI void APIENTRY glFlush(void);
+GLAPI void APIENTRY glFinish(void);
 
 /* Start Submission of Primitive Data */
 /* Currently Supported Primitive Types:
@@ -441,7 +497,7 @@ GLAPI void APIENTRY glFinish();
 GLAPI void APIENTRY glBegin(GLenum mode);
 
 /* Finish Submission of Primitive Data */
-GLAPI void APIENTRY glEnd();
+GLAPI void APIENTRY glEnd(void);
 
 /* Primitive Texture Coordinate Submission */
 GLAPI void APIENTRY glTexCoord1f(GLfloat u);
@@ -607,15 +663,15 @@ GLAPI void APIENTRY glDisableClientState(GLenum cap);
 
 GLAPI void APIENTRY glMatrixMode(GLenum mode);
 
-GLAPI void APIENTRY glLoadIdentity();
+GLAPI void APIENTRY glLoadIdentity(void);
 
 GLAPI void APIENTRY glLoadMatrixf(const GLfloat *m);
 GLAPI void APIENTRY glLoadTransposeMatrixf(const GLfloat *m);
 GLAPI void APIENTRY glMultMatrixf(const GLfloat *m);
 GLAPI void APIENTRY glMultTransposeMatrixf(const GLfloat *m);
 
-GLAPI void APIENTRY glPushMatrix();
-GLAPI void APIENTRY glPopMatrix();
+GLAPI void APIENTRY glPushMatrix(void);
+GLAPI void APIENTRY glPopMatrix(void);
 
 GLAPI void APIENTRY glTranslatef(GLfloat x, GLfloat y, GLfloat z);
 #define glTranslated glTranslatef
@@ -643,6 +699,7 @@ GLAPI void APIENTRY glFrustum(GLfloat left, GLfloat right,
 /* Fog Functions - client must enable GL_FOG for this to take effect */
 GLAPI void APIENTRY glFogi(GLenum pname, GLint param);
 GLAPI void APIENTRY glFogf(GLenum pname, GLfloat param);
+GLAPI void APIENTRY glFogiv(GLenum pname, const GLint* params);
 GLAPI void APIENTRY glFogfv(GLenum pname, const GLfloat *params);
 
 /* Lighting Functions - client must enable GL_LIGHTING for this to take effect */

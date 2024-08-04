@@ -1,10 +1,10 @@
-# nuQuake © 2024 David Croshaw
+# nuQuake © 2019 HaydenKow
 ## Free and Open for the Community!
 
 ## Working:
 - the game
-- audio +CD Audio (semi-working - 8-bit only)
-- rendering (semi-working - )
+- audio (+CD Audio)
+- rendering
 - keyboard+mouse 
 - controllers (analog too!)
 - console (with keyboard)
@@ -17,10 +17,15 @@ __let me know if stuff is broken.__
 - some mods crash
 - no networking
 
+## How To Compile:
+Step 1:
+```meson setup builddir_dc --cross-file sh4-dreamcast-kos```
+Step 2:
+```cd builddir_dc```
+Step 3:
+```meson compile```
+
 ## Shoutouts
-- Hayden Kowalchuck
-  - For the initial port of nuQuake
-  - Putting up with so much of my BS
 - Kazade
   - GLdc: the best damn opengl implemention on the Dreamcast
   - Numerous discussions and info sharing
@@ -29,6 +34,9 @@ __let me know if stuff is broken.__
 - Ian Michael
   - Inspiration and Encouragement
   - Tossing the save code over
+- Rizzo
+  - Pushing me to fix stuff and add things
+  - Stressing the hell out of Quake
 - The Dreamcast Community as a whole!
   - Assembler, DC-Talk, DCEMU. 
 
@@ -78,22 +86,6 @@ __let me know if stuff is broken.__
 | "/pc/quake_sw" | debug           |
 
 ## Developer info
-
-### Steps to Compile:
-
-1. Download and Install WSL2 and Ubuntu
-
-2. Install "Docker for Windows"
-
-3. ``` sudo apt install docker.io ```
-
-4. Turn on "WSL2 Support" in Docker
-
-5. Clone this git repo into a folder
-
-6. ``` make dc ```
-
-
 ```
 dcload-ip:
   same as burned image but on pc harddrive.

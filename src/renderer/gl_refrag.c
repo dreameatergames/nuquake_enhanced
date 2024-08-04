@@ -54,7 +54,7 @@ void R_GetMoreEfrags (void)
 {
    int i;
 
-   cl.free_efrags = (efrag_t *) Hunk_Alloc (EXTRA_EFRAGS * sizeof (efrag_t));
+   cl.free_efrags = (efrag_t *) Hunk_AllocName (EXTRA_EFRAGS * sizeof (efrag_t), "efrags");
 
    for (i = 0; i < EXTRA_EFRAGS - 1; i++)
       cl.free_efrags[i].entnext = &cl.free_efrags[i + 1];

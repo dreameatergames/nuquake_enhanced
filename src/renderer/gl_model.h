@@ -77,7 +77,7 @@ typedef struct texture_s
 {
 	char		name[16];
 	unsigned	width, height;
-	int			gl_texturenum;
+	unsigned	gl_texturenum;
 	struct msurface_s	*texturechain;	// for gl_texsort drawing
 	int			anim_total;				// total tenths in sequence ( 0 = no)
 	int			anim_min, anim_max;		// time for this frame min <=time< max
@@ -218,7 +218,7 @@ typedef struct mspriteframe_s
 	int		width;
 	int		height;
 	float	up, down, left, right;
-	int		gl_texturenum;
+	unsigned		gl_texturenum;
 } mspriteframe_t;
 
 typedef struct
@@ -309,12 +309,11 @@ typedef struct {
 	int					poseverts;
 	int					posedata;	// numposes*poseverts trivert_t
 	int					commands;	// gl command list with embedded s/t
-	int					gl_texturenum[MAX_SKINS][4];
+	unsigned		gl_texturenum[MAX_SKINS][4];
 	int					texels[MAX_SKINS];	// only for player skins
 	maliasframedesc_t	frames[1];	// variable sized
 } aliashdr_t;
 
-//#define	MAXALIASVERTS	1024
 #define	MAXALIASVERTS	2048
 #define	MAXALIASFRAMES	256
 #define	MAXALIASTRIS	2048
@@ -409,6 +408,8 @@ typedef struct model_s
 	byte		*visdata;
 	byte		*lightdata;
 	char		*entities;
+	
+	qboolean	isworldmodel;
 
 //
 // additional model data
@@ -421,11 +422,11 @@ typedef struct model_s
 
 void	Mod_Init (void);
 void	Mod_ClearAll (void);
-model_t *Mod_ForName (char *name, qboolean crash);
+model_t *Mod_ForName (const char *name, qboolean crash);
 void	*Mod_Extradata (model_t *mod);	// handles caching
 void	Mod_TouchModel (char *name);
 
-mleaf_t *Mod_PointInLeaf (float *p, model_t *model);
+mleaf_t *Mod_PointInLeaf (vec3_t p, model_t *model);
 byte	*Mod_LeafPVS (mleaf_t *leaf, model_t *model);
 
 #endif	// __MODEL__

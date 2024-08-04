@@ -46,21 +46,23 @@ typedef struct
 	int 	speed;
 	int 	width;
 	int 	stereo;
-	byte	data[1];		// variable sized
+	byte __attribute__((aligned(64)))	data[1];		// variable sized
 } sfxcache_t;
 
 typedef struct
 {
-	qboolean		gamealive;
-	qboolean		soundalive;
-	qboolean		splitbuffer;
+
 	int				channels;
 	int				samples;				// mono samples in buffer
 	int				submission_chunk;		// don't mix less than this #
 	int				samplepos;				// in mono samples
 	int				samplebits;
 	int				speed;
-	unsigned char	*buffer;
+	unsigned int *buffer;
+	qboolean	gamealive;
+	qboolean	soundalive;
+	qboolean	splitbuffer;
+	qboolean	_padding;
 } dma_t;
 
 // !!! if this is changed, it much be changed in asm_i386.h too !!!
@@ -130,11 +132,8 @@ void SNDDMA_Shutdown(void);
 #define	MAX_CHANNELS			128
 #define	MAX_DYNAMIC_CHANNELS	8
 
-#ifdef _arch_dreamcast
-extern	channel_t   channels[];
-#else
 extern	channel_t   channels[MAX_CHANNELS];
-#endif
+
 // 0 to MAX_DYNAMIC_CHANNELS-1	= normal entity sounds
 // MAX_DYNAMIC_CHANNELS to MAX_DYNAMIC_CHANNELS + NUM_AMBIENTS -1 = water, etc
 // MAX_DYNAMIC_CHANNELS + NUM_AMBIENTS to total_channels = static sounds

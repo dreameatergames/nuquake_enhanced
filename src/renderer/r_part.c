@@ -46,7 +46,7 @@ R_InitParticles
 void R_InitParticles (void)
 {
 	#ifdef _arch_dreamcast
-	r_numparticles = 1024;
+	r_numparticles = 640;
 	#else
 	int		i;
 
@@ -138,26 +138,26 @@ void R_EntityParticles (entity_t *ent)
 
 	if (!avelocities[0][0])
 	{
-		float *vels = (float *)avelocities;		
+		float *vels = (float *)avelocities;
 		for (i=0 ; i<NUMVERTEXNORMALS*3 ; i++)
 			vels[i] = (rand()&255) * 0.01f;
 	}
 
 	for (i=0 ; i<NUMVERTEXNORMALS ; i++)
 	{
-		#ifdef _arch_dreamcast
+	#if defined(_arch_dreamcast) && defined(ENABLE_DC_MATH)
 		angle = cl.time * avelocities[i][0];
 		fsincosr(angle, &sy, &cy);
 		angle = cl.time * avelocities[i][1];
 		fsincosr(angle, &sp, &cp);
-		#else
+	#else
 		angle = cl.time * avelocities[i][0];
 		sy = SIN(angle);
 		cy = COS(angle);
 		angle = cl.time * avelocities[i][1];
 		sp = SIN(angle);
 		cp = COS(angle);
-		#endif
+	#endif
 
 		forward[0] = cp*cy;
 		forward[1] = cp*sy;
@@ -198,7 +198,8 @@ void R_ClearParticles (void)
 	particles[r_numparticles-1].next = NULL;
 }
 
-
+#ifndef _arch_dreamcast
+/* Only for Debugging */
 void R_ReadPointFile_f (void)
 {
 	FILE	*f;
@@ -246,6 +247,7 @@ void R_ReadPointFile_f (void)
 	fclose (f);
 	Con_Printf ("%i points read\n", c);
 }
+#endif
 
 /*
 ===============
@@ -514,7 +516,6 @@ void R_TeleportSplash (vec3_t org)
 
 	for (i=-16 ; i<16 ; i+=4)
 		for (j=-16 ; j<16 ; j+=4)
-			//for (k=-24 ; k<32 ; k+=4)
 			for (k=0 ; k<32 ; k+=4)
 			{
 				if (!free_particles)
@@ -664,7 +665,7 @@ void R_DrawParticles (void)
 	float			dvel;
 	float			frametime;
 	int				particleIndex = 0;
-#ifdef GLQUAKE
+
 	vec3_t			up, right;
 	float			scale;
 
@@ -673,20 +674,9 @@ void R_DrawParticles (void)
 	glEnable (GL_BLEND);
 	glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
 
-	glEnableClientState(GL_COLOR_ARRAY);
-	glVertexPointer(3, GL_FLOAT, sizeof(glvert_fast_t), &gVertexFastBuffer[0].vert);
-	glTexCoordPointer(2, GL_FLOAT, sizeof(glvert_fast_t), &gVertexFastBuffer[0].texture);
-	glColorPointer(4, GL_UNSIGNED_BYTE, sizeof(glvert_fast_t), &gVertexFastBuffer[0].color);
-	glHint(GL_PERSPECTIVE_CORRECTION_HINT, GL_FASTEST);
-
 	VectorScale (vup, 1.5, up);
 	VectorScale (vright, 1.5, right);
-#else
-	D_StartParticles ();
-	VectorScale (vright, xscaleshrink, r_pright);
-	VectorScale (vup, yscaleshrink, r_pup);
-	VectorCopy (vpn, r_ppn);
-#endif
+
 	frametime = cl.time - cl.oldtime;
 	time3 = frametime * 15;
 	time2 = frametime * 10; // 15;
@@ -707,12 +697,10 @@ void R_DrawParticles (void)
 		break;
 	}
 
+	int num_particle_verts = 0;
+
 	for (p=active_particles ; p ; p=p->next)
 	{
-		if(particleIndex > 2042){
-			glDrawArrays(GL_TRIANGLES, 0, particleIndex);
-			particleIndex = 0;
-		}
 		for ( ;; )
 		{
 			kill = p->next;
@@ -725,8 +713,32 @@ void R_DrawParticles (void)
 			}
 			break;
 		}
+		num_particle_verts +=3;
+	}
 
-#ifdef GLQUAKE
+	if(!num_particle_verts){
+		return;
+	}
+
+  glvert_fast_t* submission_pointer = &r_batchedtempverts[0];
+
+  #ifdef GL_EXT_dreamcast_direct_buffer
+  glEnable(GL_DIRECT_BUFFER_KOS);
+  glDirectBufferReserve_INTERNAL_KOS(num_particle_verts, (int *)&submission_pointer, GL_TRIANGLE_STRIP);
+  #endif
+
+	glEnableClientState(GL_COLOR_ARRAY);
+	glHint(GL_PERSPECTIVE_CORRECTION_HINT, GL_FASTEST);
+  glVertexPointer(3, GL_FLOAT, sizeof(glvert_fast_t), &submission_pointer->vert);
+  glTexCoordPointer(2, GL_FLOAT, sizeof(glvert_fast_t), &submission_pointer->texture);
+#ifdef WIN98
+  glColorPointer(4, GL_UNSIGNED_BYTE, sizeof(glvert_fast_t), &submission_pointer->color);
+#else
+  glColorPointer(GL_BGRA, GL_UNSIGNED_BYTE, sizeof(glvert_fast_t), &submission_pointer->color);
+#endif
+
+	for (p=active_particles ; p ; p=p->next)
+	{
 		// hack a scale up to keep particles from disapearing
 		scale = (p->org[0] - r_origin[0])*vpn[0] + (p->org[1] - r_origin[1])*vpn[1]
 			+ (p->org[2] - r_origin[2])*vpn[2];
@@ -735,23 +747,14 @@ void R_DrawParticles (void)
 		else
 			scale = 1 + scale * 0.004;
 
+		/* BGRA */
 		uint32_t color = d_8to24table[(int)p->color];
-		//DC:  	BGRA
-		//WIN: 	RGBA
-		gVertexFastBuffer[particleIndex+0] = (glvert_fast_t){.flags = VERTEX , .vert = {p->org[0], p->org[1], p->org[2]}, .texture = {0,0}, .color = {(color >> 16) & 255, (color >> 8) & 255,color & 255, 255}, .pad0 = {0}};
-		gVertexFastBuffer[particleIndex+1] = (glvert_fast_t){.flags = VERTEX , .vert = {p->org[0] + up[0]*scale, p->org[1] + up[1]*scale, p->org[2] + up[2]*scale}, .texture = {1,0}, .color = {(color >> 16) & 255, (color >> 8) & 255,color & 255, 255}, .pad0 = {0}};
-		gVertexFastBuffer[particleIndex+2] = (glvert_fast_t){.flags = VERTEX_EOL , .vert = {p->org[0] + right[0]*scale, p->org[1] + right[1]*scale, p->org[2] + right[2]*scale}, .texture = {0,1}, .color = {(color >> 16) & 255, (color >> 8) & 255,color & 255, 255}, .pad0 = {0}};
+		*submission_pointer++ = (glvert_fast_t){.flags = VERTEX , .vert = {p->org[0], p->org[1], p->org[2]}, .texture = {0,0}, .color = {.array = {(color >> 16) & 255, (color >> 8) & 255,color & 255, 255}}, .pad0 = {0}};
+		*submission_pointer++ = (glvert_fast_t){.flags = VERTEX , .vert = {p->org[0] + up[0]*scale, p->org[1] + up[1]*scale, p->org[2] + up[2]*scale}, .texture = {1,0}, .color = {.array = {(color >> 16) & 255, (color >> 8) & 255,color & 255, 255}}, .pad0 = {0}};
+		*submission_pointer++ = (glvert_fast_t){.flags = VERTEX_EOL , .vert = {p->org[0] + right[0]*scale, p->org[1] + right[1]*scale, p->org[2] + right[2]*scale}, .texture = {0,1}, .color = {.array = {(color >> 16) & 255, (color >> 8) & 255,color & 255, 255}}, .pad0 = {0}};
 
-		#ifndef _arch_dreamcast
-		memcpy(&gVertexFastBuffer[particleIndex+0].color, &d_8to24table[(int)p->color], 4);
-		memcpy(&gVertexFastBuffer[particleIndex+1].color, &d_8to24table[(int)p->color], 4);
-		memcpy(&gVertexFastBuffer[particleIndex+2].color, &d_8to24table[(int)p->color], 4);
-		#endif
-		
 		particleIndex += 3;
-#else
-		D_DrawParticle (p);
-#endif
+
 		p->org[0] += p->vel[0]*frametime;
 		p->org[1] += p->vel[1]*frametime;
 		p->org[2] += p->vel[2]*frametime;
@@ -804,10 +807,6 @@ void R_DrawParticles (void)
 			break;
 
 		case pt_grav:
-#ifdef QUAKE2
-			p->vel[2] -= grav * 20;
-			break;
-#endif
 		case pt_slowgrav:
 			p->vel[2] -= grav;
 			break;
@@ -816,14 +815,13 @@ void R_DrawParticles (void)
 		}
 	}
 
-#ifdef GLQUAKE
-	glDrawArrays(GL_TRIANGLES, 0, particleIndex);
+	glDrawArrays(GL_TRIANGLES, 0, num_particle_verts);
 	glDisableClientState(GL_COLOR_ARRAY);
 	glHint(GL_PERSPECTIVE_CORRECTION_HINT, GL_NICEST);
 	glDisable (GL_BLEND);
 	glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE);
-#else
-	D_EndParticles ();
+#ifdef GL_EXT_dreamcast_direct_buffer
+  glDisable(GL_DIRECT_BUFFER_KOS);
 #endif
 }
 

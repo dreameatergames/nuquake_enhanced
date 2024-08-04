@@ -1,0 +1,16 @@
+void R_EndBatchingFastSurfaces(void) {
+  #if DIRECT_NORMAL_SURF
+  glEnableClientState(GL_COLOR_ARRAY);
+  glEnableClientState(GL_TEXTURE_COORD_ARRAY);
+  glVertexPointer(3, GL_FLOAT, sizeof(glvert_fast_t), &r_batchedfastvertexes[0].vert);
+  glTexCoordPointer(2, GL_FLOAT, sizeof(glvert_fast_t), &r_batchedfastvertexes[0].texture);
+  glColorPointer(GL_BGRA, GL_UNSIGNED_BYTE, sizeof(glvert_fast_t), &r_batchedfastvertexes[0].color);
+  glDrawArrays(GL_TRIANGLES, 0, r_numsurfvertexes);
+  #ifdef PARANOID
+  if (r_numsurfvertexes > 1560)
+    printf("%s:%d drew: %d\n", __FILE__, __LINE__, r_numsurfvertexes);
+  #endif
+
+  r_numsurfvertexes = 0;
+  #endif
+}

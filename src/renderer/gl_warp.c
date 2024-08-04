@@ -8,7 +8,7 @@ of the License, or (at your option) any later version.
 
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 See the GNU General Public License for more details.
 
@@ -23,10 +23,8 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 extern	model_t	*loadmodel;
 
-int		skytexturenum;
-
-int		solidskytexture;
-int		alphaskytexture;
+unsigned int		solidskytexture = 0;
+unsigned int		alphaskytexture = 0;
 float	speedscale;		// for top sky and bottom sky
 
 msurface_t	*warpface;
@@ -120,7 +118,7 @@ void SubdividePolygon (int numverts, float *verts)
 		return;
 	}
 
-	poly = Hunk_Alloc (sizeof(glpoly_t) + (numverts-4) * VERTEXSIZE*sizeof(float));
+	poly = Hunk_AllocName (sizeof(glpoly_t) + (numverts-4) * VERTEXSIZE*sizeof(float), "polysub");
 	poly->next = warpface->polys;
 	warpface->polys = poly;
 	poly->numverts = numverts;
@@ -194,39 +192,93 @@ void EmitWaterPolys (msurface_t *fa)
 {
 	glpoly_t	*p;
 	int			i;
-	float		s, t, os, ot;
+
+	glvert_fast_t* restrict submission_pointer = R_GetDirectBufferAddress();
 
 	for (p=fa->polys ; p ; p=p->next)
 	{
-		if(numwaterverts > VERTEXARRAYLIMIT) {
-			glDrawArrays(GL_TRIANGLES, 0, numwaterverts);
-			numwaterverts = 0;
-		}
+		const float*restrict v0 = p->verts[0];
+		const float v0_x = v0[0];
+		const float v0_y = v0[1];
+		const float v0_z = v0[2];
 
+    float* restrict v1 = p->verts[1];
+    float* restrict v2 = p->verts[1] + VERTEXSIZE;
+
+		const float os_0 = v0[3];
+		const float ot_0 = v0[4];
+		const float s0 = (os_0 + turbsin[(int)((ot_0*0.125+realtime) * TURBSCALE) & 255])*(1.0/64);
+		const float t0 = (ot_0 + turbsin[(int)((os_0*0.125+realtime) * TURBSCALE) & 255])*(1.0/64);
+
+    for (i = 0; i < p->numverts - 2; i++)
+    {
+			/* 2nd vertex */
+			const float v1_x = v1[0];
+			const float v1_y = v1[1];
+			const float v1_z = v1[2];
+
+			const float os_1 = v1[3];
+			const float ot_1 = v1[4];
+			const float s1 = (os_1 + turbsin[(int)((ot_1*0.125+realtime) * TURBSCALE) & 255])*(1.0/64);
+			const float t1 = (ot_1 + turbsin[(int)((os_1*0.125+realtime) * TURBSCALE) & 255])*(1.0/64);
+
+			/* 3rd vertex */
+			const float v2_x = v2[0];
+			const float v2_y = v2[1];
+			const float v2_z = v2[2];
+
+			const float os_2 = v2[3];
+			const float ot_2 = v2[4];
+			const float s2 = (os_2 + turbsin[(int)((ot_2*0.125+realtime) * TURBSCALE) & 255])*(1.0/64);
+			const float t2 = (ot_2 + turbsin[(int)((os_2*0.125+realtime) * TURBSCALE) & 255])*(1.0/64);
+
+			*submission_pointer++ = (glvert_fast_t){.flags = VERTEX, .vert = {v0_x, v0_y, v0_z}, .texture = {s0, t0}, VTX_COLOR_WHITE, .pad0 = {0}};
+			*submission_pointer++ = (glvert_fast_t){.flags = VERTEX, .vert = {v1_x, v1_y, v1_z}, .texture = {s1, t1}, VTX_COLOR_WHITE, .pad0 = {0}};
+			*submission_pointer++ = (glvert_fast_t){.flags = VERTEX_EOL, .vert = {v2_x, v2_y, v2_z}, .texture = {s2, t2}, VTX_COLOR_WHITE, .pad0 = {0}};
+
+			v1 += VERTEXSIZE;
+			v2 += VERTEXSIZE;
+			numwaterverts += 3;
+		}
+	}
+}
+
+unsigned char water_alpha = 0;
+void EmitWaterPolys_Temp(msurface_t *fa)
+{
+	glpoly_t	*p;
+	int			i;
+	float		s, t, os, ot;
+	water_alpha = (unsigned char)(255*r_wateralpha.value);
+
+	for (p=fa->polys ; p ; p=p->next)
+	{
 		const float *v0 = p->verts[0];
-	    float *v = p->verts[1];
+    float *v = p->verts[1];
 
 		os = v0[3];
 		ot = v0[4];
 		const float s0 = (os + turbsin[(int)((ot*0.125+realtime) * TURBSCALE) & 255])*(1.0/64);
 		const float t0 = (ot + turbsin[(int)((os*0.125+realtime) * TURBSCALE) & 255])*(1.0/64);
 
-	    for (i = 0; i < p->numverts - 2; i++)
-	    {
+    for (i = 0; i < p->numverts - 2; i++)
+    {
 			os = v[3];
 			ot = v[4];
 			s = (os + turbsin[(int)((ot*0.125+realtime) * TURBSCALE) & 255])*(1.0/64);
 			t = (ot + turbsin[(int)((os*0.125+realtime) * TURBSCALE) & 255])*(1.0/64);
 
-			gVertexFastBuffer[numwaterverts++] = (glvert_fast_t){.flags = VERTEX, .vert = {v0[0], v0[1], v0[2]}, .texture = {s0, t0}, .color = {255, 255, 255, 255}, .pad0 = {0}};
-			gVertexFastBuffer[numwaterverts++] = (glvert_fast_t){.flags = VERTEX, .vert = {v[0], v[1], v[2]}, .texture = {s, t}, .color = {255, 255, 255, 255}, .pad0 = {0}};
+			r_batchedtempverts[numwaterverts++] = (glvert_fast_t){.flags = VERTEX, .vert = {v0[0], v0[1], v0[2]}, .texture = {s0, t0}, .color = {.array = {255, 255, 255, water_alpha}}, .pad0 = {0}};
+			r_batchedtempverts[numwaterverts++] = (glvert_fast_t){.flags = VERTEX, .vert = {v[0], v[1], v[2]}, .texture = {s, t}, .color = {.array = {255, 255, 255, water_alpha}}, .pad0 = {0}};
+
 			v += VERTEXSIZE;
 			os = v[3];
 			ot = v[4];
 			s = (os + turbsin[(int)((ot*0.125+realtime) * TURBSCALE) & 255])*(1.0/64);
 			t = (ot + turbsin[(int)((os*0.125+realtime) * TURBSCALE) & 255])*(1.0/64);
-			gVertexFastBuffer[numwaterverts++] = (glvert_fast_t){.flags = VERTEX_EOL, .vert = {v[0], v[1], v[2]}, .texture = {s, t}, .color = {255, 255, 255, 255}, .pad0 = {0}};
-	    }
+
+			r_batchedtempverts[numwaterverts++] = (glvert_fast_t){.flags = VERTEX_EOL, .vert = {v[0], v[1], v[2]}, .texture = {s, t}, .color = {.array = {255, 255, 255, water_alpha}}, .pad0 = {0}};
+		}
 	}
 }
 
@@ -247,93 +299,71 @@ void EmitSkyPolys (msurface_t *fa)
 
 	for (p=fa->polys ; p ; p=p->next)
 	{
-		if(numwarpverts > VERTEXARRAYLIMIT){
+		#ifdef PARANOID
+		if(numwarpverts > MAX_BATCHED_TEMPVERTEXES){
 			glDrawArrays(GL_TRIANGLES, 0, numwarpverts);
+    	if(numwarpverts > 24)
+    		printf("%s:%d drew: %d\n", __FILE__, __LINE__, numwarpverts);
 			numwarpverts = 0;
 		}
+		#endif
+
 		const float *v0 = p->verts[0];
 	    v = p->verts[1];
 		VectorSubtract (v0, r_origin, dir);
 		dir[2] *= 3;	// flatten the sphere
 
 		length = dir[0]*dir[0] + dir[1]*dir[1] + dir[2]*dir[2];
-		length = sqrt (length); //@Note: change to multiply by frssa
+#if defined(_arch_dreamcast) && defined(ENABLE_DC_MATH)
+		length = (6.0f*63.0f)*MATH_fsrra(length);
+#else
+		length = SQRT (length);
 		length = 6*63/length;
+#endif
 
 		dir[0] *= length;
 		dir[1] *= length;
 
-		const float s0 = (speedscale + dir[0]) * (1.0/128);
-		const float t0 = (speedscale + dir[1]) * (1.0/128);
+		const float s0 = (speedscale + dir[0]) * (1.0f/128.0f);
+		const float t0 = (speedscale + dir[1]) * (1.0f/128.0f);
 	    for (i = 0; i < p->numverts - 2; i++)
 	    {
 			VectorSubtract (v, r_origin, dir);
 			dir[2] *= 3;    // flatten the sphere
 			length = dir[0]*dir[0] + dir[1]*dir[1] + dir[2]*dir[2];
-			length = sqrt (length); //@Note: change to multiply by frssa
+		#if defined(_arch_dreamcast) && defined(ENABLE_DC_MATH)
+			length = (6.0f*63.0f)*MATH_fsrra(length);
+		#else
+			length = SQRT (length);
 			length = 6*63/length;
+		#endif
 			dir[0] *= length;
 			dir[1] *= length;
-			s = (speedscale + dir[0]) * (1.0/128);
-			t = (speedscale + dir[1]) * (1.0/128);
+			s = (speedscale + dir[0]) * (1.0f/128.0f);
+			t = (speedscale + dir[1]) * (1.0f/128.0f);
 
-			gVertexFastBuffer[numwarpverts++] = (glvert_fast_t){.flags = VERTEX, .vert = {v0[0], v0[1], v0[2]}, .texture = {s0, t0}, .color = {255, 255, 255, 255}, .pad0 = {0}};
-			gVertexFastBuffer[numwarpverts++] = (glvert_fast_t){.flags = VERTEX, .vert = {v[0], v[1], v[2]}, .texture = {s, t}, .color = {255, 255, 255, 255}, .pad0 = {0}};
+			r_batchedtempverts[numwarpverts++] = (glvert_fast_t){.flags = VERTEX, .vert = {v0[0], v0[1], v0[2]}, .texture = {s0, t0}, VTX_COLOR_WHITE, .pad0 = {0}};
+			r_batchedtempverts[numwarpverts++] = (glvert_fast_t){.flags = VERTEX, .vert = {v[0], v[1], v[2]}, .texture = {s, t}, VTX_COLOR_WHITE, .pad0 = {0}};
 			v += VERTEXSIZE;
 			VectorSubtract (v, r_origin, dir);
 			dir[2] *= 3;    // flatten the sphere
 			length = dir[0]*dir[0] + dir[1]*dir[1] + dir[2]*dir[2];
-			length = sqrt (length); //@Note: change to multiply by frssa
+		#if defined(_arch_dreamcast) && defined(ENABLE_DC_MATH)
+			length = (6.0f*63.0f)*MATH_fsrra(length);
+		#else
+			length = SQRT (length);
 			length = 6*63/length;
+		#endif
 			dir[0] *= length;
 			dir[1] *= length;
-			s = (speedscale + dir[0]) * (1.0/128);
-			t = (speedscale + dir[1]) * (1.0/128);
-			gVertexFastBuffer[numwarpverts++] = (glvert_fast_t){.flags = VERTEX_EOL, .vert = {v[0], v[1], v[2]}, .texture = {s, t}, .color = {255, 255, 255, 255}, .pad0 = {0}};
+			s = (speedscale + dir[0]) * (1.0f/128.0f);
+			t = (speedscale + dir[1]) * (1.0f/128.0f);
+			r_batchedtempverts[numwarpverts++] = (glvert_fast_t){.flags = VERTEX_EOL, .vert = {v[0], v[1], v[2]}, .texture = {s, t}, VTX_COLOR_WHITE, .pad0 = {0}};
 	    }
 	}
 }
 
-/*
-===============
-EmitBothSkyLayers
-
-Does a sky warp on the pre-fragmented glpoly_t chain
-This will be called for brushmodels, the world
-will have them chained together.
-===============
-*/
-void EmitBothSkyLayers (msurface_t *fa)
-{
-	GL_DisableMultitexture();
-
-	GL_Bind (solidskytexture);
-	speedscale = realtime*8;
-	speedscale -= (int)speedscale & ~127 ;
-
-	numwarpverts = 0;
-	EmitSkyPolys (fa);
-
-	glEnableClientState(GL_COLOR_ARRAY);
-    glEnableClientState(GL_TEXTURE_COORD_ARRAY);
-    glVertexPointer(3, GL_FLOAT, sizeof(glvert_fast_t), &gVertexFastBuffer[0].vert);
-    glTexCoordPointer(2, GL_FLOAT, sizeof(glvert_fast_t), &gVertexFastBuffer[0].texture);
-    glColorPointer(4, GL_UNSIGNED_BYTE, sizeof(glvert_fast_t), &gVertexFastBuffer[0].color);
-    glDrawArrays(GL_TRIANGLES, 0, numwarpverts);
-
-	glEnable(GL_BLEND);  // Maybe help draw both skies?
-	GL_Bind (alphaskytexture);
-	speedscale = realtime*16;
-	speedscale -= (int)speedscale & ~127 ;
-
-	numwarpverts = 0;
-	EmitSkyPolys (fa);
-	glDrawArrays(GL_TRIANGLES, 0, numwarpverts);
-
-	glDisable(GL_BLEND);
-}
-
-#ifndef QUAKE2
+extern cvar_t r_sky;
 /*
 =================
 R_DrawSkyChain
@@ -341,6 +371,9 @@ R_DrawSkyChain
 */
 void R_DrawSkyChain (msurface_t *s)
 {
+	if(!r_sky.value)
+		return;
+
 	msurface_t	*fa;
 
 	GL_DisableMultitexture();
@@ -350,17 +383,25 @@ void R_DrawSkyChain (msurface_t *s)
 	speedscale = realtime*8;
 	speedscale -= (int)speedscale & ~127 ;
 
-	glEnableClientState(GL_COLOR_ARRAY);	
-    glEnableClientState(GL_TEXTURE_COORD_ARRAY);
-    glVertexPointer(3, GL_FLOAT, sizeof(glvert_fast_t), &gVertexFastBuffer[0].vert);
-    glTexCoordPointer(2, GL_FLOAT, sizeof(glvert_fast_t), &gVertexFastBuffer[0].texture);
-    glColorPointer(4, GL_UNSIGNED_BYTE, sizeof(glvert_fast_t), &gVertexFastBuffer[0].color);
+	glEnableClientState(GL_COLOR_ARRAY);
+  glEnableClientState(GL_TEXTURE_COORD_ARRAY);
+  glVertexPointer(3, GL_FLOAT, sizeof(glvert_fast_t), &r_batchedtempverts[0].vert);
+  glTexCoordPointer(2, GL_FLOAT, sizeof(glvert_fast_t), &r_batchedtempverts[0].texture);
+#ifdef WIN98
+		glColorPointer(4, GL_UNSIGNED_BYTE, sizeof(glvert_fast_t), &r_batchedtempverts[0].color);
+#else
+		glColorPointer(GL_BGRA, GL_UNSIGNED_BYTE, sizeof(glvert_fast_t), &r_batchedtempverts[0].color);
+#endif
 
 	numwarpverts = 0;
 	for (fa=s ; fa ; fa=fa->texturechain)
 		EmitSkyPolys (fa);
-	
-	 glDrawArrays(GL_TRIANGLES, 0, numwarpverts);
+
+	glDrawArrays(GL_TRIANGLES, 0, numwarpverts);
+	#ifdef PARANOID
+  	if(numwarpverts > 441)
+    printf("%s:%d drew: %d\n", __FILE__, __LINE__, numwarpverts);
+	#endif
 
 	glEnable(GL_BLEND);
 	GL_Bind (alphaskytexture);
@@ -370,13 +411,15 @@ void R_DrawSkyChain (msurface_t *s)
 	numwarpverts = 0;
 	for (fa=s ; fa ; fa=fa->texturechain)
 		EmitSkyPolys (fa);
-	
+
 	glDrawArrays(GL_TRIANGLES, 0, numwarpverts);
-	
+	#ifdef PARANOID
+	if(numwarpverts > 441)
+    printf("%s:%d drew: %d\n", __FILE__, __LINE__, numwarpverts);
+	#endif
+
 	glDisable(GL_BLEND);
 }
-
-#endif
 
 //===============================================================
 
@@ -391,7 +434,7 @@ void R_InitSky (miptex_t *mt)
 {
 	int			i, j, p;
 	byte		*src;
-	unsigned	trans[128*128];
+	unsigned __attribute__((aligned(32)))	trans[128*128];
 	unsigned	transpix;
 	int			r, g, b;
 	unsigned	*rgba;
@@ -420,8 +463,8 @@ void R_InitSky (miptex_t *mt)
 
 
 	if (!solidskytexture)
-		solidskytexture = texture_extension_number++;
-	GL_Bind (solidskytexture );
+		glGenTextures(1, (GLuint*)&solidskytexture);
+	GL_Bind (solidskytexture);
 	glTexImage2D (GL_TEXTURE_2D, 0, gl_solid_format, 128, 128, 0, GL_RGBA, GL_UNSIGNED_BYTE, trans);
 	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
@@ -438,10 +481,11 @@ void R_InitSky (miptex_t *mt)
 		}
 
 	if (!alphaskytexture)
-		alphaskytexture = texture_extension_number++;
+		glGenTextures(1, (GLuint*)&alphaskytexture);
 	GL_Bind(alphaskytexture);
 	glTexImage2D (GL_TEXTURE_2D, 0, gl_alpha_format, 128, 128, 0, GL_RGBA, GL_UNSIGNED_BYTE, trans);
 	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
 }
 

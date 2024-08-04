@@ -20,7 +20,9 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 // winquake.h: Win32-specific Quake header file
 
 #include <windows.h>
+#ifndef WM_MOUSEWHEEL
 #define WM_MOUSEWHEEL                   0x020A
+#endif
 
 #ifndef SERVERONLY
 #include <ddraw.h>
@@ -35,12 +37,6 @@ extern	int			global_nCmdShow;
 
 #ifndef SERVERONLY
 
-extern LPDIRECTDRAW		lpDD;
-extern qboolean			DDActive;
-extern LPDIRECTDRAWSURFACE	lpPrimary;
-extern LPDIRECTDRAWSURFACE	lpFrontBuffer;
-extern LPDIRECTDRAWSURFACE	lpBackBuffer;
-extern LPDIRECTDRAWPALETTE	lpDDPal;
 extern LPDIRECTSOUND pDS;
 extern LPDIRECTSOUNDBUFFER pDSBuf;
 
