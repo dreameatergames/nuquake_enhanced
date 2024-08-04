@@ -18,11 +18,11 @@ __let me know if stuff is broken.__
 - no networking
 
 ## How To Compile:
-Step 1:
+- Step 1:
 ```meson setup builddir_dc --cross-file sh4-dreamcast-kos```
-Step 2:
+- Step 2:
 ```cd builddir_dc```
-Step 3:
+- Step 3:
 ```meson compile```
 
 ## Shoutouts
