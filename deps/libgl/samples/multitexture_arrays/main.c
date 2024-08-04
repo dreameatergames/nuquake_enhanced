@@ -8,11 +8,27 @@
 */
 
 #include <stdio.h>
+#include <stdlib.h>
+#include <stdint.h>
 
-#include "gl.h"
-#include "glu.h"
-#include "glkos.h"
-#include "glext.h"
+#ifdef __DREAMCAST__
+#include <kos.h>
+#endif
+
+#include "GL/gl.h"
+#include "GL/glu.h"
+#include "GL/glkos.h"
+#include "GL/glext.h"
+
+#ifdef __DREAMCAST__
+extern uint8_t romdisk[];
+KOS_INIT_ROMDISK(romdisk);
+#define IMAGE1_FILENAME "/rd/wp001vq.pvr"
+#define IMAGE2_FILENAME "/rd/FlareWS_256.pvr"
+#else
+#define IMAGE1_FILENAME "../samples/multitexture_arrays/romdisk/wp001vq.pvr"
+#define IMAGE2_FILENAME "../samples/multitexture_arrays/romdisk/FlareWS_256.pvr"
+#endif
 
 /* Load a PVR texture - located in pvr-texture.c */
 extern GLuint glTextureLoadPVR(char *fname, unsigned char isMipMapped, unsigned char glMipMap);
@@ -29,8 +45,25 @@ GLfloat TEXCOORD_ARRAY[4 * 2] = { 0, 0,
                                   0, 1
                                 };
 
-GLuint ARGB_ARRAY[4 * 1] = { 0xFFFF0000, 0xFF0000FF, 0xFF00FF00, 0xFFFFFF00 };
+GLuint ARGB_ARRAY[4] = { 0xFFFF0000, 0xFF0000FF, 0xFF00FF00, 0xFFFFFF00 };
 
+int check_start() {
+#ifdef __DREAMCAST__
+    maple_device_t *cont;
+    cont_state_t *state;
+
+    cont = maple_enum_type(0, MAPLE_FUNC_CONTROLLER);
+
+    if(cont) {
+        state = (cont_state_t *)maple_dev_status(cont);
+
+        if(state)
+            return state->buttons & CONT_START;
+    }
+#endif
+
+    return 0;
+}
 
 /* Multi-Texture Example using Open GL Vertex Buffer Submission. */
 void RenderCallback(GLuint texID0, GLuint texID1) {
@@ -91,9 +124,6 @@ void RenderCallback(GLuint texID0, GLuint texID1) {
     glDisableClientState(GL_VERTEX_ARRAY);
 }
 
-extern uint8 romdisk[];
-KOS_INIT_ROMDISK(romdisk);
-
 int main(int argc, char **argv) {
     /* Notice we do not init the PVR here, that is handled by Open GL */
     glKosInit();
@@ -105,10 +135,13 @@ int main(int argc, char **argv) {
     glLoadIdentity();
 
     /* Load two PVR textures to OpenGL */
-    GLuint texID0 = glTextureLoadPVR("/rd/wp001vq.pvr", 0, 0);
-    GLuint texID1 = glTextureLoadPVR("/rd/FlareWS_256.pvr", 0, 0);
+    GLuint texID0 = glTextureLoadPVR(IMAGE1_FILENAME, 0, 0);
+    GLuint texID1 = glTextureLoadPVR(IMAGE2_FILENAME, 0, 0);
 
     while(1) {
+        if(check_start())
+            break;
+
         /* Draw the "scene" */
         RenderCallback(texID0, texID1);
 

@@ -1,0 +1,129 @@
+Detecting C compiler ABI info failed to compile with the following output:
+Change Dir: /home/dreamdev/GLdc/dcbuild/CMakeFiles/CMakeTmp
+
+Run Build Command(s):/usr/bin/gmake -f Makefile cmTC_8d6a6/fast && /usr/bin/gmake  -f CMakeFiles/cmTC_8d6a6.dir/build.make CMakeFiles/cmTC_8d6a6.dir/build
+gmake[1]: Entering directory '/home/dreamdev/GLdc/dcbuild/CMakeFiles/CMakeTmp'
+Building C object CMakeFiles/cmTC_8d6a6.dir/CMakeCCompilerABI.c.obj
+/opt/toolchains/dc/sh-elf/bin/sh-elf-gcc -DDREAMCAST -DNDEBUG -D__DREAMCAST__ -D__arch_dreamcast -D_arch_dreamcast -D_arch_sub_pristine  -v -ml -m4-single-only -ffunction-sections -fdata-sections -o CMakeFiles/cmTC_8d6a6.dir/CMakeCCompilerABI.c.obj -c /usr/share/cmake-3.22/Modules/CMakeCCompilerABI.c
+Using built-in specs.
+COLLECT_GCC=/opt/toolchains/dc/sh-elf/bin/sh-elf-gcc
+Target: sh-elf
+Configured with: ../gcc-13.2.0/configure --target=sh-elf --prefix=/opt/toolchains/dc/sh-elf --with-gnu-as --with-gnu-ld --with-newlib --disable-libssp --enable-threads=kos --enable-languages=c,c++,objc,obj-c++ --enable-checking=release --with-multilib-list=m4-single-only --with-endian=little --with-cpu=m4-single-only --with-multilib-list=m4-single-only --with-endian=little --with-cpu=m4-single-only MAKEINFO=missing CC=cc CXX=g++
+Thread model: kos
+Supported LTO compression algorithms: zlib
+gcc version 13.2.0 (GCC) 
+COLLECT_GCC_OPTIONS='-D' 'DREAMCAST' '-D' 'NDEBUG' '-D' '__DREAMCAST__' '-D' '__arch_dreamcast' '-D' '_arch_dreamcast' '-D' '_arch_sub_pristine' '-v' '-ml' '-m4-single-only' '-ffunction-sections' '-fdata-sections' '-o' 'CMakeFiles/cmTC_8d6a6.dir/CMakeCCompilerABI.c.obj' '-c' '-dumpdir' 'CMakeFiles/cmTC_8d6a6.dir/'
+ /opt/toolchains/dc/sh-elf/libexec/gcc/sh-elf/13.2.0/cc1 -quiet -v -D DREAMCAST -D NDEBUG -D __DREAMCAST__ -D __arch_dreamcast -D _arch_dreamcast -D _arch_sub_pristine /usr/share/cmake-3.22/Modules/CMakeCCompilerABI.c -quiet -dumpdir CMakeFiles/cmTC_8d6a6.dir/ -dumpbase CMakeCCompilerABI.c.c -dumpbase-ext .c -ml -m4-single-only -version -ffunction-sections -fdata-sections -o /tmp/cckzuPlI.s
+GNU C17 (GCC) version 13.2.0 (sh-elf)
+	compiled by GNU C version 11.4.0, GMP version 6.2.1, MPFR version 4.1.0, MPC version 1.2.1, isl version isl-0.24-GMP
+
+GGC heuristics: --param ggc-min-expand=100 --param ggc-min-heapsize=131072
+ignoring nonexistent directory "/opt/toolchains/dc/sh-elf/lib/gcc/sh-elf/13.2.0/../../../../sh-elf/sys-include"
+#include "..." search starts here:
+#include <...> search starts here:
+ /opt/toolchains/dc/sh-elf/lib/gcc/sh-elf/13.2.0/include
+ /opt/toolchains/dc/sh-elf/lib/gcc/sh-elf/13.2.0/include-fixed
+ /opt/toolchains/dc/sh-elf/lib/gcc/sh-elf/13.2.0/../../../../sh-elf/include
+End of search list.
+Compiler executable checksum: aeb4319ddeb54b171f59fa3d73fbbafb
+COLLECT_GCC_OPTIONS='-D' 'DREAMCAST' '-D' 'NDEBUG' '-D' '__DREAMCAST__' '-D' '__arch_dreamcast' '-D' '_arch_dreamcast' '-D' '_arch_sub_pristine' '-v' '-ml' '-m4-single-only' '-ffunction-sections' '-fdata-sections' '-o' 'CMakeFiles/cmTC_8d6a6.dir/CMakeCCompilerABI.c.obj' '-c' '-dumpdir' 'CMakeFiles/cmTC_8d6a6.dir/'
+ /opt/toolchains/dc/sh-elf/lib/gcc/sh-elf/13.2.0/../../../../sh-elf/bin/as -v -little --isa=sh4a -o CMakeFiles/cmTC_8d6a6.dir/CMakeCCompilerABI.c.obj /tmp/cckzuPlI.s
+GNU assembler version 2.41 (sh-elf) using BFD version (GNU Binutils) 2.41
+COMPILER_PATH=/opt/toolchains/dc/sh-elf/libexec/gcc/sh-elf/13.2.0/:/opt/toolchains/dc/sh-elf/libexec/gcc/sh-elf/13.2.0/:/opt/toolchains/dc/sh-elf/libexec/gcc/sh-elf/:/opt/toolchains/dc/sh-elf/lib/gcc/sh-elf/13.2.0/:/opt/toolchains/dc/sh-elf/lib/gcc/sh-elf/:/opt/toolchains/dc/sh-elf/lib/gcc/sh-elf/13.2.0/../../../../sh-elf/bin/
+LIBRARY_PATH=/opt/toolchains/dc/sh-elf/lib/gcc/sh-elf/13.2.0/:/opt/toolchains/dc/sh-elf/lib/gcc/sh-elf/13.2.0/../../../../sh-elf/lib/
+COLLECT_GCC_OPTIONS='-D' 'DREAMCAST' '-D' 'NDEBUG' '-D' '__DREAMCAST__' '-D' '__arch_dreamcast' '-D' '_arch_dreamcast' '-D' '_arch_sub_pristine' '-v' '-ml' '-m4-single-only' '-ffunction-sections' '-fdata-sections' '-o' 'CMakeFiles/cmTC_8d6a6.dir/CMakeCCompilerABI.c.obj' '-c' '-dumpdir' 'CMakeFiles/cmTC_8d6a6.dir/CMakeCCompilerABI.c.'
+Linking C executable cmTC_8d6a6.elf
+/usr/bin/cmake -E cmake_link_script CMakeFiles/cmTC_8d6a6.dir/link.txt --verbose=1
+/opt/toolchains/dc/sh-elf/bin/sh-elf-gcc  -ml -m4-single-only -Wl,-Ttext=0x8c010000 -Wl,--gc-sections -T/opt/toolchains/dc/kos/utils/ldscripts/shlelf.xc -nodefaultlibs -v -L/opt/toolchains/dc/kos/lib/dreamcast CMakeFiles/cmTC_8d6a6.dir/CMakeCCompilerABI.c.obj -o cmTC_8d6a6.elf   -L/opt/toolchains/dc/kos/addons/lib/dreamcast  -L/opt/toolchains/dc/kos/../kos-ports/lib  -L/opt/toolchains/dc/kos/lib/dreamcast  -Wl,--start-group -lstdc++ -lkallisti -lc -lgcc -Wl,--end-group -lm 
+Using built-in specs.
+COLLECT_GCC=/opt/toolchains/dc/sh-elf/bin/sh-elf-gcc
+COLLECT_LTO_WRAPPER=/opt/toolchains/dc/sh-elf/libexec/gcc/sh-elf/13.2.0/lto-wrapper
+Target: sh-elf
+Configured with: ../gcc-13.2.0/configure --target=sh-elf --prefix=/opt/toolchains/dc/sh-elf --with-gnu-as --with-gnu-ld --with-newlib --disable-libssp --enable-threads=kos --enable-languages=c,c++,objc,obj-c++ --enable-checking=release --with-multilib-list=m4-single-only --with-endian=little --with-cpu=m4-single-only --with-multilib-list=m4-single-only --with-endian=little --with-cpu=m4-single-only MAKEINFO=missing CC=cc CXX=g++
+Thread model: kos
+Supported LTO compression algorithms: zlib
+gcc version 13.2.0 (GCC) 
+COMPILER_PATH=/opt/toolchains/dc/sh-elf/libexec/gcc/sh-elf/13.2.0/:/opt/toolchains/dc/sh-elf/libexec/gcc/sh-elf/13.2.0/:/opt/toolchains/dc/sh-elf/libexec/gcc/sh-elf/:/opt/toolchains/dc/sh-elf/lib/gcc/sh-elf/13.2.0/:/opt/toolchains/dc/sh-elf/lib/gcc/sh-elf/:/opt/toolchains/dc/sh-elf/lib/gcc/sh-elf/13.2.0/../../../../sh-elf/bin/
+LIBRARY_PATH=/opt/toolchains/dc/sh-elf/lib/gcc/sh-elf/13.2.0/:/opt/toolchains/dc/sh-elf/lib/gcc/sh-elf/13.2.0/../../../../sh-elf/lib/
+COLLECT_GCC_OPTIONS='-ml' '-m4-single-only' '-T' '/opt/toolchains/dc/kos/utils/ldscripts/shlelf.xc' '-nodefaultlibs' '-v' '-L/opt/toolchains/dc/kos/lib/dreamcast' '-o' 'cmTC_8d6a6.elf' '-L/opt/toolchains/dc/kos/addons/lib/dreamcast' '-L/opt/toolchains/dc/kos/../kos-ports/lib' '-L/opt/toolchains/dc/kos/lib/dreamcast' '-dumpdir' 'cmTC_8d6a6.elf.'
+ /opt/toolchains/dc/sh-elf/libexec/gcc/sh-elf/13.2.0/collect2 -plugin /opt/toolchains/dc/sh-elf/libexec/gcc/sh-elf/13.2.0/liblto_plugin.so -plugin-opt=/opt/toolchains/dc/sh-elf/libexec/gcc/sh-elf/13.2.0/lto-wrapper -plugin-opt=-fresolution=/tmp/cc43fMC1.res -m shlelf -o cmTC_8d6a6.elf /opt/toolchains/dc/sh-elf/lib/gcc/sh-elf/13.2.0/crt1.o /opt/toolchains/dc/sh-elf/lib/gcc/sh-elf/13.2.0/crti.o /opt/toolchains/dc/sh-elf/lib/gcc/sh-elf/13.2.0/crtbegin.o -L/opt/toolchains/dc/kos/lib/dreamcast -L/opt/toolchains/dc/kos/addons/lib/dreamcast -L/opt/toolchains/dc/kos/../kos-ports/lib -L/opt/toolchains/dc/kos/lib/dreamcast -L/opt/toolchains/dc/sh-elf/lib/gcc/sh-elf/13.2.0 -L/opt/toolchains/dc/sh-elf/lib/gcc/sh-elf/13.2.0/../../../../sh-elf/lib -Ttext=0x8c010000 --gc-sections CMakeFiles/cmTC_8d6a6.dir/CMakeCCompilerABI.c.obj --start-group -lstdc++ -lkallisti -lc -lgcc --end-group -lm /opt/toolchains/dc/sh-elf/lib/gcc/sh-elf/13.2.0/crtend.o /opt/toolchains/dc/sh-elf/lib/gcc/sh-elf/13.2.0/crtn.o -T /opt/toolchains/dc/kos/utils/ldscripts/shlelf.xc
+COLLECT_GCC_OPTIONS='-ml' '-m4-single-only' '-T' '/opt/toolchains/dc/kos/utils/ldscripts/shlelf.xc' '-nodefaultlibs' '-v' '-L/opt/toolchains/dc/kos/lib/dreamcast' '-o' 'cmTC_8d6a6.elf' '-L/opt/toolchains/dc/kos/addons/lib/dreamcast' '-L/opt/toolchains/dc/kos/../kos-ports/lib' '-L/opt/toolchains/dc/kos/lib/dreamcast' '-dumpdir' 'cmTC_8d6a6.elf.'
+gmake[1]: Leaving directory '/home/dreamdev/GLdc/dcbuild/CMakeFiles/CMakeTmp'
+
+
+Cannot copy output executable
+  ''
+to destination specified by COPY_FILE:
+  '/home/dreamdev/GLdc/dcbuild/CMakeFiles/3.22.1/CMakeDetermineCompilerABI_C.bin'
+Unable to find the executable at any of:
+  /home/dreamdev/GLdc/dcbuild/CMakeFiles/CMakeTmp/cmTC_8d6a6
+  /home/dreamdev/GLdc/dcbuild/CMakeFiles/CMakeTmp/Debug/cmTC_8d6a6
+  /home/dreamdev/GLdc/dcbuild/CMakeFiles/CMakeTmp/Development/cmTC_8d6a6
+
+
+Detecting CXX compiler ABI info failed to compile with the following output:
+Change Dir: /home/dreamdev/GLdc/dcbuild/CMakeFiles/CMakeTmp
+
+Run Build Command(s):/usr/bin/gmake -f Makefile cmTC_2011f/fast && /usr/bin/gmake  -f CMakeFiles/cmTC_2011f.dir/build.make CMakeFiles/cmTC_2011f.dir/build
+gmake[1]: Entering directory '/home/dreamdev/GLdc/dcbuild/CMakeFiles/CMakeTmp'
+Building CXX object CMakeFiles/cmTC_2011f.dir/CMakeCXXCompilerABI.cpp.obj
+/opt/toolchains/dc/sh-elf/bin/sh-elf-g++ -DDREAMCAST -DNDEBUG -D__DREAMCAST__ -D__arch_dreamcast -D_arch_dreamcast -D_arch_sub_pristine  -v -ml -m4-single-only -ffunction-sections -fdata-sections -o CMakeFiles/cmTC_2011f.dir/CMakeCXXCompilerABI.cpp.obj -c /usr/share/cmake-3.22/Modules/CMakeCXXCompilerABI.cpp
+Using built-in specs.
+COLLECT_GCC=/opt/toolchains/dc/sh-elf/bin/sh-elf-g++
+Target: sh-elf
+Configured with: ../gcc-13.2.0/configure --target=sh-elf --prefix=/opt/toolchains/dc/sh-elf --with-gnu-as --with-gnu-ld --with-newlib --disable-libssp --enable-threads=kos --enable-languages=c,c++,objc,obj-c++ --enable-checking=release --with-multilib-list=m4-single-only --with-endian=little --with-cpu=m4-single-only --with-multilib-list=m4-single-only --with-endian=little --with-cpu=m4-single-only MAKEINFO=missing CC=cc CXX=g++
+Thread model: kos
+Supported LTO compression algorithms: zlib
+gcc version 13.2.0 (GCC) 
+COLLECT_GCC_OPTIONS='-D' 'DREAMCAST' '-D' 'NDEBUG' '-D' '__DREAMCAST__' '-D' '__arch_dreamcast' '-D' '_arch_dreamcast' '-D' '_arch_sub_pristine' '-v' '-ml' '-m4-single-only' '-ffunction-sections' '-fdata-sections' '-o' 'CMakeFiles/cmTC_2011f.dir/CMakeCXXCompilerABI.cpp.obj' '-c' '-dumpdir' 'CMakeFiles/cmTC_2011f.dir/'
+ /opt/toolchains/dc/sh-elf/libexec/gcc/sh-elf/13.2.0/cc1plus -quiet -v -D DREAMCAST -D NDEBUG -D __DREAMCAST__ -D __arch_dreamcast -D _arch_dreamcast -D _arch_sub_pristine /usr/share/cmake-3.22/Modules/CMakeCXXCompilerABI.cpp -quiet -dumpdir CMakeFiles/cmTC_2011f.dir/ -dumpbase CMakeCXXCompilerABI.cpp.cpp -dumpbase-ext .cpp -ml -m4-single-only -version -ffunction-sections -fdata-sections -o /tmp/ccMohKjD.s
+GNU C++17 (GCC) version 13.2.0 (sh-elf)
+	compiled by GNU C version 11.4.0, GMP version 6.2.1, MPFR version 4.1.0, MPC version 1.2.1, isl version isl-0.24-GMP
+
+GGC heuristics: --param ggc-min-expand=100 --param ggc-min-heapsize=131072
+ignoring nonexistent directory "/opt/toolchains/dc/sh-elf/lib/gcc/sh-elf/13.2.0/../../../../sh-elf/sys-include"
+#include "..." search starts here:
+#include <...> search starts here:
+ /opt/toolchains/dc/sh-elf/lib/gcc/sh-elf/13.2.0/../../../../sh-elf/include/c++/13.2.0
+ /opt/toolchains/dc/sh-elf/lib/gcc/sh-elf/13.2.0/../../../../sh-elf/include/c++/13.2.0/sh-elf
+ /opt/toolchains/dc/sh-elf/lib/gcc/sh-elf/13.2.0/../../../../sh-elf/include/c++/13.2.0/backward
+ /opt/toolchains/dc/sh-elf/lib/gcc/sh-elf/13.2.0/include
+ /opt/toolchains/dc/sh-elf/lib/gcc/sh-elf/13.2.0/include-fixed
+ /opt/toolchains/dc/sh-elf/lib/gcc/sh-elf/13.2.0/../../../../sh-elf/include
+End of search list.
+Compiler executable checksum: 6a4ffa0276bfe9e519980a8c6d046c10
+COLLECT_GCC_OPTIONS='-D' 'DREAMCAST' '-D' 'NDEBUG' '-D' '__DREAMCAST__' '-D' '__arch_dreamcast' '-D' '_arch_dreamcast' '-D' '_arch_sub_pristine' '-v' '-ml' '-m4-single-only' '-ffunction-sections' '-fdata-sections' '-o' 'CMakeFiles/cmTC_2011f.dir/CMakeCXXCompilerABI.cpp.obj' '-c' '-dumpdir' 'CMakeFiles/cmTC_2011f.dir/'
+ /opt/toolchains/dc/sh-elf/lib/gcc/sh-elf/13.2.0/../../../../sh-elf/bin/as -v -little --isa=sh4a -o CMakeFiles/cmTC_2011f.dir/CMakeCXXCompilerABI.cpp.obj /tmp/ccMohKjD.s
+GNU assembler version 2.41 (sh-elf) using BFD version (GNU Binutils) 2.41
+COMPILER_PATH=/opt/toolchains/dc/sh-elf/libexec/gcc/sh-elf/13.2.0/:/opt/toolchains/dc/sh-elf/libexec/gcc/sh-elf/13.2.0/:/opt/toolchains/dc/sh-elf/libexec/gcc/sh-elf/:/opt/toolchains/dc/sh-elf/lib/gcc/sh-elf/13.2.0/:/opt/toolchains/dc/sh-elf/lib/gcc/sh-elf/:/opt/toolchains/dc/sh-elf/lib/gcc/sh-elf/13.2.0/../../../../sh-elf/bin/
+LIBRARY_PATH=/opt/toolchains/dc/sh-elf/lib/gcc/sh-elf/13.2.0/:/opt/toolchains/dc/sh-elf/lib/gcc/sh-elf/13.2.0/../../../../sh-elf/lib/
+COLLECT_GCC_OPTIONS='-D' 'DREAMCAST' '-D' 'NDEBUG' '-D' '__DREAMCAST__' '-D' '__arch_dreamcast' '-D' '_arch_dreamcast' '-D' '_arch_sub_pristine' '-v' '-ml' '-m4-single-only' '-ffunction-sections' '-fdata-sections' '-o' 'CMakeFiles/cmTC_2011f.dir/CMakeCXXCompilerABI.cpp.obj' '-c' '-dumpdir' 'CMakeFiles/cmTC_2011f.dir/CMakeCXXCompilerABI.cpp.'
+Linking CXX executable cmTC_2011f.elf
+/usr/bin/cmake -E cmake_link_script CMakeFiles/cmTC_2011f.dir/link.txt --verbose=1
+/opt/toolchains/dc/sh-elf/bin/sh-elf-g++  -ml -m4-single-only -Wl,-Ttext=0x8c010000 -Wl,--gc-sections -T/opt/toolchains/dc/kos/utils/ldscripts/shlelf.xc -nodefaultlibs -v -L/opt/toolchains/dc/kos/lib/dreamcast CMakeFiles/cmTC_2011f.dir/CMakeCXXCompilerABI.cpp.obj -o cmTC_2011f.elf   -L/opt/toolchains/dc/kos/addons/lib/dreamcast  -L/opt/toolchains/dc/kos/../kos-ports/lib  -L/opt/toolchains/dc/kos/lib/dreamcast  -Wl,--start-group -lstdc++ -lkallisti -lc -lgcc -Wl,--end-group -lm 
+Using built-in specs.
+COLLECT_GCC=/opt/toolchains/dc/sh-elf/bin/sh-elf-g++
+COLLECT_LTO_WRAPPER=/opt/toolchains/dc/sh-elf/libexec/gcc/sh-elf/13.2.0/lto-wrapper
+Target: sh-elf
+Configured with: ../gcc-13.2.0/configure --target=sh-elf --prefix=/opt/toolchains/dc/sh-elf --with-gnu-as --with-gnu-ld --with-newlib --disable-libssp --enable-threads=kos --enable-languages=c,c++,objc,obj-c++ --enable-checking=release --with-multilib-list=m4-single-only --with-endian=little --with-cpu=m4-single-only --with-multilib-list=m4-single-only --with-endian=little --with-cpu=m4-single-only MAKEINFO=missing CC=cc CXX=g++
+Thread model: kos
+Supported LTO compression algorithms: zlib
+gcc version 13.2.0 (GCC) 
+COMPILER_PATH=/opt/toolchains/dc/sh-elf/libexec/gcc/sh-elf/13.2.0/:/opt/toolchains/dc/sh-elf/libexec/gcc/sh-elf/13.2.0/:/opt/toolchains/dc/sh-elf/libexec/gcc/sh-elf/:/opt/toolchains/dc/sh-elf/lib/gcc/sh-elf/13.2.0/:/opt/toolchains/dc/sh-elf/lib/gcc/sh-elf/:/opt/toolchains/dc/sh-elf/lib/gcc/sh-elf/13.2.0/../../../../sh-elf/bin/
+LIBRARY_PATH=/opt/toolchains/dc/sh-elf/lib/gcc/sh-elf/13.2.0/:/opt/toolchains/dc/sh-elf/lib/gcc/sh-elf/13.2.0/../../../../sh-elf/lib/
+COLLECT_GCC_OPTIONS='-ml' '-m4-single-only' '-T' '/opt/toolchains/dc/kos/utils/ldscripts/shlelf.xc' '-nodefaultlibs' '-v' '-L/opt/toolchains/dc/kos/lib/dreamcast' '-o' 'cmTC_2011f.elf' '-L/opt/toolchains/dc/kos/addons/lib/dreamcast' '-L/opt/toolchains/dc/kos/../kos-ports/lib' '-L/opt/toolchains/dc/kos/lib/dreamcast' '-dumpdir' 'cmTC_2011f.elf.'
+ /opt/toolchains/dc/sh-elf/libexec/gcc/sh-elf/13.2.0/collect2 -plugin /opt/toolchains/dc/sh-elf/libexec/gcc/sh-elf/13.2.0/liblto_plugin.so -plugin-opt=/opt/toolchains/dc/sh-elf/libexec/gcc/sh-elf/13.2.0/lto-wrapper -plugin-opt=-fresolution=/tmp/ccbiLJNQ.res -m shlelf -o cmTC_2011f.elf /opt/toolchains/dc/sh-elf/lib/gcc/sh-elf/13.2.0/crt1.o /opt/toolchains/dc/sh-elf/lib/gcc/sh-elf/13.2.0/crti.o /opt/toolchains/dc/sh-elf/lib/gcc/sh-elf/13.2.0/crtbegin.o -L/opt/toolchains/dc/kos/lib/dreamcast -L/opt/toolchains/dc/kos/addons/lib/dreamcast -L/opt/toolchains/dc/kos/../kos-ports/lib -L/opt/toolchains/dc/kos/lib/dreamcast -L/opt/toolchains/dc/sh-elf/lib/gcc/sh-elf/13.2.0 -L/opt/toolchains/dc/sh-elf/lib/gcc/sh-elf/13.2.0/../../../../sh-elf/lib -Ttext=0x8c010000 --gc-sections CMakeFiles/cmTC_2011f.dir/CMakeCXXCompilerABI.cpp.obj --start-group -lstdc++ -lkallisti -lc -lgcc --end-group -lm /opt/toolchains/dc/sh-elf/lib/gcc/sh-elf/13.2.0/crtend.o /opt/toolchains/dc/sh-elf/lib/gcc/sh-elf/13.2.0/crtn.o -T /opt/toolchains/dc/kos/utils/ldscripts/shlelf.xc
+COLLECT_GCC_OPTIONS='-ml' '-m4-single-only' '-T' '/opt/toolchains/dc/kos/utils/ldscripts/shlelf.xc' '-nodefaultlibs' '-v' '-L/opt/toolchains/dc/kos/lib/dreamcast' '-o' 'cmTC_2011f.elf' '-L/opt/toolchains/dc/kos/addons/lib/dreamcast' '-L/opt/toolchains/dc/kos/../kos-ports/lib' '-L/opt/toolchains/dc/kos/lib/dreamcast' '-dumpdir' 'cmTC_2011f.elf.'
+gmake[1]: Leaving directory '/home/dreamdev/GLdc/dcbuild/CMakeFiles/CMakeTmp'
+
+
+Cannot copy output executable
+  ''
+to destination specified by COPY_FILE:
+  '/home/dreamdev/GLdc/dcbuild/CMakeFiles/3.22.1/CMakeDetermineCompilerABI_CXX.bin'
+Unable to find the executable at any of:
+  /home/dreamdev/GLdc/dcbuild/CMakeFiles/CMakeTmp/cmTC_2011f
+  /home/dreamdev/GLdc/dcbuild/CMakeFiles/CMakeTmp/Debug/cmTC_2011f
+  /home/dreamdev/GLdc/dcbuild/CMakeFiles/CMakeTmp/Development/cmTC_2011f
+
+

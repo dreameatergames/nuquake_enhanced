@@ -1,108 +1,31 @@
 #include <stdio.h>
+#include <stdlib.h>
+#include <stdint.h>
+#include <math.h>
 
-#include "gl.h"
-#include "glu.h"
-#include "glkos.h"
+#ifdef __DREAMCAST__
+#include <kos.h>
+#endif
 
-extern uint8 romdisk[];
+#include "GL/gl.h"
+#include "GL/glu.h"
+#include "GL/glext.h"
+#include "GL/glkos.h"
+
+#ifdef __DREAMCAST__
+#include <kos.h>
+extern uint8_t romdisk[];
 KOS_INIT_ROMDISK(romdisk);
+#define IMAGE_FILENAME "/rd/NeHe.bmp"
+#else
+#define IMAGE_FILENAME "../samples/lights/romdisk/NeHe.bmp"
+#endif
 
+#include "../loadbmp.h"
 
 float xrot, yrot, zrot;
 
-
 int texture[1];
-
-
-struct Image {
-    unsigned long sizeX;
-    unsigned long sizeY;
-    char *data;
-};
-typedef struct Image Image;
-
-
-
-int ImageLoad(char *filename, Image *image) {
-    FILE *file;
-    unsigned long size;
-    unsigned long i;
-    unsigned short int planes;
-    unsigned short int bpp;
-    char temp;
-
-
-    if ((file = fopen(filename, "rb"))==NULL)
-    {
-        printf("File Not Found : %s\n",filename);
-        return 0;
-    }
-
-
-    fseek(file, 18, SEEK_CUR);
-
-
-    if ((i = fread(&image->sizeX, 4, 1, file)) != 1) {
-        printf("Error reading width from %s.\n", filename);
-        return 0;
-    }
-    printf("Width of %s: %lu\n", filename, image->sizeX);
-
-
-    if ((i = fread(&image->sizeY, 4, 1, file)) != 1) {
-        printf("Error reading height from %s.\n", filename);
-        return 0;
-    }
-    printf("Height of %s: %lu\n", filename, image->sizeY);
-
-
-    size = image->sizeX * image->sizeY * 3;
-
-
-    if ((fread(&planes, 2, 1, file)) != 1) {
-        printf("Error reading planes from %s.\n", filename);
-        return 0;
-    }
-    if (planes != 1) {
-        printf("Planes from %s is not 1: %u\n", filename, planes);
-        return 0;
-    }
-
-
-    if ((i = fread(&bpp, 2, 1, file)) != 1) {
-        printf("Error reading bpp from %s.\n", filename);
-        return 0;
-    }
-    if (bpp != 24) {
-        printf("Bpp from %s is not 24: %u\n", filename, bpp);
-        return 0;
-    }
-
-
-    fseek(file, 24, SEEK_CUR);
-
-
-    image->data = (char *) malloc(size);
-    if (image->data == NULL) {
-        printf("Error allocating memory for color-corrected image data");
-        return 0;
-    }
-
-    if ((i = fread(image->data, size, 1, file)) != 1) {
-        printf(stderr, "Error reading image data from %s.\n", filename);
-        return 0;
-    }
-
-    for (i=0;i<size;i+=3) {
-        temp = image->data[i];
-        image->data[i] = image->data[i+2];
-        image->data[i+2] = temp;
-    }
-
-
-    return 1;
-}
-
 
 void LoadGLTextures() {
 
@@ -115,7 +38,7 @@ void LoadGLTextures() {
         exit(0);
     }
 
-    if (!ImageLoad("/rd/NeHe.bmp", image1)) {
+    if (!ImageLoad(IMAGE_FILENAME, image1)) {
         exit(1);
     }
 
@@ -130,6 +53,8 @@ void LoadGLTextures() {
     glTexImage2D(GL_TEXTURE_2D, 0, 3, image1->sizeX, image1->sizeY, 0, GL_RGB, GL_UNSIGNED_BYTE, image1->data);
 
     glGenerateMipmapEXT(GL_TEXTURE_2D);
+
+    free(image1);
 };
 
 
@@ -200,9 +125,27 @@ void ReSizeGLScene(int Width, int Height)
     glMatrixMode(GL_MODELVIEW);
 }
 
+int check_start() {
+#ifdef __DREAMCAST__
+    maple_device_t *cont;
+    cont_state_t *state;
+
+    cont = maple_enum_type(0, MAPLE_FUNC_CONTROLLER);
+
+    if(cont) {
+        state = (cont_state_t *)maple_dev_status(cont);
+
+        if(state)
+            return state->buttons & CONT_START;
+    }
+#endif
+
+    return 0;
+}
+
 void DrawCube(float x, float z) {
     static float pos = 0.0f;
-    const static float radius = 30.0f;
+    static const float radius = 30.0f;
 
     pos += 0.001f;
 
@@ -283,12 +226,20 @@ void DrawGLScene()
 
 int main(int argc, char **argv)
 {
-    glKosInit();
+    GLdcConfig config;
+
+    glKosInitConfig(&config);
+    config.fsaa_enabled = GL_FALSE;
+
+    glKosInitEx(&config);
 
     InitGL(640, 480);
     ReSizeGLScene(640, 480);
 
     while(1) {
+        if(check_start())
+            break;
+
         DrawGLScene();
     }
 

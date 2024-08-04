@@ -6,13 +6,14 @@
 
    Load A PVR Texture to the PVR using Open GL
 */
+#include <stdlib.h>
+#include <stdio.h>
+#include <stdint.h>
 
-#include <kos.h>
-
-#include "gl.h"
-#include "glu.h"
-#include "glkos.h"
-#include "glext.h"
+#include "GL/gl.h"
+#include "GL/glu.h"
+#include "GL/glkos.h"
+#include "GL/glext.h"
 
 #define PVR_HDR_SIZE 0x20
 #define MAX(x, y) ((x > y) ? x : y)
@@ -22,7 +23,7 @@ static GLuint PVR_TextureWidth(unsigned char *HDR);
 static GLuint PVR_TextureFormat(unsigned char *HDR);
 
 static GLuint _glGetMipmapLevelCount(GLuint width, GLuint height) {
-    return 1 + floorf(log2f(MAX(width, height)));
+    return 1 + floor(log2(MAX(width, height)));
 }
 
 static GLuint _glGetMipmapDataSize(GLuint width, GLuint height) {
@@ -51,8 +52,8 @@ static GLuint _glGetMipmapDataSize(GLuint width, GLuint height) {
    glMipMap should be passed as 1 if Open GL should calculate the Mipmap levels, 0 otherwise */
 GLuint glTextureLoadPVR(char *fname, unsigned char isMipMapped, unsigned char glMipMap) {
     FILE *tex = NULL;
-    uint16 *TEX0 = NULL;
-    uint8 HDR[PVR_HDR_SIZE];
+    uint16_t *TEX0 = NULL;
+    uint8_t HDR[PVR_HDR_SIZE];
     GLuint texID, texSize, texW, texH, texFormat;
 
     /* Open the PVR texture file, and get its file size */
@@ -61,7 +62,7 @@ GLuint glTextureLoadPVR(char *fname, unsigned char isMipMapped, unsigned char gl
     if(tex == NULL) {
         printf("FILE READ ERROR: %s\n", fname);
 
-        while(1);
+        return 1;
     }
 
     fseek(tex, 0, SEEK_END);
@@ -92,12 +93,12 @@ GLuint glTextureLoadPVR(char *fname, unsigned char isMipMapped, unsigned char gl
     if(texFormat != GL_UNSIGNED_SHORT_5_6_5)
         glCompressedTexImage2DARB(GL_TEXTURE_2D,
                            0,
- 	                       texFormat,
- 	                       texW,
- 	                       texH,
- 	                       0,
- 	                       texSize,
- 	                       TEX0);
+                           texFormat,
+                           texW,
+                           texH,
+                           0,
+                           texSize,
+                           TEX0);
     else {
         fprintf(stderr, "%x\n", texFormat);
         glTexImage2D(GL_TEXTURE_2D,

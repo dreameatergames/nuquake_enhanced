@@ -7,10 +7,13 @@
    (c)2002 Dan Potter, Paul Boese
 */
 
+#ifdef __DREAMCAST__
 #include <kos.h>
+#endif
 
 #include <GL/gl.h>
-
+#include <GL/glkos.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
 
@@ -21,6 +24,7 @@ int phase = PHASE_HALVE;
 float avgfps = -1;
 
 void running_stats() {
+#ifdef __DREAMCAST__
     pvr_stats_t stats;
     pvr_get_stats(&stats);
 
@@ -28,18 +32,22 @@ void running_stats() {
         avgfps = stats.frame_rate;
     else
         avgfps = (avgfps + stats.frame_rate) / 2.0f;
+#endif
 }
 
 void stats() {
+#ifdef __DREAMCAST__
     pvr_stats_t stats;
 
     pvr_get_stats(&stats);
     dbglog(DBG_DEBUG, "3D Stats: %d VBLs, frame rate ~%f fps\n",
            stats.vbl_count, stats.frame_rate);
+#endif
 }
 
 
 int check_start() {
+#ifdef __DREAMCAST__
     maple_device_t *cont;
     cont_state_t *state;
 
@@ -51,11 +59,10 @@ int check_start() {
         if(state)
             return state->buttons & CONT_START;
     }
+#endif
 
     return 0;
 }
-
-pvr_poly_hdr_t hdr;
 
 void setup() {
     glKosInit();
@@ -93,7 +100,7 @@ void do_frame() {
     glKosSwapBuffers();
 }
 
-time_t start;
+time_t begin;
 void switch_tests(int ppf) {
     printf("Beginning new test: %d polys per frame (%d per second at 60fps)\n",
            ppf * 3, ppf * 3 * 60);
@@ -106,8 +113,8 @@ void check_switch() {
 
     now = time(NULL);
 
-    if(now >= (start + 5)) {
-        start = time(NULL);
+    if(now >= (begin + 5)) {
+        begin = time(NULL);
         printf("  Average Frame Rate: ~%f fps (%d pps)\n", avgfps, (int)(polycnt * avgfps * 2));
 
         switch(phase) {
@@ -158,7 +165,7 @@ int main(int argc, char **argv) {
 
     /* Start off with something obscene */
     switch_tests(200000 / 60);
-    start = time(NULL);
+    begin = time(NULL);
 
     for(;;) {
         if(check_start())

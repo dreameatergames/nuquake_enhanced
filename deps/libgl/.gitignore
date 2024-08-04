@@ -6,5 +6,8 @@
 *.img
 dc-build.sh
 .buildconfig
-GL/version.h
-.vscode
+build/*
+builddir/*
+version.[c|h]
+pcbuild/*
+dcbuild/*

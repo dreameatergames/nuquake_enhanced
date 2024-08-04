@@ -7,11 +7,17 @@
    (c)2002 Dan Potter, Paul Boese
 */
 
+#ifdef __DREAMCAST__
 #include <kos.h>
+#include "../profiler.h"
+#endif
 
 #include <GL/gl.h>
+#include <GL/glkos.h>
 
+#include <stdint.h>
 #include <stdlib.h>
+#include <stdio.h>
 #include <time.h>
 
 enum { PHASE_HALVE, PHASE_INCR, PHASE_DECR, PHASE_FINAL };
@@ -21,6 +27,7 @@ int phase = PHASE_HALVE;
 float avgfps = -1;
 
 void running_stats() {
+#ifdef __DREAMCAST__
     pvr_stats_t stats;
     pvr_get_stats(&stats);
 
@@ -28,18 +35,22 @@ void running_stats() {
         avgfps = stats.frame_rate;
     else
         avgfps = (avgfps + stats.frame_rate) / 2.0f;
+#endif
 }
 
 void stats() {
+#ifdef __DREAMCAST__
     pvr_stats_t stats;
 
     pvr_get_stats(&stats);
     dbglog(DBG_DEBUG, "3D Stats: %d VBLs, frame rate ~%f fps\n",
            stats.vbl_count, stats.frame_rate);
+#endif
 }
 
 
 int check_start() {
+#ifdef __DREAMCAST__
     maple_device_t *cont;
     cont_state_t *state;
 
@@ -51,14 +62,17 @@ int check_start() {
         if(state)
             return state->buttons & CONT_START;
     }
+#endif
 
     return 0;
 }
 
-pvr_poly_hdr_t hdr;
-
 void setup() {
-    glKosInit();
+    GLdcConfig cfg;
+    glKosInitConfig(&cfg);
+    cfg.initial_immediate_capacity = 14000;
+    glKosInitEx(&cfg);
+
     glMatrixMode(GL_MODELVIEW);
     glLoadIdentity();
     glOrtho(0, 640, 0, 480, -100, 100);
@@ -93,10 +107,12 @@ void do_frame() {
     glKosSwapBuffers();
 }
 
-time_t start;
+time_t begin;
 void switch_tests(int ppf) {
     printf("Beginning new test: %d polys per frame (%d per second at 60fps)\n",
            ppf * 2, ppf * 2 * 60);
+    fflush(stdout);
+
     avgfps = -1;
     polycnt = ppf;
 }
@@ -106,10 +122,9 @@ void check_switch() {
 
     now = time(NULL);
 
-    if(now >= (start + 5)) {
-        start = time(NULL);
+    if(now >= (begin + 5)) {
+        begin = time(NULL);
         printf("  Average Frame Rate: ~%f fps (%d pps)\n", avgfps, (int)(polycnt * avgfps * 2));
-
         switch(phase) {
             case PHASE_HALVE:
 
@@ -150,18 +165,32 @@ void check_switch() {
             case PHASE_FINAL:
                 break;
         }
+
+        fflush(stdout);
     }
 }
 
+#define PROFILE 0
+
 int main(int argc, char **argv) {
+#if PROFILE
+    profiler_init("/pc/gmon.out");
+#endif
+
     setup();
+
+#if PROFILE
+    profiler_start();
+#endif
 
     /* Start off with something obscene */
     switch_tests(200000 / 60);
-    start = time(NULL);
+    begin = time(NULL);
+
+    uint32_t iterations = 2000;
 
     for(;;) {
-        if(check_start())
+        if(check_start() || iterations-- == 0)
             break;
 
         printf(" \r");
@@ -172,7 +201,10 @@ int main(int argc, char **argv) {
 
     stats();
 
+#if PROFILE
+    profiler_stop();
+    profiler_clean_up();
+#endif
+
     return 0;
 }
-
-

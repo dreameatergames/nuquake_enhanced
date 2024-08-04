@@ -1,0 +1,86 @@
+The target system is: Generic - 1 - 
+The host system is: Linux - 5.15.146.1-microsoft-standard-WSL2 - x86_64
+Compiling the C compiler identification source file "CMakeCCompilerId.c" succeeded.
+Compiler: /opt/toolchains/dc/sh-elf/bin/sh-elf-gcc 
+Build flags: 
+Id flags:  
+
+The output was:
+0
+
+
+Compilation of the C compiler identification source "CMakeCCompilerId.c" produced "a.out"
+
+The C compiler identification is GNU, found in "/home/dreamdev/GLdc/dcbuild/CMakeFiles/3.22.1/CompilerIdC/a.out"
+
+Compiling the CXX compiler identification source file "CMakeCXXCompilerId.cpp" succeeded.
+Compiler: /opt/toolchains/dc/sh-elf/bin/sh-elf-g++ 
+Build flags: 
+Id flags:  
+
+The output was:
+0
+
+
+Compilation of the CXX compiler identification source "CMakeCXXCompilerId.cpp" produced "a.out"
+
+The CXX compiler identification is GNU, found in "/home/dreamdev/GLdc/dcbuild/CMakeFiles/3.22.1/CompilerIdCXX/a.out"
+
+Determining if the C compiler works passed with the following output:
+Change Dir: /home/dreamdev/GLdc/dcbuild/CMakeFiles/CMakeTmp
+
+Run Build Command(s):/usr/bin/gmake -f Makefile cmTC_e279c/fast && /usr/bin/gmake  -f CMakeFiles/cmTC_e279c.dir/build.make CMakeFiles/cmTC_e279c.dir/build
+gmake[1]: Entering directory '/home/dreamdev/GLdc/dcbuild/CMakeFiles/CMakeTmp'
+Building C object CMakeFiles/cmTC_e279c.dir/testCCompiler.c.obj
+/opt/toolchains/dc/sh-elf/bin/sh-elf-gcc -DDREAMCAST -DNDEBUG -D__DREAMCAST__ -D__arch_dreamcast -D_arch_dreamcast -D_arch_sub_pristine -I/opt/toolchains/dc/kos/include -I/opt/toolchains/dc/kos/kernel/arch/dreamcast/include -I/opt/toolchains/dc/kos/addons/include -I/opt/toolchains/dc/kos/../kos-ports/include -ml -m4-single-only -ffunction-sections -fdata-sections -o CMakeFiles/cmTC_e279c.dir/testCCompiler.c.obj -c /home/dreamdev/GLdc/dcbuild/CMakeFiles/CMakeTmp/testCCompiler.c
+Linking C executable cmTC_e279c.elf
+/usr/bin/cmake -E cmake_link_script CMakeFiles/cmTC_e279c.dir/link.txt --verbose=1
+/opt/toolchains/dc/sh-elf/bin/sh-elf-gcc  -ml -m4-single-only -Wl,-Ttext=0x8c010000 -Wl,--gc-sections -T/opt/toolchains/dc/kos/utils/ldscripts/shlelf.xc -nodefaultlibs  -L/opt/toolchains/dc/kos/lib/dreamcast CMakeFiles/cmTC_e279c.dir/testCCompiler.c.obj -o cmTC_e279c.elf   -L/opt/toolchains/dc/kos/addons/lib/dreamcast  -L/opt/toolchains/dc/kos/../kos-ports/lib  -L/opt/toolchains/dc/kos/lib/dreamcast  -Wl,--start-group -lstdc++ -lkallisti -lc -lgcc -Wl,--end-group -lm 
+gmake[1]: Leaving directory '/home/dreamdev/GLdc/dcbuild/CMakeFiles/CMakeTmp'
+
+
+
+Determining if the CXX compiler works passed with the following output:
+Change Dir: /home/dreamdev/GLdc/dcbuild/CMakeFiles/CMakeTmp
+
+Run Build Command(s):/usr/bin/gmake -f Makefile cmTC_1d67f/fast && /usr/bin/gmake  -f CMakeFiles/cmTC_1d67f.dir/build.make CMakeFiles/cmTC_1d67f.dir/build
+gmake[1]: Entering directory '/home/dreamdev/GLdc/dcbuild/CMakeFiles/CMakeTmp'
+Building CXX object CMakeFiles/cmTC_1d67f.dir/testCXXCompiler.cxx.obj
+/opt/toolchains/dc/sh-elf/bin/sh-elf-g++ -DDREAMCAST -DNDEBUG -D__DREAMCAST__ -D__arch_dreamcast -D_arch_dreamcast -D_arch_sub_pristine -I/opt/toolchains/dc/kos/include -I/opt/toolchains/dc/kos/kernel/arch/dreamcast/include -I/opt/toolchains/dc/kos/addons/include -I/opt/toolchains/dc/kos/../kos-ports/include -ml -m4-single-only -ffunction-sections -fdata-sections -o CMakeFiles/cmTC_1d67f.dir/testCXXCompiler.cxx.obj -c /home/dreamdev/GLdc/dcbuild/CMakeFiles/CMakeTmp/testCXXCompiler.cxx
+Linking CXX executable cmTC_1d67f.elf
+/usr/bin/cmake -E cmake_link_script CMakeFiles/cmTC_1d67f.dir/link.txt --verbose=1
+/opt/toolchains/dc/sh-elf/bin/sh-elf-g++  -ml -m4-single-only -Wl,-Ttext=0x8c010000 -Wl,--gc-sections -T/opt/toolchains/dc/kos/utils/ldscripts/shlelf.xc -nodefaultlibs  -L/opt/toolchains/dc/kos/lib/dreamcast CMakeFiles/cmTC_1d67f.dir/testCXXCompiler.cxx.obj -o cmTC_1d67f.elf   -L/opt/toolchains/dc/kos/addons/lib/dreamcast  -L/opt/toolchains/dc/kos/../kos-ports/lib  -L/opt/toolchains/dc/kos/lib/dreamcast  -Wl,--start-group -lstdc++ -lkallisti -lc -lgcc -Wl,--end-group -lm 
+gmake[1]: Leaving directory '/home/dreamdev/GLdc/dcbuild/CMakeFiles/CMakeTmp'
+
+
+
+Performing C SOURCE FILE Test COMPILER_HAS_FSRRA succeeded with the following output:
+Change Dir: /home/dreamdev/GLdc/dcbuild/CMakeFiles/CMakeTmp
+
+Run Build Command(s):/usr/bin/gmake -f Makefile cmTC_9036a/fast && /usr/bin/gmake  -f CMakeFiles/cmTC_9036a.dir/build.make CMakeFiles/cmTC_9036a.dir/build
+gmake[1]: Entering directory '/home/dreamdev/GLdc/dcbuild/CMakeFiles/CMakeTmp'
+Building C object CMakeFiles/cmTC_9036a.dir/src.c.obj
+/opt/toolchains/dc/sh-elf/bin/sh-elf-gcc -DCOMPILER_HAS_FSRRA -DDREAMCAST -DNDEBUG -D__DREAMCAST__ -D__arch_dreamcast -D_arch_dreamcast -D_arch_sub_pristine -I/opt/toolchains/dc/kos/include -I/opt/toolchains/dc/kos/kernel/arch/dreamcast/include -I/opt/toolchains/dc/kos/addons/include -I/opt/toolchains/dc/kos/../kos-ports/include -mfsrra -ml -m4-single-only -ffunction-sections -fdata-sections -std=gnu99 -o CMakeFiles/cmTC_9036a.dir/src.c.obj -c /home/dreamdev/GLdc/dcbuild/CMakeFiles/CMakeTmp/src.c
+Linking C executable cmTC_9036a.elf
+/usr/bin/cmake -E cmake_link_script CMakeFiles/cmTC_9036a.dir/link.txt --verbose=1
+/opt/toolchains/dc/sh-elf/bin/sh-elf-gcc  -ml -m4-single-only -Wl,-Ttext=0x8c010000 -Wl,--gc-sections -T/opt/toolchains/dc/kos/utils/ldscripts/shlelf.xc -nodefaultlibs  -L/opt/toolchains/dc/kos/lib/dreamcast CMakeFiles/cmTC_9036a.dir/src.c.obj -o cmTC_9036a.elf   -L/opt/toolchains/dc/kos/addons/lib/dreamcast  -L/opt/toolchains/dc/kos/../kos-ports/lib  -L/opt/toolchains/dc/kos/lib/dreamcast  -Wl,--start-group -lstdc++ -lkallisti -lc -lgcc -Wl,--end-group -lm 
+gmake[1]: Leaving directory '/home/dreamdev/GLdc/dcbuild/CMakeFiles/CMakeTmp'
+
+
+Source file was:
+int main(void) { return 0; }
+Performing C SOURCE FILE Test COMPILER_HAS_FSCA succeeded with the following output:
+Change Dir: /home/dreamdev/GLdc/dcbuild/CMakeFiles/CMakeTmp
+
+Run Build Command(s):/usr/bin/gmake -f Makefile cmTC_70fba/fast && /usr/bin/gmake  -f CMakeFiles/cmTC_70fba.dir/build.make CMakeFiles/cmTC_70fba.dir/build
+gmake[1]: Entering directory '/home/dreamdev/GLdc/dcbuild/CMakeFiles/CMakeTmp'
+Building C object CMakeFiles/cmTC_70fba.dir/src.c.obj
+/opt/toolchains/dc/sh-elf/bin/sh-elf-gcc -DCOMPILER_HAS_FSCA -DDREAMCAST -DNDEBUG -D__DREAMCAST__ -D__arch_dreamcast -D_arch_dreamcast -D_arch_sub_pristine -I/opt/toolchains/dc/kos/include -I/opt/toolchains/dc/kos/kernel/arch/dreamcast/include -I/opt/toolchains/dc/kos/addons/include -I/opt/toolchains/dc/kos/../kos-ports/include -mfsca -ml -m4-single-only -ffunction-sections -fdata-sections -std=gnu99 -o CMakeFiles/cmTC_70fba.dir/src.c.obj -c /home/dreamdev/GLdc/dcbuild/CMakeFiles/CMakeTmp/src.c
+Linking C executable cmTC_70fba.elf
+/usr/bin/cmake -E cmake_link_script CMakeFiles/cmTC_70fba.dir/link.txt --verbose=1
+/opt/toolchains/dc/sh-elf/bin/sh-elf-gcc  -ml -m4-single-only -Wl,-Ttext=0x8c010000 -Wl,--gc-sections -T/opt/toolchains/dc/kos/utils/ldscripts/shlelf.xc -nodefaultlibs  -L/opt/toolchains/dc/kos/lib/dreamcast CMakeFiles/cmTC_70fba.dir/src.c.obj -o cmTC_70fba.elf   -L/opt/toolchains/dc/kos/addons/lib/dreamcast  -L/opt/toolchains/dc/kos/../kos-ports/lib  -L/opt/toolchains/dc/kos/lib/dreamcast  -Wl,--start-group -lstdc++ -lkallisti -lc -lgcc -Wl,--end-group -lm 
+gmake[1]: Leaving directory '/home/dreamdev/GLdc/dcbuild/CMakeFiles/CMakeTmp'
+
+
+Source file was:
+int main(void) { return 0; }

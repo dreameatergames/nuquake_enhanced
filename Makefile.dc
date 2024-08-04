@@ -23,7 +23,7 @@ DEBUG_CFLAGS = $(BASE_CFLAGS) -O0 -g
 
 #INC_LZO = -I$(DEP_DIR)/minilzo
 #INC_ALDC = -I$(DEP_DIR)/aldc/include
-INCS :=  -I$(DEP_DIR)/libgl/include  -I$(DEP_DIR)/cglm/include 
+INCS :=  -I$(DEP_DIR)/libgl/include/GL  -I$(DEP_DIR)/cglm/include 
 
 CC = kos-cc 
 CXX = kos-c++

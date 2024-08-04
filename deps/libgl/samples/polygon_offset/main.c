@@ -1,12 +1,16 @@
-#include <kos.h>
 typedef enum
 {
     false,
     true
 } bool;
-#include "gl.h"
-#include "glu.h"
-#include "glkos.h"
+
+#ifdef __DREAMCAST__
+#include <kos.h>
+#endif
+
+#include "GL/gl.h"
+#include "GL/glu.h"
+#include "GL/glkos.h"
 
 /* A general OpenGL initialization function.  Sets all of the initial parameters. */
 void InitGL(int Width, int Height) // We call this right after our OpenGL window is created.
@@ -94,8 +98,9 @@ void drawPolygon()
     glEnd();
 }
 int frames = 0;
-void check_input()
+int check_input()
 {
+#ifdef __DREAMCAST__
     maple_device_t *cont;
     cont_state_t *state;
 
@@ -107,9 +112,12 @@ void check_input()
 
         if (state)
         {
+            if (state->buttons & CONT_START)
+                return 0;
+
             if (frames <= 0)
             {
-                if (state->buttons & CONT_START)
+                if (state->buttons & CONT_A)
                 {
                     offset = !offset;
                     frames = 60;
@@ -117,6 +125,9 @@ void check_input()
             }
         }
     }
+#endif
+
+    return 1;
 }
 
 /* The main drawing function. */
@@ -204,7 +215,8 @@ int main(int argc, char **argv)
 
     while (1)
     {
-        check_input();
+        if(!check_input())
+            break;
         DrawGLScene();
         xrot += 0.1f;
         yrot += 0.25f;

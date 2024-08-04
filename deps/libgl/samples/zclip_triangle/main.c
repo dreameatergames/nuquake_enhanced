@@ -2,9 +2,13 @@
 #include <string.h>
 #include <stdlib.h>
 
-#include "gl.h"
-#include "glu.h"
-#include "glkos.h"
+#ifdef __DREAMCAST__
+#include <kos.h>
+#endif
+
+#include "GL/gl.h"
+#include "GL/glu.h"
+#include "GL/glkos.h"
 
 
 /* A general OpenGL initialization function.  Sets all of the initial parameters. */
@@ -20,10 +24,12 @@ void InitGL(int Width, int Height)	        // We call this right after our OpenG
     glMatrixMode(GL_PROJECTION);
     glLoadIdentity();				// Reset The Projection Matrix
 
-    gluPerspective(45.0f,(GLfloat)Width/(GLfloat)Height,0.1f,100.0f);	// Calculate The Aspect Ratio Of The Window
+    gluPerspective(45.0f,(GLfloat)Width/(GLfloat)Height,1.0f,100.0f);	// Calculate The Aspect Ratio Of The Window
 
     glMatrixMode(GL_MODELVIEW);
     glLoadIdentity();
+
+    glEnable(GL_CULL_FACE);
 }
 
 /* The function called when our window is resized (which shouldn't happen, because we're fullscreen) */
@@ -37,13 +43,32 @@ void ReSizeGLScene(int Width, int Height)
     glMatrixMode(GL_PROJECTION);
     glLoadIdentity();
 
-    gluPerspective(45.0f,(GLfloat)Width/(GLfloat)Height,0.1f,100.0f);
+    gluPerspective(45.0f,(GLfloat)Width/(GLfloat)Height,1.0f,100.0f);
     glMatrixMode(GL_MODELVIEW);
+}
+
+int check_start() {
+#ifdef __DREAMCAST__
+    maple_device_t *cont;
+    cont_state_t *state;
+
+    cont = maple_enum_type(0, MAPLE_FUNC_CONTROLLER);
+
+    if(cont) {
+        state = (cont_state_t *)maple_dev_status(cont);
+
+        if(state)
+            return state->buttons & CONT_START;
+    }
+#endif
+
+    return 0;
 }
 
 /* The main drawing function. */
 void DrawGLScene()
 {
+    static GLfloat rotation = 0.0f;
     static GLfloat movement = 0.0f;
     static GLboolean increasing = GL_TRUE;
 
@@ -59,13 +84,18 @@ void DrawGLScene()
         movement -= 0.05f;
     }
 
+    rotation += 0.5f;
+    rotation = (rotation > 360.0f) ? rotation - 360.0f : rotation;
+
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);		// Clear The Screen And The Depth Buffer
+    glClearColor(0.5f, 0.5f, 0.5f, 0.5f);
     glLoadIdentity();				// Reset The View
 
     glDisable(GL_CULL_FACE);
 
     glPushMatrix();
-        glTranslatef(0.0f, -1.0f, movement);
+        glTranslatef(0.0f, -1.0f, -movement);
+        glRotatef(rotation, 0.0f, 1.0f, 0.0f);
 
         glBegin(GL_TRIANGLES);
             glColor3f(1.0f, 0.0f, 0.0f);
@@ -91,6 +121,9 @@ int main(int argc, char **argv)
     ReSizeGLScene(640, 480);
 
     while(1) {
+        if(check_start())
+            break;
+
         DrawGLScene();
     }
 

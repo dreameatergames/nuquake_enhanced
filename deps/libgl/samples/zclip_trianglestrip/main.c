@@ -2,9 +2,13 @@
 #include <string.h>
 #include <stdlib.h>
 
-#include "gl.h"
-#include "glu.h"
-#include "glkos.h"
+#ifdef __DREAMCAST__
+#include <kos.h>
+#endif
+
+#include "GL/gl.h"
+#include "GL/glu.h"
+#include "GL/glkos.h"
 
 
 /* A general OpenGL initialization function.  Sets all of the initial parameters. */
@@ -16,6 +20,7 @@ void InitGL(int Width, int Height)	        // We call this right after our OpenG
     glEnable(GL_DEPTH_TEST);			// Enables Depth Testing
     glShadeModel(GL_SMOOTH);			// Enables Smooth Color Shading
     glEnable(GL_TEXTURE_2D);
+    glDisable(GL_CULL_FACE);
 
     glMatrixMode(GL_PROJECTION);
     glLoadIdentity();				// Reset The Projection Matrix
@@ -41,30 +46,56 @@ void ReSizeGLScene(int Width, int Height)
     glMatrixMode(GL_MODELVIEW);
 }
 
+int check_start() {
+#ifdef __DREAMCAST__
+    maple_device_t *cont;
+    cont_state_t *state;
+
+    cont = maple_enum_type(0, MAPLE_FUNC_CONTROLLER);
+
+    if(cont) {
+        state = (cont_state_t *)maple_dev_status(cont);
+
+        if(state)
+            return state->buttons & CONT_START;
+    }
+#endif
+
+    return 0;
+}
+
+static GLfloat movement = -10.0f;
+static GLfloat rotation = 0.0f;
+
+void update_movement() {
+#ifdef __DREAMCAST__
+    maple_device_t *cont;
+    cont_state_t *state;
+
+    cont = maple_enum_type(0, MAPLE_FUNC_CONTROLLER);
+
+    if(cont) {
+        state = (cont_state_t *)maple_dev_status(cont);
+        if(state) {
+            if(state->buttons & CONT_DPAD_UP) {
+                movement += 0.5f;
+            } else if(state->buttons & CONT_DPAD_DOWN) {
+                movement -= 0.5f;
+            }
+
+            if(state->buttons & CONT_DPAD_LEFT) {
+                rotation += 0.5f;
+            } else if(state->buttons & CONT_DPAD_RIGHT) {
+                rotation -= 0.5f;
+            }
+        }
+    }
+#endif
+}
+
 /* The main drawing function. */
 void DrawGLScene()
 {
-    static GLfloat movement = 0.0f;
-    static GLfloat rotation = 0.0f;
-    static GLboolean increasing = GL_TRUE;
-
-    if(movement > 10.0) {
-        increasing = GL_FALSE;
-    } else if(movement < -10.0f) {
-        increasing = GL_TRUE;
-    }
-
-    if(increasing) {
-        movement += 0.05f;
-    } else {
-        movement -= 0.05f;
-    }
-
-    rotation += 0.1f;
-    if(rotation > 360.0f) {
-        rotation -= 360.0f;
-    }
-
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);		// Clear The Screen And The Depth Buffer
     glLoadIdentity();				// Reset The View
 
@@ -72,24 +103,58 @@ void DrawGLScene()
         glTranslatef(0.0f, -1.0f, movement);
         glRotatef(rotation, 0.0f, 1.0, 0.0f);
 
-        glBegin(GL_TRIANGLE_STRIP);
-            glColor3f(1.0f, 1.0f, 0.0f);
-            glVertex3f(-2.5f, 0.0f, 5.0f);
+        /* We create a horseshoe shape tri-strip here because that allows for situations where a strip
+           leaves and re-enters the viewport */
 
-            glColor3f(1.0f, 0.0f, 0.0f);
-            glVertex3f(2.5f, 0.0f, 5.0f);
+        glBegin(GL_TRIANGLE_STRIP);
+            // Left side
+            glColor3f(1.0f, 1.0f, 0.0f);
+            glVertex3f(-2.0f, 0.0f, 5.0f);
+
+            glColor3f(1.0f, 1.0f, 0.0f);
+            glVertex3f(-1.0f, 0.0f, 5.0f);
+
+            glColor3f(1.0f, 1.0f, 0.0f);
+            glVertex3f(-2.0f, 0.0f, 3.0f);
+
+            glColor3f(1.0f, 1.0f, 0.0f);
+            glVertex3f(-1.0f, 0.0f, 3.0f);
+
+            glColor3f(1.0f, 1.0f, 0.0f);
+            glVertex3f(-2.0f, 0.0f, 1.0f);
+
+            glColor3f(1.0f, 1.0f, 0.0f);
+            glVertex3f(-1.0f, 0.0f, 1.0f);
+
+            // Curve
+            glColor3f(0.0f, 1.0f, 0.0f);
+            glVertex3f(-1.0f, 0.0f, -1.0f);
 
             glColor3f(0.0f, 1.0f, 0.0f);
-            glVertex3f(-2.5f, 0.0f, -5.0f);
+            glVertex3f(1.0f, 0.0f, 1.0f);
 
-            glColor3f(0.0f, 0.0f, 1.0f);
-            glVertex3f(2.5f, 0.0f, -5.0f);
+            glColor3f(0.0f, 1.0f, 0.0f);
+            glVertex3f(1.0f, 0.0f, -1.0f);
 
-            glColor3f(0.0f, 1.0f, 1.0f);
-            glVertex3f(-2.5f, 0.0f, -10.0f);
+            // Right side
+            // Degenerate to reverse ordering
+            glColor3f(1.0f, 0.0f, 0.0f);
+            glVertex3f(2.0f, 0.0f, 1.0f);
 
-            glColor3f(1.0f, 0.0f, 1.0f);
-            glVertex3f(2.5f, 0.0f, -10.0f);
+            glColor3f(0.0f, 1.0f, 0.0f);
+            glVertex3f(1.0f, 0.0f, 1.0f);
+
+            glColor3f(1.0f, 0.0f, 0.0f);
+            glVertex3f(1.0f, 0.0f, 3.0f);
+
+            glColor3f(1.0f, 0.0f, 0.0f);
+            glVertex3f(2.0f, 0.0f, 3.0f);
+
+            glColor3f(1.0f, 0.0f, 0.0f);
+            glVertex3f(1.0f, 0.0f, 5.0f);
+
+            glColor3f(1.0f, 0.0f, 0.0f);
+            glVertex3f(2.0f, 0.0f, 5.0f);
         glEnd();
     glPopMatrix();
 
@@ -105,6 +170,11 @@ int main(int argc, char **argv)
     ReSizeGLScene(640, 480);
 
     while(1) {
+        if(check_start())
+            break;
+
+        update_movement();
+
         DrawGLScene();
     }
 

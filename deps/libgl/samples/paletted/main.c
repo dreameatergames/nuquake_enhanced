@@ -1,14 +1,24 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+#include <stdint.h>
 
-#include "gl.h"
-#include "glext.h"
-#include "glu.h"
-#include "glkos.h"
+#ifdef __DREAMCAST__
+#include <kos.h>
+#endif
 
-extern uint8 romdisk[];
+#include "GL/gl.h"
+#include "GL/glext.h"
+#include "GL/glu.h"
+#include "GL/glkos.h"
+
+#ifdef __DREAMCAST__
+extern uint8_t romdisk[];
 KOS_INIT_ROMDISK(romdisk);
+#define IMG_PATH "/rd/NeHe.tex"
+#else
+#define IMG_PATH "../samples/paletted/romdisk/NeHe.tex"
+#endif
 
 /* floats for x rotation, y rotation, z rotation */
 float xrot, yrot, zrot;
@@ -70,7 +80,7 @@ int LoadPalettedTex(const char* filename, Image* image) {
     } palette_header;
     fread(&palette_header, sizeof(palette_header), 1, filein);
 
-    image->palette = (unsigned int*) malloc(sizeof(unsigned int) * palette_header.numcolors);
+    image->palette = (char*) malloc(sizeof(unsigned int) * palette_header.numcolors);
     image->palette_width = palette_header.numcolors;
 
     fread(image->palette, sizeof(unsigned int), palette_header.numcolors, filein);
@@ -106,7 +116,7 @@ void LoadGLTextures() {
         exit(0);
     }
 
-    if (!LoadPalettedTex("/rd/NeHe.tex", image1)) {
+    if (!LoadPalettedTex(IMG_PATH, image1)) {
         exit(1);
     }
 
@@ -122,8 +132,10 @@ void LoadGLTextures() {
 
     // 2d texture, level of detail 0 (normal), 3 components (red, green, blue), x size from image, y size from image,
     // border 0 (normal), rgb color data, unsigned byte data, and finally the data itself.
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_COLOR_INDEX8_EXT, image1->width, image1->height, 0, GL_COLOR_INDEX, GL_UNSIGNED_BYTE_TWID_KOS, image1->data);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_COLOR_INDEX8_EXT, image1->width, image1->height, 0, GL_COLOR_INDEX8_TWID_KOS, GL_UNSIGNED_BYTE, image1->data);
     glGenerateMipmapEXT(GL_TEXTURE_2D);
+
+    free(image1);
 }
 
 /* A general OpenGL initialization function.  Sets all of the initial parameters. */
@@ -160,6 +172,23 @@ void ReSizeGLScene(int Width, int Height)
     glMatrixMode(GL_MODELVIEW);
 }
 
+int check_start() {
+#ifdef __DREAMCAST__
+    maple_device_t *cont;
+    cont_state_t *state;
+
+    cont = maple_enum_type(0, MAPLE_FUNC_CONTROLLER);
+
+    if(cont) {
+        state = (cont_state_t *)maple_dev_status(cont);
+
+        if(state)
+            return state->buttons & CONT_START;
+    }
+#endif
+
+    return 0;
+}
 
 /* The main drawing function. */
 void DrawGLScene()
@@ -231,6 +260,9 @@ int main(int argc, char **argv)
     ReSizeGLScene(640, 480);
 
     while(1) {
+        if(check_start())
+            break;
+
         DrawGLScene();
     }
 
