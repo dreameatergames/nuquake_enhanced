@@ -17,14 +17,6 @@ __let me know if stuff is broken.__
 - some mods crash
 - no networking
 
-## How To Compile:
-- Step 1:
-```meson setup builddir_dc --cross-file sh4-dreamcast-kos```
-- Step 2:
-```cd builddir_dc```
-- Step 3:
-```meson compile```
-
 ## Shoutouts
 - Kazade
   - GLdc: the best damn opengl implemention on the Dreamcast

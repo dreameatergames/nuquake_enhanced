@@ -512,15 +512,17 @@ int main(int argc, char **argv) {
   Host_Init(&parms);
   oldtime = Sys_FloatTime();
   //profiler_enable();
-  while (1) {
-    newtime = Sys_FloatTime();
-    time = newtime - oldtime;
+   while (1) {
+      newtime = Sys_FloatTime();
+      time = newtime - oldtime;
 
-    Host_Frame(time);
-    oldtime = newtime;
-    //SNDDMA_Submit(); /* Original */
-    //snd_bump_poll();
+      irq_disable();  
+      Host_Frame(time);
+      irq_enable();   
+
+      oldtime = newtime;
   }
+
   return 1;
 }
 

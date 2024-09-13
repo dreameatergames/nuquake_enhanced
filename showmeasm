@@ -1,0 +1,19 @@
+#!/bin/bash
+
+case $1 in
+        *.o | *.a)
+            sh-elf-objdump $3 -w -C -d -z -j .text.$2 $1   | awk '/file format/{p=0} /0000000/{p=1} p'
+            ;;
+        *.elf )
+            sh-elf-objdump -w  -d -z $1 | awk -F"\n" -v RS="\n\n" "\$1 ~ /<$2>:\$/"
+            ;;
+        -gdb )
+            sh-elf-gdb -batch -ex "disassemble/r $3" $2
+            ;;
+	-gdbs )
+	    sh-elf-gdb -batch -ex "disassemble/rs $3" $2
+	    ;;
+        *   )
+            print "error: $filename is not a library, object or ELF file."
+            return 1 ;;
+    esac
