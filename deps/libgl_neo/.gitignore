@@ -1,0 +1,10 @@
+*.o
+.*.swp
+*~
+*.a
+*.elf
+*.img
+*.sh
+.buildconfig
+GL/version.h
+.vscode

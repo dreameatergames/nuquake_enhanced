@@ -1,0 +1,498 @@
+diff --git a/GL/texture.c b/GL/texture.c
+index 5503b90..1e55a8f 100644
+--- a/GL/texture.c
++++ b/GL/texture.c
+@@ -16,7 +16,7 @@
+ 
+ static TextureObject* TEXTURE_UNITS[MAX_TEXTURE_UNITS] = {NULL, NULL};
+ static NamedArray TEXTURE_OBJECTS;
+-static GLubyte ACTIVE_TEXTURE = 0;
++GLubyte ACTIVE_TEXTURE = 0;
+ 
+ static TexturePalette* SHARED_PALETTES[4] = {NULL, NULL, NULL, NULL};
+ 
+@@ -26,6 +26,12 @@ static GLboolean BANKS_USED[4];  // Each time a 256 colour bank is used, this is
+ static GLboolean SUBBANKS_USED[4][16]; // 4 counts of the used 16 colour banks within the 256 ones
+ static GLenum INTERNAL_PALETTE_FORMAT = GL_RGBA4;
+ 
++#ifdef USE_YALLOC
++#include "../yalloc/yalloc.h"
++static void *yalloc_base = NULL;
++static size_t yalloc_size = 0;
++#endif
++
+ static TexturePalette* _initTexturePalette() {
+     TexturePalette* palette = (TexturePalette*) malloc(sizeof(TexturePalette));
+     assert(palette);
+@@ -307,6 +313,18 @@ GLubyte _glInitTextures() {
+ 
+     memset((void*) BANKS_USED, 0x0, sizeof(BANKS_USED));
+     memset((void*) SUBBANKS_USED, 0x0, sizeof(SUBBANKS_USED));
++
++#ifdef USE_YALLOC
++    size_t vram_free = pvr_mem_available();
++    yalloc_size = vram_free-(64*1024); /* Take all but 64kb VRAM */
++    yalloc_base = pvr_mem_malloc(yalloc_size);
++    yalloc_init(yalloc_base, yalloc_size);
++    printf("YALLOC!:\n");
++    printf("pvr mem free: %u\n", vram_free);
++    printf("yalloc_size: %u\n", yalloc_size);
++    printf("yalloc base: %x\n", yalloc_base);
++#endif
++
+     return 1;
+ }
+ 
+@@ -393,7 +411,11 @@ void APIENTRY glDeleteTextures(GLsizei n, GLuint *textures) {
+         }
+ 
+         if(txr->data) {
++#ifdef USE_YALLOC
++            yalloc_free(yalloc_base, txr->data);
++#else
+             pvr_mem_free(txr->data);
++#endif
+             txr->data = NULL;
+         }
+ 
+@@ -497,10 +519,6 @@ void APIENTRY glTexEnvi(GLenum target, GLenum pname, GLint param) {
+     }
+ }
+ 
+-void APIENTRY glTexEnvf(GLenum target, GLenum pname, GLfloat param) {
+-    glTexEnvi(target, pname, param);
+-}
+-
+ void APIENTRY glCompressedTexImage2DARB(GLenum target,
+                                      GLint level,
+                                      GLenum internalFormat,
+@@ -594,16 +612,23 @@ void APIENTRY glCompressedTexImage2DARB(GLenum target,
+     active->isCompressed = GL_TRUE;
+ 
+     /* Odds are slim new data is same size as old, so free always */
++#ifdef USE_YALLOC
++    if(active->data)
++        yalloc_free(yalloc_base, active->data);
++
++    active->data = yalloc_alloc(yalloc_base, imageSize);
++#else
+     if(active->data)
+         pvr_mem_free(active->data);
+ 
+     active->data = pvr_mem_malloc(imageSize);
++#endif
+ 
+     if(data)
+         sq_cpy(active->data, data, imageSize);
+ }
+ 
+-static GLint _cleanInternalFormat(GLint internalFormat) {
++GLint _cleanInternalFormat(GLint internalFormat) {
+     switch (internalFormat) {
+     case GL_COLOR_INDEX4_EXT:
+         return GL_COLOR_INDEX4_EXT;
+@@ -753,7 +778,7 @@ GL_FORCE_INLINE void _rgba8888_to_rgba8888(const GLubyte* source, GLubyte* dest)
+ }
+ 
+ GL_FORCE_INLINE void _rgba8888_to_rgb565(const GLubyte* source, GLubyte* dest) {
+-    *((GLushort*) dest) = ((source[0] & 0b11111000) << 8) | ((source[1] & 0b11111100) << 3) | (source[2] >> 3);
++    *((GLushort*) dest) = ((source[0] & 0xF8) << 8) | ((source[1] & 0xFC) << 3) | (source[2] >> 3);
+ }
+ 
+ GL_FORCE_INLINE void _rgb888_to_rgba8888(const GLubyte* source, GLubyte* dest) {
+@@ -766,15 +791,15 @@ GL_FORCE_INLINE void _rgb888_to_rgba8888(const GLubyte* source, GLubyte* dest) {
+ }
+ 
+ GL_FORCE_INLINE void _rgb888_to_rgb565(const GLubyte* source, GLubyte* dest) {
+-    *((GLushort*) dest) = ((source[0] & 0b11111000) << 8) | ((source[1] & 0b11111100) << 3) | (source[2] >> 3);
++    *((GLushort*) dest) = ((source[0] & 0xF8) << 8) | ((source[1] & 0xFC) << 3) | (source[2] >> 3);
+ }
+ 
+ GL_FORCE_INLINE void _rgba8888_to_a000(const GLubyte* source, GLubyte* dest) {
+-    *((GLushort*) dest) = ((source[3] & 0b11111000) << 8);
++    *((GLushort*) dest) = ((source[3] & 0xF8) << 8);
+ }
+ 
+ GL_FORCE_INLINE void _r8_to_rgb565(const GLubyte* source, GLubyte* dest) {
+-    *((GLushort*) dest) = (source[0] & 0b11111000) << 8;
++    *((GLushort*) dest) = (source[0] & 0xF8) << 8;
+ }
+ 
+ GL_FORCE_INLINE void _rgba4444_to_argb4444(const GLubyte* source, GLubyte* dest) {
+@@ -897,7 +922,7 @@ GLboolean _glIsMipmapComplete(const TextureObject* obj) {
+     }
+ 
+     GLsizei i = 0;
+-    for(; i < obj->mipmapCount; ++i) {
++    for(; i < (GLubyte)(obj->mipmapCount); ++i) {
+         if((obj->mipmap & (1 << i)) == 0) {
+             return GL_FALSE;
+         }
+@@ -924,13 +949,21 @@ void _glAllocateSpaceForMipmaps(TextureObject* active) {
+     memcpy(temp, active->data, size);
+ 
+     /* Free the PVR data */
++#ifdef USE_YALLOC
++    yalloc_free(yalloc_base, active->data);
++#else
+     pvr_mem_free(active->data);
++#endif
+     active->data = NULL;
+ 
+     /* Figure out how much room to allocate for mipmaps */
+     GLuint bytes = _glGetMipmapDataSize(active);
+ 
++#ifdef USE_YALLOC
++    active->data = yalloc_alloc(yalloc_base, bytes);
++#else
+     active->data = pvr_mem_malloc(bytes);
++#endif
+ 
+     /* If there was existing data, then copy it where it should go */
+     memcpy(_glGetMipmapLocation(active, 0), temp, size);
+@@ -943,10 +976,6 @@ void _glAllocateSpaceForMipmaps(TextureObject* active) {
+     active->baseDataOffset = _glGetMipmapDataOffset(active, 0);
+ }
+ 
+-#define STRINGIFY(x) #x
+-#define TOSTRING(x) STRINGIFY(x)
+-#define INFO_MSG(x) printf("%s %s\n", __FILE__ ":" TOSTRING(__LINE__), x)
+-
+ void APIENTRY glTexImage2D(GLenum target, GLint level, GLint internalFormat,
+                            GLsizei width, GLsizei height, GLint border,
+                            GLenum format, GLenum type, const GLvoid *data) {
+@@ -977,7 +1006,7 @@ void APIENTRY glTexImage2D(GLenum target, GLint level, GLint internalFormat,
+             _glKosThrowError(GL_INVALID_VALUE, __func__);
+         }
+     } else {
+-        if(internalFormat != GL_COLOR_INDEX8_EXT) {
++        if((internalFormat != GL_COLOR_INDEX8_EXT) && (internalFormat != GL_COLOR_INDEX4_EXT)) {
+             INFO_MSG("");
+             _glKosThrowError(GL_INVALID_ENUM, __func__);
+         }
+@@ -986,25 +1015,17 @@ void APIENTRY glTexImage2D(GLenum target, GLint level, GLint internalFormat,
+     GLuint w = width;
+     GLuint h = height;
+     if(level == 0){
+-        if((w < 8 || (w & -w) != w)) {
++        if((w < 8) || !((w & (w - 1)) == 0)) {
+             /* Width is not a power of two. Must be!*/
+             INFO_MSG("");
+             _glKosThrowError(GL_INVALID_VALUE, __func__);
+         }
+ 
+-
+-        if((h < 8 || (h & -h) != h)) {
++        if((h < 8) || !((h & (h - 1)) == 0)) {
+             /* height is not a power of two. Must be!*/
+             INFO_MSG("");
+             _glKosThrowError(GL_INVALID_VALUE, __func__);
+         }
+-    } else {
+-        /* Mipmap Errors, kos crashes if 1x1 */
+-        if((h < 2) || (w < 2)){
+-            assert(TEXTURE_UNITS[ACTIVE_TEXTURE]);
+-            TEXTURE_UNITS[ACTIVE_TEXTURE]->mipmap |= (1 << level);
+-            return;
+-        }
+     }
+ 
+     if(level < 0) {
+@@ -1015,7 +1036,7 @@ void APIENTRY glTexImage2D(GLenum target, GLint level, GLint internalFormat,
+     if(level > 0 && width != height) {
+         INFO_MSG("");
+         fprintf(stderr, "[GL ERROR] Mipmaps cannot be supported on non-square textures\n");
+-        _glKosThrowError(GL_INVALID_OPERATION, __func__);
++        _glKosThrowError(GL_INVALID_OPERATION, "glTexImage2D9");
+     }
+ 
+     if(border) {
+@@ -1029,6 +1050,8 @@ void APIENTRY glTexImage2D(GLenum target, GLint level, GLint internalFormat,
+     }
+ 
+     GLboolean isPaletted = (internalFormat == GL_COLOR_INDEX8_EXT) ? GL_TRUE : GL_FALSE;
++    if(internalFormat == GL_COLOR_INDEX4_EXT)
++        isPaletted = 2;
+ 
+     if(_glKosHasError()) {
+         _glKosPrintError();
+@@ -1048,7 +1071,11 @@ void APIENTRY glTexImage2D(GLenum target, GLint level, GLint internalFormat,
+            active->height != height ||
+            active->color != pvr_format) {
+             /* changed - free old texture memory */
++#ifdef USE_YALLOC
++            yalloc_free(yalloc_base, active->data);
++#else
+             pvr_mem_free(active->data);
++#endif
+             active->data = NULL;
+             active->mipmap = 0;
+             active->mipmapCount = 0;
+@@ -1064,6 +1091,7 @@ void APIENTRY glTexImage2D(GLenum target, GLint level, GLint internalFormat,
+      */
+     GLint destStride = isPaletted ? 1 : 2;
+     GLuint bytes = (width * height * destStride);
++    bytes = (internalFormat == GL_COLOR_INDEX4_EXT) ? bytes/2 : bytes;
+ 
+     if(!active->data) {
+         assert(active);
+@@ -1087,7 +1115,11 @@ void APIENTRY glTexImage2D(GLenum target, GLint level, GLint internalFormat,
+             /* If we're uploading a mipmap level, we need to allocate the full amount of space */
+             _glAllocateSpaceForMipmaps(active);
+         } else {
++#ifdef USE_YALLOC
++            active->data = yalloc_alloc(yalloc_base, active->baseDataSize);
++#else
+             active->data = pvr_mem_malloc(active->baseDataSize);
++#endif
+         }
+ 
+         assert(active->data);
+@@ -1193,12 +1225,36 @@ void APIENTRY glTexImage2D(GLenum target, GLint level, GLint internalFormat,
+     }
+ 
+     if(needsTwiddling) {
+-        const GLubyte *pixels = (GLubyte*) (conversionBuffer) ? conversionBuffer : data;
+-
+-        if(internalFormat == GL_COLOR_INDEX8_EXT) {
+-            pvr_txr_load_ex((void*) pixels, targetData, width, height, PVR_TXRLOAD_8BPP);
++        if(level){
++            const GLubyte *pixels = (GLubyte*) data;
++            GLuint x, y, min, mask;
++            GLushort *vtex    = (GLushort*) targetData;
++
++            min = MIN(width, height);
++            mask = min - 1;
++
++            if(height == 1 || width == 1){
++                targetData[0] = ((GLubyte*)data)[0];
++                targetData[1] = ((GLubyte*)data)[0];
++                targetData[2] = ((GLubyte*)data)[0];
++                targetData[3] = ((GLubyte*)data)[0];
++            } else {
++                for(y = 0; y < height; y += 2) {
++                    for(x = 0; x < width; x++) {
++                        vtex[TWIDOUT((y & mask) / 2, x & mask) + (x / min + y / min)*min * min / 2] = pixels[y * width + x] | (pixels[(y + 1) * width + x] << 8);
++                    }
++                }
++            }
+         } else {
+-            pvr_txr_load_ex((void*) pixels, targetData, width, height, PVR_TXRLOAD_16BPP);
++            const GLubyte *pixels = (GLubyte*) (conversionBuffer) ? conversionBuffer : data;
++
++            if(internalFormat == GL_COLOR_INDEX8_EXT) {
++                pvr_txr_load_ex((void*) pixels, targetData, width, height, PVR_TXRLOAD_8BPP);
++            } else if(internalFormat == GL_COLOR_INDEX4_EXT) {
++                pvr_txr_load_ex((void*) pixels, targetData, width, height, PVR_TXRLOAD_4BPP);
++            } else {
++                pvr_txr_load_ex((void*) pixels, targetData, width, height, PVR_TXRLOAD_16BPP);
++            }
+         }
+ 
+         /* We make sure we remove nontwiddled and add twiddled. We could always
+@@ -1315,18 +1371,22 @@ GLAPI void APIENTRY glColorTableEXT(GLenum target, GLenum internalFormat, GLsize
+     GLint validTypes[] = {GL_UNSIGNED_BYTE, GL_BYTE, GL_UNSIGNED_SHORT, GL_SHORT, 0};
+ 
+     if(_glCheckValidEnum(target, validTargets, __func__) != 0) {
++        INFO_MSG("Target");
+         return;
+     }
+ 
+     if(_glCheckValidEnum(internalFormat, validInternalFormats, __func__) != 0) {
++        INFO_MSG("Internal");
+         return;
+     }
+ 
+     if(_glCheckValidEnum(format, validFormats, __func__) != 0) {
++        INFO_MSG("Format");
+         return;
+     }
+ 
+     if(_glCheckValidEnum(type, validTypes, __func__) != 0) {
++        INFO_MSG("Types");
+         return;
+     }
+ 
+@@ -1422,14 +1482,120 @@ GLAPI void APIENTRY glColorTableEXT(GLenum target, GLenum internalFormat, GLsize
+ }
+ 
+ GLAPI void APIENTRY glColorSubTableEXT(GLenum target, GLsizei start, GLsizei count, GLenum format, GLenum type, const GLvoid *data) {
+-    _GL_UNUSED(target);
+-    _GL_UNUSED(start);
+-    _GL_UNUSED(count);
+-    _GL_UNUSED(format);
+-    _GL_UNUSED(type);
+-    _GL_UNUSED(data);
+-    _glKosThrowError(GL_INVALID_OPERATION, __func__);
+-    _glKosPrintError();
++    GLint validTargets[] = {
++        GL_SHARED_TEXTURE_PALETTE_EXT,
++        GL_SHARED_TEXTURE_PALETTE_0_KOS,
++        GL_SHARED_TEXTURE_PALETTE_1_KOS,
++        GL_SHARED_TEXTURE_PALETTE_2_KOS,
++        GL_SHARED_TEXTURE_PALETTE_3_KOS,
++        0
++    };
++
++    int width = count;
++
++    GLint validFormats[] = {GL_RGB, GL_RGBA, 0};
++    GLint validTypes[] = {GL_UNSIGNED_BYTE, GL_BYTE, GL_UNSIGNED_SHORT, GL_SHORT, 0};
++
++    if(_glCheckValidEnum(target, validTargets, __func__) != 0) {
++        return;
++    }
++
++    if(_glCheckValidEnum(format, validFormats, __func__) != 0) {
++        return;
++    }
++
++    if(_glCheckValidEnum(type, validTypes, __func__) != 0) {
++        return;
++    }
++
++    /* Only allow up to 256 colours in a palette */
++    if(width > 256 || width == 0) {
++        _glKosThrowError(GL_INVALID_VALUE, __func__);
++        _glKosPrintError();
++        return;
++    }
++
++    GLint sourceStride = _determineStride(format, type);
++
++    assert(sourceStride > -1);
++
++    TextureConversionFunc convert = _determineConversion(
++        GL_RGBA8,  /* We always store palettes in this format */
++        format,
++        type
++    );
++
++    if(!convert) {
++        _glKosThrowError(GL_INVALID_OPERATION, __func__);
++        _glKosPrintError();
++        return;
++    }
++
++    TexturePalette* palette = NULL;
++    int start_offset=0;
++
++    /* Custom extension - allow uploading to one of 4 custom palettes */
++    if(target == GL_SHARED_TEXTURE_PALETTE_EXT || target == GL_SHARED_TEXTURE_PALETTE_0_KOS) {
++        palette = SHARED_PALETTES[0];
++        start_offset=(16*16)*0;
++        palette->bank = 0;
++        BANKS_USED[0] = GL_TRUE;
++    } else if(target == GL_SHARED_TEXTURE_PALETTE_1_KOS) {
++        palette = SHARED_PALETTES[1];
++        start_offset=(16*16)*1;
++        palette->bank = 1;
++        BANKS_USED[1] = GL_TRUE;
++    } else if(target == GL_SHARED_TEXTURE_PALETTE_2_KOS) {
++        palette = SHARED_PALETTES[2];
++        start_offset=(16*16)*2;
++        palette->bank = 2;
++        BANKS_USED[2] = GL_TRUE;
++    } else if(target == GL_SHARED_TEXTURE_PALETTE_3_KOS) {
++        palette = SHARED_PALETTES[3];
++        start_offset=(16*16)*3;
++        palette->bank = 2;
++        BANKS_USED[3] = GL_TRUE;
++    }
++
++    assert(palette);
++
++    if(target) {
++        free(palette->data);
++        palette->data = NULL;
++    }
++
++    palette->data = (GLubyte*) malloc(width * 4);
++    palette->format = format;
++    palette->width = width;
++    palette->size = (width > 16) ? 256 : 16;
++    assert(palette->size == 16 || palette->size == 256);
++
++    SUBBANKS_USED[palette->bank][start] = GL_TRUE;
++
++    GLubyte* src = (GLubyte*) data;
++    GLubyte* dst = (GLubyte*) palette->data;
++
++    assert(src);
++    assert(dst);
++
++    /* Transform and copy the source palette to the texture */
++    GLushort i = 0;
++    for(; i < width; ++i) {
++        convert(src, dst);
++
++        src += sourceStride;
++        dst += 4;
++    }
++
++    GLushort offset = start_offset+(16 * start);
++    for(i = 0; i < width; ++i) {
++        GLubyte* entry = &palette->data[i * 4];
++        if(INTERNAL_PALETTE_FORMAT == GL_RGBA8) {
++            pvr_set_pal_entry(offset + i, PACK_ARGB8888(entry[3], entry[0], entry[1], entry[2]));
++        } else {
++            pvr_set_pal_entry(offset + i, PACK_ARGB4444(entry[3], entry[0], entry[1], entry[2]));
++        }
++    }
+ }
+ 
+ GLAPI void APIENTRY glGetColorTableEXT(GLenum target, GLenum format, GLenum type, GLvoid *data) {
+@@ -1527,3 +1693,53 @@ GLAPI void APIENTRY glReadPixels(GLint x, GLint y, GLsizei width, GLsizei height
+     _GL_UNUSED(pixels);
+     assert(0 && "Not Implemented");
+ }
++
++GLAPI GLuint APIENTRY glGetFreeVRAM_INTERNAL_KOS(void) {
++#ifdef USE_YALLOC
++    size_t vram_free = yalloc_count_free(yalloc_base);
++    return vram_free;
++#else
++    return 0;
++#endif
++}
++
++GLAPI GLuint APIENTRY glGetUsedVRAM_INTERNAL_KOS(void) {
++#ifdef USE_YALLOC
++    return yalloc_size - glGetFreeVRAM_INTERNAL_KOS();
++#else
++    return 0;
++#endif
++}
++
++GLAPI GLuint APIENTRY glGetContinuousVRAM_INTERNAL_KOS(void) {
++#ifdef USE_YALLOC
++    size_t vram_block = yalloc_count_continuous(yalloc_base);
++    return vram_block;
++#else
++    return 0;
++#endif
++}
++
++GLAPI GLvoid APIENTRY glDumpVRAM_INTERNAL_KOS(void) {
++#ifdef USE_YALLOC
++    yalloc_dump(yalloc_base, "PVR VRAM");
++#else
++#endif
++}
++
++GLAPI GLvoid APIENTRY glDefragmentVRAM_INTERNAL_KOS(void) {
++#ifdef USE_YALLOC
++    printf("PVR VRAM Defrag started!\n");
++    yalloc_defrag_start(yalloc_base);
++    /* Replace all texture pointers */
++    for(GLuint id = 0; id<MAX_TEXTURE_COUNT;id++){
++        if(glIsTexture(id)){
++            TextureObject* txr = (TextureObject*) named_array_get(&TEXTURE_OBJECTS, id);
++            txr->data = yalloc_defrag_address(yalloc_base, txr->data);
++        }
++    }
++    yalloc_defrag_commit(yalloc_base);
++#else
++#endif
++}
++
