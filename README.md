@@ -46,7 +46,6 @@ Step 2:
 Step 3:
 ```meson compile```
 
->>>>>>> parent of 8bff83a (Update README.md)
 ## Shoutouts
 - Mrneo240
   - Coding everything
