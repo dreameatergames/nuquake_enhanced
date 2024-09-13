@@ -1,7 +1,0 @@
-open environ.sh in the KOS directory in a text editor
-
-uncomment the line that mentions -DNDEBUG
-
-source environ.sh
-make clean
-make
