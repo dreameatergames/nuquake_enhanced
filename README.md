@@ -1,7 +1,7 @@
-# nuQuake © 2019 HaydenKow
+# nuQuake Enhanced © 2024 HaydenKow/David Croshaw
 ## Free and Open for the Community!
 
-## Working:
+## Working (In Emulator):
 - the game
 - audio (+CD Audio)
 - rendering
@@ -14,10 +14,32 @@
 __let me know if stuff is broken.__
 
 ## Known Issues:
+- Running on hardware crashes after console messages stop
 - some mods crash
 - no networking
+## Compiling Instructions
+### Prerequisites
+- Ubuntu\Debian ```sudo apt install meson ninja-build```
+- Fedora\RHEL\CentOS ```sudo dnf install meson ninja-build```
+- Arch(NEEEERD!!!) ```sudo pacman -S meson```
+- Kallistios(KOS) Toolchain Installation in default install location
+### KOS Setup
+- ```sudo nano environ.sh```
+- Under "Debug Builds" uncomment ```export KOS_CFLAGS="${KOS_CFLAGS} -DNDEBUG"```
+- ```source environ.sh```
+- ```make clean```
+- ```make```
+### Compiling
+- ```meson setup  build_dc --cross-file sh4-dreamcast-kos```
+- ```cd build_dc```
+- ```meson compile```
+- if recompiling ```rm -rf build_dc/```
+
 
 ## Shoutouts
+- Mrneo240
+  - Coding everything
+  - Putting up with me
 - Kazade
   - GLdc: the best damn opengl implemention on the Dreamcast
   - Numerous discussions and info sharing
@@ -26,9 +48,6 @@ __let me know if stuff is broken.__
 - Ian Michael
   - Inspiration and Encouragement
   - Tossing the save code over
-- Rizzo
-  - Pushing me to fix stuff and add things
-  - Stressing the hell out of Quake
 - The Dreamcast Community as a whole!
   - Assembler, DC-Talk, DCEMU. 
 
@@ -37,45 +56,13 @@ __let me know if stuff is broken.__
 ## How to run
 - it runs CD-R or CD-ROM, dcload-ip with this directory structure:
 
-### burned Quake sharware version:
-```
-\QUAKE_SW
+\CD
+  IP.BIN
+  1ST_READ.BIN
   +- ID1
        +- PAK0.PAK
 ```
 
-### Quake commercial version full install:
-```
-\QUAKE
-  +- ID1
-  |    +- PAK0.PAK
-  |    +- PAK1.PAK
-  +- ALIEN (optional)
-  |    +- PAK0.PAK
-  |    +- PAK1.PAK
-  +- MOD (optional)
-  |    +- PAK0.PAK
-```
-
-### Quake commercial version CD-ROM:
-```
-\Data
-  +- ID1
-       +- glquake
-       +- PAK0.PAK
-       +- PAK1.PAK
-```
-
-## Notes
-- These are checked for quake files, in order but any can be used:
-
-| Folder         | Normal Origin   |
-| :------------- | :-------------- |
-| "/cd/QUAKE"    | installed       |
-| "/cd/QUAKE_SW" | shareware       |
-| "/cd/data"     | official CD-ROM |
-| "/pc/quake"    | debug           |
-| "/pc/quake_sw" | debug           |
 
 ## Developer info
 ```
