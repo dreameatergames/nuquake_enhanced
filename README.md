@@ -17,6 +17,17 @@ __let me know if stuff is broken.__
 - some mods crash
 - no networking
 
+<<<<<<< HEAD
+=======
+## How To Compile:
+Step 1:
+```meson setup builddir_dc --cross-file sh4-dreamcast-kos```
+Step 2:
+```cd builddir_dc```
+Step 3:
+```meson compile```
+
+>>>>>>> parent of 8bff83a (Update README.md)
 ## Shoutouts
 - Kazade
   - GLdc: the best damn opengl implemention on the Dreamcast
