@@ -1,9 +1,8 @@
 # nuQuake Enhanced © 2024 HaydenKow/David Croshaw
 ## Free and Open for the Community!
 
-## Working (In Emulator):
+## Working:
 - the game
-- audio (+CD Audio)
 - rendering
 - keyboard+mouse 
 - controllers (analog too!)
@@ -14,7 +13,8 @@
 __let me know if stuff is broken.__
 
 ## Known Issues:
-- Running on hardware crashes after console messages stop
+- audio (+CD Audio) is disabled temporarily so it boots on Dreamcast hardware
+- Graphical glitches due to gldc hack
 - some mods crash
 - no networking
 ## Compiling Instructions
@@ -30,9 +30,7 @@ __let me know if stuff is broken.__
 - ```make clean```
 - ```make```
 ### Compiling
-- ```meson setup  build_dc --cross-file sh4-dreamcast-kos```
-- ```cd build_dc```
-- ```meson compile```
+- ```make -f Makefile.dc```
 - if recompiling ```rm -rf build_dc/```
 
 ## Shoutouts
@@ -42,6 +40,9 @@ __let me know if stuff is broken.__
 - Kazade
   - GLdc: the best damn opengl implemention on the Dreamcast
   - Numerous discussions and info sharing
+- Bruceleet
+  - Fixing the rendering code
+  - Debugging the main crash
 - BERO
   - Sound code, and most of the input code (All old, had to be forward ported)
 - Ian Michael
