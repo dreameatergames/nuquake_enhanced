@@ -171,10 +171,10 @@ S_Init
 */
 void S_Init (void)
 {
-	/* in my view, S_Init called twice in host.c when #ifndef _WIN32 and #ifdef GLQUAKE
-		BERO
-	*/
-
+	// in my view, S_Init called twice in host.c when #ifndef _WIN32 and #ifdef GLQUAKE -- BERO
+	
+	// Sound causes a hang on real hw due to CDDA uncomment this if you want sound. This still works fine on flycast. Bruce.
+/*  
 	if (snd_initialized) return;
 
 	Con_Printf("\nSound Initialization\n");
@@ -246,6 +246,8 @@ void S_Init (void)
 	ambient_sfx[AMBIENT_SKY] = S_PrecacheSound ("ambience/wind2.wav");
 
 	S_StopAllSounds (true);
+
+	*/
 }
 
 
