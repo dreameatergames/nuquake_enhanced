@@ -171,12 +171,6 @@ S_Init
 */
 void S_Init (void)
 {
-	// in my view, S_Init called twice in host.c when #ifndef _WIN32 and #ifdef GLQUAKE -- BERO
-	
-	// Sound causes a hang on real hw due to CDDA uncomment this if you want sound. This still works fine on flycast. Bruce.
-/*  
-	if (snd_initialized) return;
-
 	Con_Printf("\nSound Initialization\n");
 
 	if (COM_CheckParm("-nosound"))
@@ -209,6 +203,8 @@ void S_Init (void)
 		Con_Printf ("loading all sounds as 8bit\n");
 	}
 
+
+
 	snd_initialized = true;
 
 	S_Startup ();
@@ -225,7 +221,8 @@ void S_Init (void)
 		shm = (void *) Hunk_AllocName(sizeof(*shm), "shm");
 		shm->splitbuffer = 0;
 		shm->samplebits = 16;
-		shm->speed = 22050;
+		shm->speed = 44100;
+	//	shm->speed = 22050; Quake 1 arena
 		shm->channels = 2;
 		shm->samples = 32768;
 		shm->samplepos = 0;
@@ -235,7 +232,9 @@ void S_Init (void)
 		shm->buffer = Hunk_AllocName(1<<16, "shmbuf");
 	}
 
-	Con_Printf ("Sound sampling rate: %i\n", shm->speed);
+	if ( shm ) {
+		Con_Printf ("Sound sampling rate: %i\n", shm->speed);
+	}
 
 	// provides a tick sound until washed clean
 
@@ -246,8 +245,6 @@ void S_Init (void)
 	ambient_sfx[AMBIENT_SKY] = S_PrecacheSound ("ambience/wind2.wav");
 
 	S_StopAllSounds (true);
-
-	*/
 }
 
 

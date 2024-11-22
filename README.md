@@ -30,7 +30,7 @@ __let me know if stuff is broken.__
 - ```make clean```
 - ```make```
 ### Compiling
-- ```make -f Makefile.dc```
+- ```make```
 - if recompiling ```rm -rf build_dc/```
 
 ## Shoutouts

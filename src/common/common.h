@@ -151,6 +151,8 @@ char *MSG_ReadString (void);
 float MSG_ReadCoord (void);
 float MSG_ReadAngle (void);
 
+void Q_memset (void *dest, int fill, int count);
+
 
 //============================================================================
 
