@@ -18,7 +18,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 */
 // snd_mem.c: sound caching
-
+// Modded Fixed for dreamcast Ian micheal
 #include "quakedef.h"
 
 int			cache_full_cycle;
@@ -102,7 +102,6 @@ sfxcache_t *S_LoadSound (sfx_t *s)
 	int		len;
 	float	stepscale;
 	sfxcache_t	*sc;
-	//byte	stackbuf[1*1024];		// avoid dirtying the cache heap /* Original */
 	byte	stackbuf[2*1024];		// avoid dirtying the cache heap
 
 // see if still in memory
@@ -213,7 +212,7 @@ void FindNextChunk(char *name)
 //			Sys_Error ("FindNextChunk: %i length is past the 1 meg sanity limit", iff_chunk_len);
 		data_p -= 8;
 		last_chunk = data_p + 8 + ( (iff_chunk_len + 1) & ~1 );
-		if (!strncmp((char*)data_p, name, 4))
+		if (!strncmp(data_p, name, 4))
 			return;
 	}
 }
@@ -236,7 +235,7 @@ void DumpChunks(void)
 		memcpy (str, data_p, 4);
 		data_p += 4;
 		iff_chunk_len = GetLittleLong();
-		Con_Printf ("0x%x : %s (%d)\n", (uintptr_t)(data_p - 4), str, iff_chunk_len);
+		Con_Printf ("0x%x : %s (%d)\n", (int)(data_p - 4), str, iff_chunk_len);
 		data_p += (iff_chunk_len + 1) & ~1;
 	} while (data_p < iff_end);
 }
@@ -263,7 +262,7 @@ wavinfo_t GetWavinfo (char *name, byte *wav, int wavlength)
 
 // find "RIFF" chunk
 	FindChunk("RIFF");
-	if (!(data_p && !strncmp((char*)data_p+8, "WAVE", 4)))
+	if (!(data_p && !strncmp(data_p+8, "WAVE", 4)))
 	{
 		Con_Printf("Missing RIFF/WAVE chunks\n");
 		return info;
@@ -304,7 +303,7 @@ wavinfo_t GetWavinfo (char *name, byte *wav, int wavlength)
 		FindNextChunk ("LIST");
 		if (data_p)
 		{
-			if (!strncmp ((char*)data_p + 28, "mark", 4))
+			if (!strncmp (data_p + 28, "mark", 4))
 			{	// this is not a proper parse, but it works with cooledit...
 				data_p += 24;
 				i = GetLittleLong ();	// samples in loop
@@ -339,3 +338,4 @@ wavinfo_t GetWavinfo (char *name, byte *wav, int wavlength)
 	
 	return info;
 }
+

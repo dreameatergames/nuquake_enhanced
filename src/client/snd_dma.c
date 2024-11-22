@@ -18,10 +18,10 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 */
 // snd_dma.c -- main control for any streaming sound output device
-
+// Modded fixed for dreamcast Ian micheal
 #include "quakedef.h"
 
-#if defined(_WIN32)
+#ifdef _WIN32
 #include "winquake.h"
 #endif
 
@@ -56,19 +56,18 @@ vec_t		sound_nominal_clip_dist=1000.0;
 int			soundtime;		// sample PAIRS
 int   		paintedtime; 	// sample PAIRS
 
-
-//#define	MAX_SFX		512 /* Original */
+//#define	MAX_SFX		1024  Normal radquake 4.7
 #define	MAX_SFX		2048 // quake 1 arena 
+//#define	MAX_SFX		4096 // max
 sfx_t		*known_sfx;		// hunk allocated [MAX_SFX]
 int			num_sfx;
 
 sfx_t		*ambient_sfx[NUM_AMBIENTS];
-
-//int 		desired_speed = 11025; /* Original */
-int 		desired_speed = 22050;
+int 		desired_speed = 44100; //HQ sound Ian micheal
+//int 		desired_speed = 22050; // Quake 1 arena has to lower sample rate 
+//int 		desired_speed = 11025; //taov
 int 		desired_bits = 16;
 
-int new_wav_buffer_written=0;
 int sound_started=0;
 
 cvar_t bgmvolume = {"bgmvolume", "1", true};
@@ -76,10 +75,8 @@ cvar_t volume = {"volume", "0.7", true};
 
 cvar_t nosound = {"nosound", "0"};
 cvar_t precache = {"precache", "1"};
-//cvar_t loadas8bit = {"loadas8bit", "0"}; //Hack, maybe enable /* Original */
-cvar_t loadas8bit = {"loadas8bit", "0"};
-cvar_t bgmbuffer = {"bgmbuffer", "4096"}; /* Original */
-//cvar_t bgmbuffer = {"bgmbuffer", "0"};
+cvar_t loadas8bit = {"loadas8bit", "1"};
+cvar_t bgmbuffer = {"bgmbuffer", "0"};
 cvar_t ambient_level = {"ambient_level", "0.3"};
 cvar_t ambient_fade = {"ambient_fade", "100"};
 cvar_t snd_noextraupdate = {"snd_noextraupdate", "0"};
@@ -99,7 +96,7 @@ cvar_t _snd_mixahead = {"_snd_mixahead", "0.1", true};
 //
 
 qboolean fakedma = false;
-int fakedma_updates = 15;
+int fakedma_updates = 10;
 
 
 void S_AmbientOff (void)
@@ -171,11 +168,6 @@ S_Init
 */
 void S_Init (void)
 {
-	// in my view, S_Init called twice in host.c when #ifndef _WIN32 and #ifdef GLQUAKE -- BERO
-	
-	// Sound causes a hang on real hw due to CDDA uncomment this if you want sound. This still works fine on flycast. Bruce.
-/*  
-	if (snd_initialized) return;
 
 	Con_Printf("\nSound Initialization\n");
 
@@ -209,6 +201,8 @@ void S_Init (void)
 		Con_Printf ("loading all sounds as 8bit\n");
 	}
 
+
+
 	snd_initialized = true;
 
 	S_Startup ();
@@ -225,7 +219,8 @@ void S_Init (void)
 		shm = (void *) Hunk_AllocName(sizeof(*shm), "shm");
 		shm->splitbuffer = 0;
 		shm->samplebits = 16;
-		shm->speed = 22050;
+		shm->speed = 44100;
+	//	shm->speed = 22050; Quake 1 arena
 		shm->channels = 2;
 		shm->samples = 32768;
 		shm->samplepos = 0;
@@ -235,7 +230,9 @@ void S_Init (void)
 		shm->buffer = Hunk_AllocName(1<<16, "shmbuf");
 	}
 
-	Con_Printf ("Sound sampling rate: %i\n", shm->speed);
+	if ( shm ) {
+		Con_Printf ("Sound sampling rate: %i\n", shm->speed);
+	}
 
 	// provides a tick sound until washed clean
 
@@ -246,8 +243,6 @@ void S_Init (void)
 	ambient_sfx[AMBIENT_SKY] = S_PrecacheSound ("ambience/wind2.wav");
 
 	S_StopAllSounds (true);
-
-	*/
 }
 
 
@@ -411,6 +406,7 @@ void SND_Spatialize(channel_t *ch)
     vec_t dist;
     vec_t lscale, rscale, scale;
     vec3_t source_vec;
+	sfx_t *snd;
 
 // anything coming from the view entity will allways be full volume
 	if (ch->entnum == cl.viewentity)
@@ -422,6 +418,7 @@ void SND_Spatialize(channel_t *ch)
 
 // calculate stereo seperation and distance attenuation
 
+	snd = ch->sfx;
 	VectorSubtract(ch->origin, listener_origin, source_vec);
 	
 	dist = VectorNormalize(source_vec) * ch->dist_mult;
@@ -568,7 +565,7 @@ void S_ClearBuffer (void)
 {
 	int		clear;
 		
-#if defined(_WIN32)
+#ifdef _WIN32
 	if (!sound_started || !shm || (!shm->buffer && !pDSBuf))
 #else
 	if (!sound_started || !shm || !shm->buffer)
@@ -580,7 +577,7 @@ void S_ClearBuffer (void)
 	else
 		clear = 0;
 
-#if defined(_WIN32)
+#ifdef _WIN32
 	if (pDSBuf)
 	{
 		DWORD	dwSize;
@@ -590,7 +587,7 @@ void S_ClearBuffer (void)
 
 		reps = 0;
 
-		while ((hresult = pDSBuf->lpVtbl->Lock(pDSBuf, 0, gSndBufSize, (void**)&pData, &dwSize, NULL, NULL, 0)) != DS_OK)
+		while ((hresult = pDSBuf->lpVtbl->Lock(pDSBuf, 0, gSndBufSize, &pData, &dwSize, NULL, NULL, 0)) != DS_OK)
 		{
 			if (hresult != DSERR_BUFFERLOST)
 			{
@@ -852,8 +849,7 @@ void GetSoundtime(void)
 void S_ExtraUpdate (void)
 {
 
-#if defined(_WIN32) || defined(__linux__)
-	extern void IN_Accumulate (void);
+#ifdef _WIN32
 	IN_Accumulate ();
 #endif
 
@@ -864,7 +860,7 @@ void S_ExtraUpdate (void)
 
 void S_Update_(void)
 {
-	#ifndef SDL
+#ifndef SDL
 
 	unsigned        endtime;
 	int				samps;
@@ -883,12 +879,12 @@ void S_Update_(void)
 	}
 
 // mix ahead of current position
-	endtime = soundtime + (((int)(_snd_mixahead.value * shm->speed)+3)&~3);
+	endtime = soundtime + _snd_mixahead.value * shm->speed;
 	samps = shm->samples >> (shm->channels-1);
-	if ((int)(endtime - soundtime) > samps)
+	if (endtime - soundtime > samps)
 		endtime = soundtime + samps;
 
-#if defined(_WIN32)
+#ifdef _WIN32
 // if the buffer was lost or stopped, restore it and/or restart it
 	{
 		DWORD	dwStatus;
@@ -909,9 +905,8 @@ void S_Update_(void)
 
 	S_PaintChannels (endtime);
 
-	//SNDDMA_Submit(); /* Original */
-	new_wav_buffer_written = 0;
-	#endif /* ! SDL */
+	SNDDMA_Submit ();
+#endif /* ! SDL */
 }
 
 /*
@@ -1000,7 +995,7 @@ void S_LocalSound (char *sound)
 	sfx_t	*sfx;
 
 	if (nosound.value)
-	return;
+		return;
 	if (!sound_started)
 		return;
 		
