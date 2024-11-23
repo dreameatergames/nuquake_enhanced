@@ -18,12 +18,14 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 */
 // snd_dma.c -- main control for any streaming sound output device
-// Modded fixed for dreamcast Ian micheal
+#include "memfuncs.h"
 #include "quakedef.h"
-
+#include "sound.h"
 #ifdef _WIN32
 #include "winquake.h"
 #endif
+
+
 
 void S_Play(void);
 void S_PlayVol(void);
@@ -56,16 +58,14 @@ vec_t		sound_nominal_clip_dist=1000.0;
 int			soundtime;		// sample PAIRS
 int   		paintedtime; 	// sample PAIRS
 
-//#define	MAX_SFX		1024  Normal radquake 4.7
-#define	MAX_SFX		2048 // quake 1 arena 
-//#define	MAX_SFX		4096 // max
+
+#define	MAX_SFX		512
 sfx_t		*known_sfx;		// hunk allocated [MAX_SFX]
 int			num_sfx;
 
 sfx_t		*ambient_sfx[NUM_AMBIENTS];
-int 		desired_speed = 44100; //HQ sound Ian micheal
-//int 		desired_speed = 22050; // Quake 1 arena has to lower sample rate 
-//int 		desired_speed = 11025; //taov
+
+int 		desired_speed = 11025;
 int 		desired_bits = 16;
 
 int sound_started=0;
@@ -75,13 +75,13 @@ cvar_t volume = {"volume", "0.7", true};
 
 cvar_t nosound = {"nosound", "0"};
 cvar_t precache = {"precache", "1"};
-cvar_t loadas8bit = {"loadas8bit", "1"};
-cvar_t bgmbuffer = {"bgmbuffer", "0"};
+cvar_t loadas8bit = {"loadas8bit", "0"};
+cvar_t bgmbuffer = {"bgmbuffer", "4096"};
 cvar_t ambient_level = {"ambient_level", "0.3"};
 cvar_t ambient_fade = {"ambient_fade", "100"};
 cvar_t snd_noextraupdate = {"snd_noextraupdate", "0"};
 cvar_t snd_show = {"snd_show", "0"};
-cvar_t _snd_mixahead = {"_snd_mixahead", "0.1", true};
+cvar_t _snd_mixahead = {"_snd_mixahead", "0.2", true};
 
 
 // ====================================================================
@@ -96,7 +96,8 @@ cvar_t _snd_mixahead = {"_snd_mixahead", "0.1", true};
 //
 
 qboolean fakedma = false;
-int fakedma_updates = 10;
+int fakedma_updates = 1;
+
 
 
 void S_AmbientOff (void)
@@ -219,8 +220,7 @@ void S_Init (void)
 		shm = (void *) Hunk_AllocName(sizeof(*shm), "shm");
 		shm->splitbuffer = 0;
 		shm->samplebits = 16;
-		shm->speed = 44100;
-	//	shm->speed = 22050; Quake 1 arena
+		shm->speed = 22050;
 		shm->channels = 2;
 		shm->samples = 32768;
 		shm->samplepos = 0;
@@ -403,7 +403,7 @@ SND_Spatialize
 void SND_Spatialize(channel_t *ch)
 {
     vec_t dot;
-    vec_t dist;
+    vec_t ldist, rdist, dist;
     vec_t lscale, rscale, scale;
     vec3_t source_vec;
 	sfx_t *snd;
@@ -1008,7 +1008,16 @@ void S_LocalSound (char *sound)
 	S_StartSound (cl.viewentity, -1, sfx, vec3_origin, 1, 1);
 }
 
+/*
+==============
+SNDDMA_Submit
 
+Send sound to device if buffer isn't really the dma buffer
+===============
+*/
+void SNDDMA_Submit(void)
+{
+}
 void S_ClearPrecache (void)
 {
 }

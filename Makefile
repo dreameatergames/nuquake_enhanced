@@ -37,8 +37,9 @@ debug: $(BUILD_DIR)/$(TARGET_EXEC)
 
 #INC_LZO = -I$(DEP_DIR)/minilzo
 #INC_ALDC = -I$(DEP_DIR)/aldc/include
-INCS :=  -I$(DEP_DIR)/libgl/include  -I$(DEP_DIR)/cglm/include
-#-I$(DEP_DIR)/SDL-1.2.9/inst/include -I$(DEP_DIR)/SDL/include
+INCS :=  -I$(DEP_DIR)/libgl/include  -I$(DEP_DIR)/cglm/include -I$(DEP_DIR)/SDL/include
+#-I$(DEP_DIR)/SDL-1.2.9/inst/include
+
 
 CC = kos-cc
 AS = kos-as

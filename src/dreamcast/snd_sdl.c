@@ -1,6 +1,5 @@
-// Modded fixed Ian micheal 2019
+
 #include <stdio.h>
-#include <SDL/SDL.h>
 #include <SDL/SDL_audio.h>
 #include <SDL/SDL_byteorder.h>
 #include "quakedef.h"
@@ -35,7 +34,7 @@ qboolean SNDDMA_Init(void)
 			break;
 		case 16:
 			if ( SDL_BYTEORDER == SDL_BIG_ENDIAN )
-				desired.format = AUDIO_S16MSB;
+				desired.format = AUDIO_S16LSB;
 			else
 				desired.format = AUDIO_S16LSB;
 			break;
@@ -45,7 +44,7 @@ qboolean SNDDMA_Init(void)
 			return 0;
 	}
 	desired.channels = 2;
-	desired.samples = 2048;
+	desired.samples = 512;
 	desired.callback = paint_audio;
 
 	/* Open the audio device */

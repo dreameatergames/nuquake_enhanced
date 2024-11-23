@@ -18,7 +18,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 */
 // snd_mem.c: sound caching
-// Modded Fixed for dreamcast Ian micheal
+
 #include "quakedef.h"
 
 int			cache_full_cycle;
@@ -102,7 +102,7 @@ sfxcache_t *S_LoadSound (sfx_t *s)
 	int		len;
 	float	stepscale;
 	sfxcache_t	*sc;
-	byte	stackbuf[2*1024];		// avoid dirtying the cache heap
+	byte	stackbuf[1*1024];		// avoid dirtying the cache heap
 
 // see if still in memory
 	sc = Cache_Check (&s->cache);

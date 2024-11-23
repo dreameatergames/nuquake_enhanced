@@ -1,0 +1,265 @@
+> build_dc/./src/client/cl_demo.c.o
+> build_dc/./src/client/cl_input.c.o
+> build_dc/./src/client/cl_main.c.o
+src/client/cl_main.c: In function ‘CL_PrintEntities_f’:
+src/client/cl_main.c:238:110: warning: implicit conversion from ‘vec_t’ {aka ‘float’} to ‘double’ when passing argument to function [-Wdouble-promotion]
+  238 | rintf("%s:%2i  (%5.1f,%5.1f,%5.1f) [%5.1f %5.1f %5.1f]\n", ent->model->name, ent->frame, ent->origin[0], ent->origin[1], ent->origin[2], ent->angles[0], ent->angles[1], ent->angles[2]);
+      |                                                                                          ~~~~~~~~~~~^~~
+
+src/client/cl_main.c:238:126: warning: implicit conversion from ‘vec_t’ {aka ‘float’} to ‘double’ when passing argument to function [-Wdouble-promotion]
+  238 | %5.1f,%5.1f,%5.1f) [%5.1f %5.1f %5.1f]\n", ent->model->name, ent->frame, ent->origin[0], ent->origin[1], ent->origin[2], ent->angles[0], ent->angles[1], ent->angles[2]);
+      |                                                                                          ~~~~~~~~~~~^~~
+
+src/client/cl_main.c:238:142: warning: implicit conversion from ‘vec_t’ {aka ‘float’} to ‘double’ when passing argument to function [-Wdouble-promotion]
+  238 | f) [%5.1f %5.1f %5.1f]\n", ent->model->name, ent->frame, ent->origin[0], ent->origin[1], ent->origin[2], ent->angles[0], ent->angles[1], ent->angles[2]);
+      |                                                                                          ~~~~~~~~~~~^~~
+
+src/client/cl_main.c:238:158: warning: implicit conversion from ‘vec_t’ {aka ‘float’} to ‘double’ when passing argument to function [-Wdouble-promotion]
+  238 | %5.1f]\n", ent->model->name, ent->frame, ent->origin[0], ent->origin[1], ent->origin[2], ent->angles[0], ent->angles[1], ent->angles[2]);
+      |                                                                                          ~~~~~~~~~~~^~~
+
+src/client/cl_main.c:238:174: warning: implicit conversion from ‘vec_t’ {aka ‘float’} to ‘double’ when passing argument to function [-Wdouble-promotion]
+  238 | model->name, ent->frame, ent->origin[0], ent->origin[1], ent->origin[2], ent->angles[0], ent->angles[1], ent->angles[2]);
+      |                                                                                          ~~~~~~~~~~~^~~
+
+src/client/cl_main.c:238:190: warning: implicit conversion from ‘vec_t’ {aka ‘float’} to ‘double’ when passing argument to function [-Wdouble-promotion]
+  238 | e, ent->frame, ent->origin[0], ent->origin[1], ent->origin[2], ent->angles[0], ent->angles[1], ent->angles[2]);
+      |                                                                                                ~~~~~~~~~~~^~~
+
+src/client/cl_main.c: In function ‘CL_SignonReply’:
+src/client/cl_main.c:158:6: warning: stack usage is 8216 bytes [-Wstack-usage=]
+  158 | void CL_SignonReply(void) {
+      |      ^~~~~~~~~~~~~~
+> build_dc/./src/client/cl_parse.c.o
+> build_dc/./src/client/cl_tent.c.o
+> build_dc/./src/client/keys.c.o
+> build_dc/./src/client/menu.c.o
+> build_dc/./src/client/snd_dma.c.o
+src/client/snd_dma.c: In function ‘SND_Spatialize’:
+src/client/snd_dma.c:409:16: warning: variable ‘snd’ set but not used [-Wunused-but-set-variable]
+  409 |         sfx_t *snd;
+      |                ^~~
+src/client/snd_dma.c:406:18: warning: unused variable ‘rdist’ [-Wunused-variable]
+  406 |     vec_t ldist, rdist, dist;
+      |                  ^~~~~
+src/client/snd_dma.c:406:11: warning: unused variable ‘ldist’ [-Wunused-variable]
+  406 |     vec_t ldist, rdist, dist;
+      |           ^~~~~
+src/client/snd_dma.c: In function ‘S_Update_’:
+src/client/snd_dma.c:884:33: warning: comparison of integer expressions of different signedness: ‘unsigned int’ and ‘in
+’ [-Wsign-compare]
+  884 |         if (endtime - soundtime > samps)
+      |                                 ^
+> build_dc/./src/client/snd_mem.c.o
+src/client/snd_mem.c: In function ‘FindNextChunk’:
+src/client/snd_mem.c:215:30: warning: pointer targets in passing argument 1 of ‘strncmp’ differ in signedness [-Wpointer-sign]
+  215 |                 if (!strncmp(data_p, name, 4))
+      |                              ^~~~~~
+      |                              |
+      |                              byte * {aka unsigned char *}
+In file included from src/common/quakedef.h:36,
+                 from src/client/snd_mem.c:22:
+/opt/toolchains/dc/sh-elf/sh-elf/include/string.h:43:19: note: expected ‘const char *’ but argument is of type ‘byte *’ {aka ‘unsigned char *’}
+   43 | int      strncmp (const char *, const char *, size_t);
+      |                   ^~~~~~~~~~~~
+src/client/snd_mem.c: In function ‘GetWavinfo’:
+src/client/snd_mem.c:265:40: warning: pointer targets in passing argument 1 of ‘strncmp’ differ in signedness [-Wpointer-sign]
+  265 |         if (!(data_p && !strncmp(data_p+8, "WAVE", 4)))
+      |                                  ~~~~~~^~
+      |                                        |
+      |                                        byte * {aka unsigned char *}
+/opt/toolchains/dc/sh-elf/sh-elf/include/string.h:43:19: note: expected ‘const char *’ but argument is of type ‘byte *’ {aka ‘unsigned char *’}
+   43 | int      strncmp (const char *, const char *, size_t);
+      |                   ^~~~~~~~~~~~
+src/client/snd_mem.c:306:46: warning: pointer targets in passing argument 1 of ‘strncmp’ differ in signedness [-Wpointer-sign]
+  306 |                         if (!strncmp (data_p + 28, "mark", 4))
+      |                                       ~~~~~~~^~~~
+      |                                              |
+      |                                              byte * {aka unsigned char *}
+/opt/toolchains/dc/sh-elf/sh-elf/include/string.h:43:19: note: expected ‘const char *’ but argument is of type ‘byte *’ {aka ‘unsigned char *’}
+   43 | int      strncmp (const char *, const char *, size_t);
+      |                   ^~~~~~~~~~~~
+> build_dc/./src/client/view.c.o
+> build_dc/./src/common/chase.c.o
+> build_dc/./src/common/cmd.c.o
+> build_dc/./src/common/common.c.o
+src/common/common.c: In function ‘COM_LoadPackFile’:
+src/common/common.c:1398:53: warning: implicit conversion from ‘float’ to ‘double’ when passing argument to function [-Wdouble-promotion]
+ 1398 |                         printf("%.2f kb needed\n",  (float)(sizeof(dpackfile_t) * MAX_FILES_IN_PACK / 1024));
+      |                                                     ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+> build_dc/./src/common/console.c.o
+> build_dc/./src/common/crc.c.o
+> build_dc/./src/common/cvar.c.o
+> build_dc/./src/common/host.c.o
+src/common/host.c: In function ‘Host_WriteConfiguration’:
+src/common/host.c:341:30: warning: the comparison will always evaluate as ‘false’ for the address of ‘file_buf’ will never be NULL [-Waddress]
+  341 |                 if (file_buf == NULL) {
+      |                              ^~
+src/common/host.c:299:16: note: ‘file_buf’ declared here
+  299 | static uint8_t file_buf[1024 * 128]; //128k
+      |                ^~~~~~~~
+src/common/host.c:355:21: warning: pointer targets in assignment from ‘uint8_t *’ {aka ‘unsigned char *’} to ‘char *’ differ in signedness [-Wpointer-sign]
+  355 |                 ptr = file_buf;
+      |                     ^
+src/common/host.c:387:35: warning: pointer targets in passing argument 1 of ‘VMU_calcCRC’ differ in signedness [-Wpointer-sign]
+  387 |                 crc = VMU_calcCRC(file_buf, filesize+head_len);
+      |                                   ^~~~~~~~
+      |                                   |
+      |                                   uint8_t * {aka unsigned char *}
+In file included from src/common/host.c:297:
+./src/dreamcast/vmu_misc.h:22:26: note: expected ‘char *’ but argument is of type ‘uint8_t *’ {aka ‘unsigned char *’}
+   22 | uint16 VMU_calcCRC(char *file_buf, int data_len);
+      |                    ~~~~~~^~~~~~~~
+src/common/host.c: In function ‘Host_ReadConfiguration’:
+src/common/host.c:526:22: warning: the comparison will always evaluate as ‘false’ for the address of ‘file_buf’ will never be NULL [-Waddress]
+  526 |         if (file_buf == NULL) {
+      |                      ^~
+src/common/host.c:299:16: note: ‘file_buf’ declared here
+  299 | static uint8_t file_buf[1024 * 128]; //128k
+      |                ^~~~~~~~
+src/common/host.c:537:23: warning: pointer targets in passing argument 1 of ‘Cbuf_AddText’ differ in signedness [-Wpointer-sign]
+  537 |         Cbuf_AddText (file_buf);
+      |                       ^~~~~~~~
+      |                       |
+      |                       uint8_t * {aka unsigned char *}
+In file included from src/common/quakedef.h:231,
+                 from src/common/host.c:22:
+src/common/cmd.h:41:32: note: expected ‘const char *’ but argument is of type ‘uint8_t *’ {aka ‘unsigned char *’}
+   41 | void Cbuf_AddText (const char *text);
+      |                    ~~~~~~~~~~~~^~~~
+src/common/host.c:538:19: warning: pointer targets in passing argument 1 of ‘Con_Print’ differ in signedness [-Wpointer-sign]
+  538 |         Con_Print(file_buf);
+      |                   ^~~~~~~~
+      |                   |
+      |                   uint8_t * {aka unsigned char *}
+In file included from src/common/quakedef.h:250:
+src/common/console.h:36:23: note: expected ‘char *’ but argument is of type ‘uint8_t *’ {aka ‘unsigned char *’}
+   36 | void Con_Print (char *txt);
+      |                 ~~~~~~^~~
+src/common/host.c: In function ‘Host_Init’:
+src/common/host.c:1135:102: warning: implicit conversion from ‘float’ to ‘double’ when passing argument to function [-Wdouble-promotion]
+ 1135 |                Sys_Error ("Only %4.1f megs of memory available, can't execute game", parms->memsize / (float)0x100000);
+      |                                                                                      ~~~~~~~~~~~~~~~^~~~~~~~~~~~~~~~~
+
+src/common/host.c:1166:59: warning: implicit conversion from ‘float’ to ‘double’ when passing argument to function [-Wdouble-promotion]
+ 1166 |         Con_Printf ("%4.1f megabyte heap\n",parms->memsize/ (1024*1024.0));
+      |                                             ~~~~~~~~~~~~~~^~~~~~~~~~~~~~~
+> build_dc/./src/common/host_cmd.c.o
+> build_dc/./src/common/mathlib.c.o
+> build_dc/./src/common/net_loop.c.o
+> build_dc/./src/common/net_main.c.o
+> build_dc/./src/common/sbar.c.o
+> build_dc/./src/common/wad.c.o
+> build_dc/./src/common/world.c.o
+> build_dc/./src/common/zone.c.o
+src/common/zone.c: In function ‘Cache_Report’:
+src/common/zone.c:827:98: warning: implicit conversion from ‘float’ to ‘double’ when passing argument to function [-Wdouble-promotion]
+  827 |         Con_DPrintf ("%4.1f kilobyte data cache\n", (hunk_size - hunk_high_used - hunk_low_used) / (float)(1024*1024) );
+      |                                                     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^~~~~~~~~~~~~~~~~~~~
+> build_dc/./src/dreamcast/cd_sdl.c.o
+src/dreamcast/cd_sdl.c: In function ‘CD_f’:
+src/dreamcast/cd_sdl.c:162:17: warning: assignment discards ‘const’ qualifier from pointer target type [-Wdiscarded-qualifiers]
+  162 |         command = Cmd_Argv(1);
+      |                 ^
+src/dreamcast/cd_sdl.c: In function ‘CDAudio_Play’:
+src/dreamcast/cd_sdl.c:46:11: warning: ‘cd_stat’ may be used uninitialized [-Wmaybe-uninitialized]
+   46 |         if(cd_stat == CD_PLAYING)
+      |           ^
+src/dreamcast/cd_sdl.c:31:18: note: ‘cd_stat’ was declared here
+   31 |         CDstatus cd_stat;
+      |                  ^~~~~~~
+> build_dc/./src/dreamcast/in_dreamcast.c.o
+> build_dc/./src/dreamcast/net_none.c.o
+> build_dc/./src/dreamcast/ram.c.o
+> build_dc/./src/dreamcast/snd_mix.c.o
+> build_dc/./src/dreamcast/snd_sdl.c.o
+src/dreamcast/snd_sdl.c: In function ‘paint_audio’:
+src/dreamcast/snd_sdl.c:16:29: warning: assignment to ‘unsigned int *’ from incompatible pointer type ‘Uint8 *’ {aka ‘unsigned char *’} [-Wincompatible-pointer-types]
+   16 |                 shm->buffer = stream;
+      |                             ^
+src/dreamcast/snd_sdl.c:13:31: warning: unused parameter ‘unused’ [-Wunused-parameter]
+   13 | static void paint_audio(void *unused, Uint8 *stream, int len)
+      |                         ~~~~~~^~~~~~
+src/dreamcast/snd_sdl.c: In function ‘SNDDMA_Init’:
+src/dreamcast/snd_sdl.c:63:28: warning: this statement may fall through [-Wimplicit-fallthrough=]
+   63 |                         if ( ((obtained.format == AUDIO_S16LSB) &&
+      |                            ^
+src/dreamcast/snd_sdl.c:71:17: note: here
+   71 |                 default:
+      |                 ^~~~~~~
+> build_dc/./src/dreamcast/sys_dreamcast.c.o
+> build_dc/./src/dreamcast/vid_gldc.c.o
+> build_dc/./src/dreamcast/vmuheader.c.o
+> build_dc/./src/dreamcast/vmu_misc.c.o
+> build_dc/./src/dreamcast/vmu_state.c.o
+> build_dc/./src/renderer/gl_batcher.c.o
+> build_dc/./src/renderer/gl_draw.c.o
+> build_dc/./src/renderer/gl_mesh.c.o
+> build_dc/./src/renderer/gl_model.c.o
+src/renderer/gl_model.c: In function ‘Mod_FloodFillSkin’:
+src/renderer/gl_model.c:1392:6: warning: stack usage is 16412 bytes [-Wstack-usage=]
+ 1392 | void Mod_FloodFillSkin( byte *skin, int skinwidth, int skinheight )
+      |      ^~~~~~~~~~~~~~~~~
+> build_dc/./src/renderer/gl_refrag.c.o
+> build_dc/./src/renderer/gl_rlight.c.o
+> build_dc/./src/renderer/gl_rmain.c.o
+> build_dc/./src/renderer/gl_rmisc.c.o
+> build_dc/./src/renderer/gl_rsurf.c.o
+> build_dc/./src/renderer/gl_screen.c.o
+src/renderer/gl_screen.c: In function ‘CalcFov’:
+src/renderer/gl_screen.c:243:43: warning: implicit conversion from ‘float’ to ‘double’ when passing argument to function [-Wdouble-promotion]
+  243 |                 Sys_Error ("Bad fov: %f", fov_x);
+      |                                           ^~~~~
+> build_dc/./src/renderer/gl_warp.c.o
+src/renderer/gl_warp.c: In function ‘R_InitSky’:
+src/renderer/gl_warp.c:433:6: warning: stack usage is 65616 bytes [-Wstack-usage=]
+  433 | void R_InitSky (miptex_t *mt)
+      |      ^~~~~~~~~
+> build_dc/./src/renderer/menu_loader.c.o
+> build_dc/./src/renderer/r_part.c.o
+> build_dc/./src/server/sv_main.c.o
+src/server/sv_main.c: In function ‘SV_StartSound’:
+src/server/sv_main.c:130:63: warning: implicit conversion from ‘float’ to ‘double’ when passing argument to function [-Wdouble-promotion]
+  130 |                 Sys_Error ("SV_StartSound: attenuation = %f", attenuation);
+      |                                                               ^~~~~~~~~~~
+In file included from src/server/sv_main.c:22:
+src/server/sv_main.c: In function ‘SV_SendServerinfo’:
+src/common/quakedef.h:24:41: warning: implicit conversion from ‘float’ to ‘double’ when passing argument to function [-Wdouble-promotion]
+   24 | #define VERSION                         1.09f
+      |                                         ^~~~~
+src/server/sv_main.c:195:67: note: in expansion of macro ‘VERSION’
+  195 |         sprintf (message, "%c\nVERSION %4.2f SERVER (%i CRC)", 2, VERSION, pr_crc);
+      |                                                                   ^~~~~~~
+> build_dc/./src/server/sv_move.c.o
+> build_dc/./src/server/sv_phys.c.o
+src/server/sv_phys.c: In function ‘SV_PushMove’:
+src/server/sv_phys.c:441:6: warning: stack usage is 12448 bytes [-Wstack-usage=]
+  441 | void SV_PushMove (edict_t *pusher, float movetime)
+      |      ^~~~~~~~~~~
+> build_dc/./src/server/sv_user.c.o
+> build_dc/./src/vm/pr_cmds.c.o
+> build_dc/./src/vm/pr_edict.c.o
+src/vm/pr_edict.c: In function ‘PR_UglyValueString’:
+src/vm/pr_edict.c:395:56: warning: implicit conversion from ‘float’ to ‘double’ when passing argument to function [-Wdouble-promotion]
+  395 |                 snprintf (line, sizeof(line), "%f", val->_float);
+      |                                                     ~~~^~~~~~~~
+src/vm/pr_edict.c:398:70: warning: implicit conversion from ‘float’ to ‘double’ when passing argument to function [-Wdouble-promotion]
+  398 |                 snprintf (line, sizeof(line), "%f %f %f", val->vector[0], val->vector[1], val->vector[2]);
+      |                                                           ~~~~~~~~~~~^~~
+src/vm/pr_edict.c:398:86: warning: implicit conversion from ‘float’ to ‘double’ when passing argument to function [-Wdouble-promotion]
+  398 |                 snprintf (line, sizeof(line), "%f %f %f", val->vector[0], val->vector[1], val->vector[2]);
+      |                                                                           ~~~~~~~~~~~^~~
+src/vm/pr_edict.c:398:102: warning: implicit conversion from ‘float’ to ‘double’ when passing argument to function [-Wdouble-promotion]
+  398 |                 snprintf (line, sizeof(line), "%f %f %f", val->vector[0], val->vector[1], val->vector[2]);
+      |                                                                                           ~~~~~~~~~~~^~~
+src/vm/pr_edict.c: In function ‘ED_Write’:
+src/vm/pr_edict.c:530:6: warning: stack usage is 40040 bytes [-Wstack-usage=]
+  530 | void ED_Write (gzFile f, edict_t *ed)
+      |      ^~~~~~~~
+src/vm/pr_edict.c: In function ‘ED_WriteGlobals’:
+src/vm/pr_edict.c:683:6: warning: stack usage is 40036 bytes [-Wstack-usage=]
+  683 | void ED_WriteGlobals (gzFile f)
+      |      ^~~~~~~~~~~~~~~
+> build_dc/./src/vm/pr_exec.c.o
+-e
++ build_dc/nuquake.elf
