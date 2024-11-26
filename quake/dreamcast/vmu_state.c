@@ -126,6 +126,12 @@ void Host_SavegameComment(char *text)
 Host_Savegame_f
 ===============
 */
+
+/*
+    Name: Ian micheal
+    Date: 25/11/24 05:54
+    Description: Fixed pointer signedness in VMU CRC calculation
+*/
 static char w_buf[40000];
 void Host_Savegame_f(void)
 {
@@ -341,14 +347,13 @@ void Host_Savegame_f(void)
 	memcpy(ptr, icon_bitmap, 512);
 	ptr += 512; // Icons bitmap
 
-	// Calculating CRC checksum
-	Con_Printf("Calculating CRC checksum...\n");
+    Con_Printf("Calculating CRC checksum...\n");
 
-	crc = VMU_calcCRC(file_buf, filesize + 640);
+    // Fixed: Cast to const uint8_t* to match VMU_calcCRC signature
+    crc = VMU_calcCRC((const uint8_t *)file_buf, filesize + 640);
 
-	file_buf[0x46] = (crc & 0x00ff) >> 0;
-	file_buf[0x47] = (crc & 0xff00) >> 8;
-
+    file_buf[0x46] = (crc & 0x00ff) >> 0;
+    file_buf[0x47] = (crc & 0xff00) >> 8;
 	// Saving game
 	sprintf(name, "%s", Cmd_Argv(1));
 

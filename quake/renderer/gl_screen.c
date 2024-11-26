@@ -234,21 +234,26 @@ void SCR_CheckDrawCenterString (void)
 CalcFov
 ====================
 */
-float CalcFov (float fov_x, float width, float height)
+
+/*
+    Name: Ian micheal
+    Date: 25/11/24 05:54
+    Description: Fixed float-to-double conversion warning in FOV calculation
+*/
+
+float CalcFov(float fov_x, float width, float height)
 {
-        float   a;
-        float   x;
+    float a;
+    float x;
 
-        if (fov_x < 1 || fov_x > 179)
-                Sys_Error ("Bad fov: %f", fov_x);
+    if (fov_x < 1 || fov_x > 179)
+        Sys_Error("Bad fov: %f", (double)fov_x);  // Explicit cast to double
 
-        x = width/tanf(fov_x/360*M_PI);
+    x = width / tanf(fov_x / 360 * M_PI);
+    a = atanf(height / x);
+    a = a * 360 / M_PI;
 
-        a = atanf (height/x);
-
-        a = a*360/M_PI;
-
-        return a;
+    return a;
 }
 
 /*

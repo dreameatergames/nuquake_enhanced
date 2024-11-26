@@ -528,146 +528,300 @@ void Host_Savegame_f (void)
 Host_Loadgame_f
 ===============
 */
-void Host_Loadgame_f (void)
+void Host_Loadgame_f(void)
 {
-	char	name[MAX_OSPATH];
-	FILE	*f;
-	char	mapname[MAX_QPATH];
-	float	time, tfloat;
-	char	str[32768]; 
-	const char *start;
-	int		i, r;
-	edict_t	*ent;
-	int		entnum;
-	int		version;
-	float			spawn_parms[NUM_SPAWN_PARMS];
+    char name[MAX_OSPATH];
+    FILE *f;
+    char mapname[MAX_QPATH];
+    float time, tfloat;
+    char str[32768]; 
+    const char *start;
+    int i, r;
+    edict_t *ent;
+    int entnum;
+    int version;
+    float spawn_parms[NUM_SPAWN_PARMS];
+    
+    Con_Printf("\n=== Starting Load Game ===\n");
 
-	if (cmd_source != src_command)
-		return;
+    if (cmd_source != src_command)
+    {
+        Con_Printf("Load game called from invalid source\n");
+        return;
+    }
 
-	if (Cmd_Argc() != 2)
-	{
-		Con_Printf ("load <savename> : load a game\n");
-		return;
-	}
+    if (Cmd_Argc() != 2)
+    {
+        Con_Printf("load <savename> : load a game\n");
+        return;
+    }
 
-	cls.demonum = -1;		// stop demo loop in case this fails
+    cls.demonum = -1;        // stop demo loop in case this fails
 
-	sprintf (name, "%s/%s", com_gamedir, Cmd_Argv(1));
-	COM_DefaultExtension (name, ".sav");
-	
-// we can't call SCR_BeginLoadingPlaque, because too much stack space has
-// been used.  The menu calls it before stuffing loadgame command
-//	SCR_BeginLoadingPlaque ();
+    // Build save file path
+    sprintf(name, "%s/%s", com_gamedir, Cmd_Argv(1));
+    COM_DefaultExtension(name, ".sav");
+    
+    Con_Printf("Opening save file: %s\n", name);
+    f = fopen(name, "r");
+    if (!f)
+    {
+        Con_Printf("ERROR: couldn't open file.\n");
+        return;
+    }
 
-	Con_Printf ("Loading game from %s...\n", name);
-	f = fopen (name, "r");
-	if (!f)
-	{
-		Con_Printf ("ERROR: couldn't open.\n");
-		return;
-	}
+    // Read version
+    if (fscanf(f, "%i\n", &version) != 1)
+    {
+        Con_Printf("ERROR: Failed to read version\n");
+        fclose(f);
+        return;
+    }
 
-	fscanf (f, "%i\n", &version);
-	if (version != SAVEGAME_VERSION)
-	{
-		fclose (f);
-		Con_Printf ("Savegame is version %i, not %i\n", version, SAVEGAME_VERSION);
-		return;
-	}
-	fscanf (f, "%s\n", str);
-	for (i=0 ; i<NUM_SPAWN_PARMS ; i++)
-		fscanf (f, "%f\n", &spawn_parms[i]);
-// this silliness is so we can load 1.06 save files, which have float skill values
-	fscanf (f, "%f\n", &tfloat);
-	current_skill = (int)(tfloat + 0.1);
-	Cvar_SetValue ("skill", (float)current_skill);
+    Con_Printf("Save version: %i (expected: %i)\n", version, SAVEGAME_VERSION);
 
-	fscanf (f, "%s\n",mapname);
-	fscanf (f, "%f\n",&time);
+    if (version != SAVEGAME_VERSION)
+    {
+        fclose(f);
+        Con_Printf("Savegame is version %i, not %i\n", version, SAVEGAME_VERSION);
+        return;
+    }
 
-	CL_Disconnect_f ();
-	
-	SV_SpawnServer (mapname);
-	if (!sv.active)
-	{
-		Con_Printf ("Couldn't load map\n");
-		return;
-	}
-	sv.paused = true;		// pause until all clients connect
-	sv.loadgame = true;
+    // Read description
+    if (fscanf(f, "%s\n", str) != 1)
+    {
+        Con_Printf("ERROR: Failed to read save description\n");
+        fclose(f);
+        return;
+    }
 
-// load the light styles
+    // Read spawn parameters
+    for (i = 0; i < NUM_SPAWN_PARMS; i++)
+    {
+        if (fscanf(f, "%f\n", &spawn_parms[i]) != 1)
+        {
+            Con_Printf("ERROR: Failed to read spawn parameter %d\n", i);
+            fclose(f);
+            return;
+        }
+    }
 
-	for (i=0 ; i<MAX_LIGHTSTYLES ; i++)
-	{
-		fscanf (f, "%s\n", str);
-		//sv.lightstyles[i] = Hunk_Alloc (strlen(str)+1);
-		//strcpy (sv.lightstyles[i], str);
-		sv.lightstyles[i] = (const char *)Hunk_Strdup (str, "lightstyles");
-	}
+    // Read skill
+    if (fscanf(f, "%f\n", &tfloat) != 1)
+    {
+        Con_Printf("ERROR: Failed to read skill level\n");
+        fclose(f);
+        return;
+    }
+    current_skill = (int)(tfloat + 0.1);
+    Cvar_SetValue("skill", (float)current_skill);
 
-// load the edicts out of the savegame file
-	entnum = -1;		// -1 is the globals
-	while (!feof(f))
-	{
-		for (i=0 ; i<(int)sizeof(str)-1 ; i++)
-		{
-			r = fgetc (f);
-			if (r == EOF || !r)
-				break;
-			str[i] = r;
-			if (r == '}')
-			{
-				i++;
-				break;
-			}
-		}
-		if (i == sizeof(str)-1)
-			Sys_Error ("Loadgame buffer overflow");
-		str[i] = 0;
+    // Read map name
+    if (fscanf(f, "%s\n", mapname) != 1)
+    {
+        Con_Printf("ERROR: Failed to read map name\n");
+        fclose(f);
+        return;
+    }
 
-		start = COM_Parse(str);
-		if (!com_token[0])
-			break;		// end of file
-		if (strcmp(com_token,"{"))
-			Sys_Error ("First token isn't a brace");
-			
-		if (entnum == -1)
-		{	// parse the global vars
-			ED_ParseGlobals (start);
-		}
-		else
-		{	// parse an edict
+    Con_Printf("Loading map: %s\n", mapname);
 
-			ent = EDICT_NUM(entnum);
-			memset (&ent->v, 0, progs->entityfields * 4);
-			ent->free = false;
-			ED_ParseEdict (start, ent);
-	
-		// link it into the bsp tree
-			if (!ent->free)
-				SV_LinkEdict (ent, false);
-		}
+    // Read time
+    if (fscanf(f, "%f\n", &time) != 1)
+    {
+        Con_Printf("ERROR: Failed to read game time\n");
+        fclose(f);
+        return;
+    }
 
-		entnum++;
-	}
-	
-	sv.num_edicts = entnum;
-	sv.time = time;
+    CL_Disconnect_f();
 
-	fclose (f);
+    // Spawn the server
+    Con_Printf("Spawning server...\n");
+    SV_SpawnServer(mapname);
+    if (!sv.active)
+    {
+        Con_Printf("ERROR: Couldn't load map %s\n", mapname);
+        fclose(f);
+        return;
+    }
 
-	for (i=0 ; i<NUM_SPAWN_PARMS ; i++)
-		svs.clients->spawn_parms[i] = spawn_parms[i];
+    // Verify entity system state after spawn
+    if (!sv.edicts) {
+        Con_Printf("ERROR: sv.edicts not initialized\n");
+        fclose(f);
+        return;
+    }
 
-	if (cls.state != ca_dedicated)
-	{
-		CL_EstablishConnection ("local");
-		Host_Reconnect_f ();
-	}
+    // Force initialize entity counts
+    if (sv.max_edicts <= 0) {
+        sv.max_edicts = MAX_EDICTS;
+    }
+    if (sv.num_edicts <= 0) {
+        sv.num_edicts = 1;  // Start with world entity
+    }
+
+    // Print entity system state
+    Con_Printf("Entity system state:\n");
+    Con_Printf("  sv.edicts: %p\n", (void*)sv.edicts);
+    Con_Printf("  sv.max_edicts: %d\n", sv.max_edicts);
+    Con_Printf("  sv.num_edicts: %d\n", sv.num_edicts);
+    Con_Printf("  pr_edict_size: %d\n", pr_edict_size);
+
+    // Initialize edicts
+    sv.paused = true;        // pause until all clients connect
+    sv.loadgame = true;
+
+    // Load light styles
+    Con_Printf("Loading light styles...\n");
+    for (i = 0; i < MAX_LIGHTSTYLES; i++)
+    {
+        if (fscanf(f, "%s\n", str) != 1)
+        {
+            Con_Printf("ERROR: Failed to read light style %d\n", i);
+            fclose(f);
+            return;
+        }
+        sv.lightstyles[i] = (const char *)Hunk_Strdup(str, "lightstyles");
+    }
+
+    // Load the edicts
+    entnum = -1;        // -1 is the globals
+    int entities_loaded = 0;
+    
+    Con_Printf("Starting entity load...\n");
+    
+    while (!feof(f))
+    {
+        // Clear buffer before reading
+        memset(str, 0, sizeof(str));
+
+        // Read entity data
+        for (i = 0; i < (int)sizeof(str)-1; i++)
+        {
+            r = fgetc(f);
+            if (r == EOF || !r)
+                break;
+            str[i] = r;
+            if (r == '}')
+            {
+                i++;
+                break;
+            }
+        }
+
+        if (i == sizeof(str)-1)
+        {
+            Con_Printf("ERROR: Entity data too large at entity %d\n", entnum);
+            fclose(f);
+            return;
+        }
+
+        str[i] = 0;
+        start = COM_Parse(str);
+        if (!com_token[0])
+            break;        // end of file
+
+        if (strcmp(com_token, "{"))
+        {
+            Con_Printf("ERROR: Expected '{' at entity %d\n", entnum);
+            fclose(f);
+            return;
+        }
+            
+        if (entnum == -1)
+        {
+            Con_Printf("Parsing global variables...\n");
+            if (!ED_ParseGlobals(start))
+            {
+                Con_Printf("ERROR: Failed to parse global variables\n");
+                fclose(f);
+                return;
+            }
+        }
+        else
+        {
+            // Verify entity system state before each entity
+            if (!sv.edicts) {
+                Con_Printf("ERROR: sv.edicts became NULL during loading\n");
+                fclose(f);
+                return;
+            }
+
+            // Ensure we have room for this entity
+            if (entnum >= sv.max_edicts)
+            {
+                Con_Printf("ERROR: Too many entities (max: %d)\n", sv.max_edicts);
+                fclose(f);
+                return;
+            }
+
+            // Update num_edicts before creating new entity
+            if (entnum >= sv.num_edicts) {
+                sv.num_edicts = entnum + 1;
+            }
+
+            Con_Printf("Loading entity %d (num_edicts: %d, max: %d)...\n", 
+                      entnum, sv.num_edicts, sv.max_edicts);
+
+            ent = EDICT_NUM(entnum);
+            if (!ent)
+            {
+                Con_Printf("ERROR: Failed to create entity %d\n", entnum);
+                fclose(f);
+                return;
+            }
+
+            memset(&ent->v, 0, progs->entityfields * 4);
+            ent->free = false;
+            
+            if (!ED_ParseEdict(start, ent))
+            {
+                Con_Printf("ERROR: Failed to parse entity %d\n", entnum);
+                fclose(f);
+                return;
+            }
+    
+            if (!ent->free)
+            {
+                if (!SV_LinkEdict(ent, false))
+                {
+                    Con_Printf("ERROR: Failed to link entity %d\n", entnum);
+                    fclose(f);
+                    return;
+                }
+                entities_loaded++;
+            }
+        }
+        entnum++;
+    }
+
+    Con_Printf("Successfully loaded %d entities\n", entities_loaded);
+    
+    // Final entity system state verification
+    if (entnum > 0) {
+        sv.num_edicts = entnum;
+        Con_Printf("Final entity count: %d\n", sv.num_edicts);
+    }
+    
+    sv.time = time;
+    fclose(f);
+
+    // Set spawn parameters
+    Con_Printf("Setting spawn parameters...\n");
+    for (i = 0; i < NUM_SPAWN_PARMS; i++)
+        svs.clients->spawn_parms[i] = spawn_parms[i];
+
+    // Reconnect if not dedicated server
+    if (cls.state != ca_dedicated)
+    {
+        Con_Printf("Establishing connection...\n");
+        CL_EstablishConnection("local");
+        Host_Reconnect_f();
+    }
+
+    Con_Printf("=== Load Game Complete ===\n");
 }
-
 #endif
 //============================================================================
 

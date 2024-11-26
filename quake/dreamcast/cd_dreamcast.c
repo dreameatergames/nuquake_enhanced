@@ -223,15 +223,22 @@ void CDAudio_Resume(void) {
   cdPlaying = true;
 }
 
-static void CD_f(void) {
-  const char *command;
-  int ret;
-  int n;
+/*
+    Name: Ian micheal
+    Date: 25/11/24 05:54
+    Description: Fixed float-to-double conversion warning in CD volume reporting
+*/
 
-  if (Cmd_Argc() < 2)
-    return;
+static void CD_f(void)
+{
+    const char *command;
+    int ret;
+    int n;
 
-  command = Cmd_Argv(1);
+    if (Cmd_Argc() < 2)
+        return;
+
+    command = Cmd_Argv(1);
 
   if (strcasecmp(command, "on") == 0) {
     enabled = true;
@@ -314,15 +321,17 @@ static void CD_f(void) {
     return;
   }
 
-  if (strcasecmp(command, "info") == 0) {
-    Con_Printf("%u tracks\n", maxTrack);
-    if (cdPlaying)
-      Con_Printf("Currently %s track %u\n", playLooping ? "looping" : "cdPlaying", playTrack);
-    else if (wasPlaying)
-      Con_Printf("Paused %s track %u\n", playLooping ? "looping" : "cdPlaying", playTrack);
-    Con_Printf("Volume is %f\n", (float)cdvolume);
-    return;
+ if (strcasecmp(command, "info") == 0) {
+        Con_Printf("%u tracks\n", maxTrack);
+        if (cdPlaying)
+            Con_Printf("Currently %s track %u\n", playLooping ? "looping" : "cdPlaying", playTrack);
+        else if (wasPlaying)
+            Con_Printf("Paused %s track %u\n", playLooping ? "looping" : "cdPlaying", playTrack);
+        // Fixed: Explicit cast to double for printf %f format
+        Con_Printf("Volume is %f\n", (double)cdvolume);
+        return;
   }
+    
 }
 
 void CDAudio_Update(void) {

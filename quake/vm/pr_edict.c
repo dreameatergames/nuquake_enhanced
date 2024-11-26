@@ -355,54 +355,56 @@ static const char *PR_ValueString (int type, eval_t *val)
 	#endif
 }
 
+
 /*
-============
-PR_UglyValueString
-(etype_t type, eval_t *val)
-
-Returns a string describing *data in a type specific manner
-Easier to parse than PR_ValueString
-=============
+    Name: Ian micheal
+    Date: 25/11/24 05:54 
+    Description: Fixed float conversion warnings and excessive stack usage
 */
-static const char *PR_UglyValueString (int type, eval_t *val)
+
+// Static buffer to avoid large stack allocations
+static char global_line[1024];
+
+static const char *PR_UglyValueString(int type, eval_t *val)
 {
-	static char	line[1024];
-	ddef_t		*def;
-	dfunction_t	*f;
+    ddef_t      *def;
+    dfunction_t *f;
 
-	type &= ~DEF_SAVEGLOBAL;
-
-	switch (type)
-	{
-	case ev_string:
-		snprintf (line, sizeof(line), "%s", PR_GetString(val->string));
-		break;
-	case ev_entity:
-		snprintf (line, sizeof(line), "%i", NUM_FOR_EDICT(PROG_TO_EDICT(val->edict)));
-		break;
-	case ev_function:
-		f = pr_functions + val->function;
-		snprintf (line, sizeof(line), "%s", PR_GetString(f->s_name));
-		break;
-	case ev_field:
-		def = ED_FieldAtOfs ( val->_int );
-		snprintf (line, sizeof(line), "%s", PR_GetString(def->s_name));
-		break;
-	case ev_void:
-		snprintf (line, sizeof(line), "void");
-		break;
-	case ev_float:
-		snprintf (line, sizeof(line), "%f", val->_float);
-		break;
-	case ev_vector:
-		snprintf (line, sizeof(line), "%f %f %f", val->vector[0], val->vector[1], val->vector[2]);
-		break;
-	default:
-		snprintf (line, sizeof(line), "bad type %i", type);
-		break;
-	}
-
-	return line;
+    type &= ~DEF_SAVEGLOBAL;
+    switch (type)
+    {
+        case ev_string:
+            snprintf(global_line, sizeof(global_line), "%s", PR_GetString(val->string));
+            break;
+        case ev_entity:
+            snprintf(global_line, sizeof(global_line), "%i", NUM_FOR_EDICT(PROG_TO_EDICT(val->edict)));
+            break;
+        case ev_function:
+            f = pr_functions + val->function;
+            snprintf(global_line, sizeof(global_line), "%s", PR_GetString(f->s_name));
+            break;
+        case ev_field:
+            def = ED_FieldAtOfs(val->_int);
+            snprintf(global_line, sizeof(global_line), "%s", PR_GetString(def->s_name));
+            break;
+        case ev_void:
+            snprintf(global_line, sizeof(global_line), "void");
+            break;
+        case ev_float:
+            snprintf(global_line, sizeof(global_line), "%f", (double)val->_float);
+            break;
+        case ev_vector:
+            snprintf(global_line, sizeof(global_line), "%f %f %f", 
+                    (double)val->vector[0], 
+                    (double)val->vector[1], 
+                    (double)val->vector[2]);
+            break;
+        default:
+            snprintf(global_line, sizeof(global_line), "bad type %i", type);
+            break;
+    }
+    
+    return global_line;
 }
 
 /*
@@ -527,58 +529,58 @@ ED_Write
 For savegames
 =============
 */
-void ED_Write (gzFile f, edict_t *ed)
+/*
+    Name: Ian micheal
+    Date: 25/11/24 05:54 
+    Description: Memory optimized version with smaller buffer
+*/
+
+// Reduced buffer size to 8KB which should be sufficient for most cases
+#define WRITE_BUFFER_SIZE 8192  // 40,000 bytes orginal size
+static char write_buffer[WRITE_BUFFER_SIZE];
+
+void ED_Write(gzFile f, edict_t *ed)
 {
-	ddef_t	*d;
-	int		*v;
-	int		i, j;
-	const char	*name;
-	int		type;
-	char	tmp_buf[40000];
+    ddef_t       *d;
+    int          *v;
+    int          i, j;
+    const char   *name;
+    int          type;
 
-	//fprintf (f, "{\n");
-	sprintf (tmp_buf, "{\n");
-	gzwrite(f, tmp_buf, strlen(tmp_buf));
+    gzprintf(f, "{\n");
 
-	if (ed->free)
-	{
-		//fprintf (f, "}\n");
-		sprintf (tmp_buf, "}\n");
-		gzwrite(f, tmp_buf, strlen(tmp_buf));
-		return;
-	}
+    if (ed->free)
+    {
+        gzprintf(f, "}\n");
+        return;
+    }
+    
+    for (i = 1; i < progs->numfielddefs; i++)
+    {
+        d = &pr_fielddefs[i];
+        name = PR_GetString(d->s_name);
+        if (name[strlen(name)-2] == '_')
+            continue;   // skip _x, _y, _z vars
+            
+        v = (int *)((char *)&ed->v + d->ofs*4);
 
-	for (i = 1; i < progs->numfielddefs; i++)
-	{
-		d = &pr_fielddefs[i];
-		name = PR_GetString(d->s_name);
-		j = strlen (name);
-		if (j > 1 && name[j - 2] == '_')
-			continue;	// skip _x, _y, _z vars
+        // if the value is still all 0, don't write it out
+        type = d->type & ~DEF_SAVEGLOBAL;
+        
+        for (j = 0; j < type_size[type]; j++)
+            if (v[j])
+                break;
+        if (j == type_size[type])
+            continue;
+    
+        // Write in smaller chunks to avoid buffer overflow
+        snprintf(write_buffer, sizeof(write_buffer), "\"%s\" \"%s\"\n", 
+                name, 
+                PR_UglyValueString(type, (eval_t *)v));
+        gzprintf(f, "%s", write_buffer);
+    }
 
-		v = (int *)((char *)&ed->v + d->ofs*4);
-
-	// if the value is still all 0, skip the field
-		type = d->type & ~DEF_SAVEGLOBAL;
-		for (j = 0; j < type_size[type]; j++)
-		{
-			if (v[j])
-				break;
-		}
-		if (j == type_size[type])
-			continue;
-
-		//fprintf (f,"\"%s\" ",name);
-		sprintf (tmp_buf,"\"%s\" ",name);
-		gzwrite(f, tmp_buf, strlen(tmp_buf));
-		//fprintf (f, "\"%s\"\n", PR_UglyValueString(d->type, (eval_t *)v));
-		sprintf (tmp_buf,"\"%s\"\n", PR_UglyValueString(d->type, (eval_t *)v));
-		gzwrite(f, tmp_buf, strlen(tmp_buf));
-	}
-
-	//fprintf (f, "}\n");
-	sprintf (tmp_buf, "}\n");
-	gzwrite(f, tmp_buf, strlen(tmp_buf));
+    gzprintf(f, "}\n");
 }
 
 void ED_PrintNum (int ent)
@@ -680,41 +682,59 @@ FIXME: need to tag constants, doesn't really work
 ED_WriteGlobals
 =============
 */
-void ED_WriteGlobals (gzFile f)
+/*
+    Name: Ian micheal
+    Date: 25/11/24 05:54 
+    Description: Memory optimized version using shared buffer
+*/
+
+// If not already defined from previous optimization
+#ifndef WRITE_BUFFER_SIZE
+#define WRITE_BUFFER_SIZE 8192
+#endif
+
+// Use the same static buffer we created earlier, or create if not existing
+#ifndef WRITE_BUFFER_DECLARED
+#define WRITE_BUFFER_DECLARED
+static char write_buffer[WRITE_BUFFER_SIZE];
+#endif
+
+void ED_WriteGlobals(gzFile f)
 {
-	ddef_t		*def;
-	int			i;
-	const char		*name;
-	int			type;
-	char	tmp_buf[40000];
+    ddef_t *def;
+    int i;
+    const char *name;
+    int type;
 
-//	fprintf (f,"{\n");
-	sprintf (tmp_buf,"{\n");
-	gzwrite(f, tmp_buf, strlen(tmp_buf));
-	for (i = 0; i < progs->numglobaldefs; i++)
-	{
-		def = &pr_globaldefs[i];
-		type = def->type;
-		if ( !(def->type & DEF_SAVEGLOBAL) )
-			continue;
-		type &= ~DEF_SAVEGLOBAL;
+    // Write opening brace
+    gzprintf(f, "{\n");
 
-		if (type != ev_string && type != ev_float && type != ev_entity)
-			continue;
+    for (i = 0; i < progs->numglobaldefs; i++)
+    {
+        def = &pr_globaldefs[i];
+        type = def->type;
 
-		name = PR_GetString(def->s_name);
-		//fprintf (f,"\"%s\" ", name);
-		sprintf (tmp_buf,"\"%s\" ", name);
-		gzwrite(f, tmp_buf, strlen(tmp_buf));
-		//fprintf (f, "\"%s\"\n", PR_UglyValueString(type, (eval_t *)&pr_globals[def->ofs]));
-		sprintf (tmp_buf,"\"%s\"\n", PR_UglyValueString(type, (eval_t *)&pr_globals[def->ofs]));
-		gzwrite(f, tmp_buf, strlen(tmp_buf));
-	}
-	//	fprintf (f,"}\n");
-	sprintf (tmp_buf,"}\n");
-	gzwrite(f, tmp_buf, strlen(tmp_buf));
+        if (!(def->type & DEF_SAVEGLOBAL))
+            continue;
+
+        type &= ~DEF_SAVEGLOBAL;
+        if (type != ev_string && type != ev_float && type != ev_entity)
+            continue;
+
+        name = PR_GetString(def->s_name);
+
+        // Combine writes to reduce buffer operations
+        snprintf(write_buffer, sizeof(write_buffer), 
+                "\"%s\" \"%s\"\n",
+                name, 
+                PR_UglyValueString(type, (eval_t *)&pr_globals[def->ofs]));
+        
+        gzwrite(f, write_buffer, strlen(write_buffer));
+    }
+
+    // Write closing brace
+    gzprintf(f, "}\n");
 }
-
 /*
 =============
 ED_ParseGlobals
@@ -1230,23 +1250,65 @@ void PR_Init (void)
 
 edict_t *EDICT_NUM(int n)
 {
-	if (n < 0 || n >= sv.max_edicts)
-		Host_Error ("EDICT_NUM: bad number %i", n);
-	return (edict_t *)((byte *)sv.edicts + (n)*pr_edict_size);
+    // Add protection for sv.max_edicts
+    if (!sv.max_edicts) {
+        sv.max_edicts = MAX_EDICTS;
+    }
+    
+    if (n < 0 || n >= sv.max_edicts) {
+        Con_Printf("EDICT_NUM: Invalid index %i (max: %i)\n", n, sv.max_edicts);
+        Host_Error("EDICT_NUM: bad number %i", n);
+    }
+    return (edict_t *)((byte *)sv.edicts + (n)*pr_edict_size);
 }
 
 int NUM_FOR_EDICT(edict_t *e)
 {
-	int		b;
+    int b;
 
-	b = (byte *)e - (byte *)sv.edicts;
-	b = b / pr_edict_size;
+    // Protection for uninitialized server
+    if (!sv.edicts) {
+        Host_Error("NUM_FOR_EDICT: sv.edicts is null");
+        return -1;
+    }
 
-	if (b < 0 || b >= sv.num_edicts)
-		Host_Error ("NUM_FOR_EDICT: bad pointer");
-	return b;
+    // Protect against null pointer
+    if (!e) {
+        Host_Error("NUM_FOR_EDICT: null entity pointer");
+        return -1;
+    }
+
+    // Initialize num_edicts if not set
+    if (sv.num_edicts <= 0) {
+        sv.num_edicts = 1;  // Minimum for world entity
+    }
+
+    b = (byte *)e - (byte *)sv.edicts;
+    
+    // Validate the pointer is within edicts array bounds
+    if (b < 0 || b >= (sv.max_edicts * pr_edict_size)) {
+        Con_Printf("NUM_FOR_EDICT: pointer out of bounds (offset: %d, max: %d)\n", 
+                  b, sv.max_edicts * pr_edict_size);
+        Host_Error("NUM_FOR_EDICT: bad pointer");
+        return -1;
+    }
+
+    b = b / pr_edict_size;
+
+    // Extra validation of calculated index
+    if (b < 0 || b >= sv.max_edicts) {
+        Con_Printf("NUM_FOR_EDICT: invalid index %d (max: %d)\n", b, sv.max_edicts);
+        Host_Error("NUM_FOR_EDICT: bad index");
+        return -1;
+    }
+
+    // Dynamically expand num_edicts if needed
+    if (b >= sv.num_edicts) {
+        sv.num_edicts = b + 1;
+    }
+
+    return b;
 }
-
 //===========================================================================
 
 

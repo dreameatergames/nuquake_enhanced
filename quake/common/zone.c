@@ -822,9 +822,20 @@ Cache_Report
 
 ============
 */
-void Cache_Report (void)
+/*
+    Name: Ian micheal
+    Date: 25/11/24 05:54
+    Description: Fixed float-to-double conversion warning by using consistent double arithmetic
+*/
+
+void Cache_Report(void)
 {
-	Con_DPrintf ("%4.1f kilobyte data cache\n", (hunk_size - hunk_high_used - hunk_low_used) / (float)(1024*1024) );
+    // Calculate free memory in bytes first
+    const double bytes_per_mb = 1024.0 * 1024.0;
+    double free_memory = (double)(hunk_size - hunk_high_used - hunk_low_used);
+    double kb_free = free_memory / bytes_per_mb;
+    
+    Con_DPrintf("%4.1f kilobyte data cache\n", kb_free);
 }
 
 /*

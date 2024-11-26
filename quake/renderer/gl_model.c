@@ -1389,50 +1389,67 @@ extern unsigned d_8to24table[];
 	else if (pos[off] != 255) fdc = pos[off]; \
 }
 
-void Mod_FloodFillSkin( byte *skin, int skinwidth, int skinheight )
+/*
+    Name: Ian micheal
+    Date: 25/11/24 05:54
+    Description: Fixed excessive stack usage by moving FIFO buffer to static storage
+*/
+
+#define FLOODFILL_FIFO_SIZE    0x1000
+#define FLOODFILL_FIFO_MASK    (FLOODFILL_FIFO_SIZE - 1)
+
+// Move large FIFO array to static storage
+static floodfill_t static_fifo[FLOODFILL_FIFO_SIZE];
+
+void Mod_FloodFillSkin(byte *skin, int skinwidth, int skinheight)
 {
-	byte				fillcolor = *skin; // assume this is the pixel to fill
-	floodfill_t			fifo[FLOODFILL_FIFO_SIZE];
-	int					inpt = 0, outpt = 0;
-	int					filledcolor = -1;
-	int					i;
+    byte fillcolor = *skin;  // assume this is the pixel to fill
+    int inpt = 0, outpt = 0;
+    int filledcolor = -1;
+    int i;
 
-	if (filledcolor == -1)
-	{
-		filledcolor = 0;
-		// attempt to find opaque black
-		for (i = 0; i < 256; ++i)
-			if (d_8to24table[i] == (255 << 0)) // alpha 1.0
-			{
-				filledcolor = i;
-				break;
-			}
-	}
+    // Using static_fifo instead of stack-based array
+    floodfill_t *fifo = static_fifo;
 
-	// can't fill to filled color or to transparent color (used as visited marker)
-	if ((fillcolor == filledcolor) || (fillcolor == 255))
-	{
-		//printf( "not filling skin from %d to %d\n", fillcolor, filledcolor );
-		return;
-	}
+    if (filledcolor == -1)
+    {
+        filledcolor = 0;
+        // attempt to find opaque black
+        for (i = 0; i < 256; ++i)
+        {
+            if (d_8to24table[i] == (255 << 0))  // alpha 1.0
+            {
+                filledcolor = i;
+                break;
+            }
+        }
+    }
 
-	fifo[inpt].x = 0, fifo[inpt].y = 0;
-	inpt = (inpt + 1) & FLOODFILL_FIFO_MASK;
+    // can't fill to filled color or to transparent color (used as visited marker)
+    if ((fillcolor == filledcolor) || (fillcolor == 255))
+    {
+        return;
+    }
 
-	while (outpt != inpt)
-	{
-		int			x = fifo[outpt].x, y = fifo[outpt].y;
-		int			fdc = filledcolor;
-		byte		*pos = &skin[x + skinwidth * y];
+    fifo[inpt].x = 0;
+    fifo[inpt].y = 0;
+    inpt = (inpt + 1) & FLOODFILL_FIFO_MASK;
 
-		outpt = (outpt + 1) & FLOODFILL_FIFO_MASK;
+    while (outpt != inpt)
+    {
+        int x = fifo[outpt].x, y = fifo[outpt].y;
+        int fdc = filledcolor;
+        byte *pos = &skin[x + skinwidth * y];
+        
+        outpt = (outpt + 1) & FLOODFILL_FIFO_MASK;
 
-		if (x > 0)				FLOODFILL_STEP( -1, -1, 0 );
-		if (x < skinwidth - 1)	FLOODFILL_STEP( 1, 1, 0 );
-		if (y > 0)				FLOODFILL_STEP( -skinwidth, 0, -1 );
-		if (y < skinheight - 1)	FLOODFILL_STEP( skinwidth, 0, 1 );
-		skin[x + skinwidth * y] = fdc;
-	}
+        if (x > 0)               FLOODFILL_STEP( -1, -1, 0 );
+        if (x < skinwidth - 1)   FLOODFILL_STEP( 1, 1, 0 );
+        if (y > 0)               FLOODFILL_STEP( -skinwidth, 0, -1 );
+        if (y < skinheight - 1)  FLOODFILL_STEP( skinwidth, 0, 1 );
+        
+        skin[x + skinwidth * y] = fdc;
+    }
 }
 
 /*

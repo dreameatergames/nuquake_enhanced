@@ -115,17 +115,20 @@ FILE IO
 ===============================================================================
 */
 
-#define MAX_HANDLES 12
+#define MAX_HANDLES 10
 //#define MAX_HANDLES 8
 FILE *sys_handles[MAX_HANDLES];
 
-static int findhandle(void) {
-  for (int i = 0; i < MAX_HANDLES; i++)
+int findhandle(void) {
+  int i;
+
+  for (i = 1; i < MAX_HANDLES; i++)
     if (!sys_handles[i])
       return i;
   Sys_Error("out of handles");
   return -1;
 }
+
 
 /*
 ================
@@ -340,12 +343,23 @@ void Sys_Quit(void) {
   //arch_exit();
 }
 
-extern void timer_ms_gettime(uint32_t *secs, uint32_t *msecs);
-float Sys_FloatTime (void) {
-  uint32_t s, ms;
-  timer_ms_gettime(&s, &ms);
-  return (float)s+(ms/1000.0f);
+#include <sys/time.h>
+
+float Sys_FloatTime(void) {
+  struct timeval tp;
+  struct timezone tzp;
+  static int secbase;
+
+  gettimeofday(&tp, &tzp);
+
+  if (!secbase) {
+    secbase = tp.tv_sec;
+    return tp.tv_usec / 1000000.0f;
+  }
+
+  return (tp.tv_sec - secbase) + tp.tv_usec / 1000000.0f;
 }
+
 
 char *Sys_ConsoleInput(void) {
   return NULL;
@@ -409,7 +423,7 @@ int main(int argc, char **argv) {
 
   GLdcConfig config;
   glKosInitConfig(&config);
-  config.autosort_enabled = GL_FALSE;
+  config.autosort_enabled = GL_TRUE;
   config.fsaa_enabled = GL_FALSE;
   config.internal_palette_format = GL_RGBA8;
   /*
@@ -506,23 +520,21 @@ int main(int argc, char **argv) {
   if (!parms.membase)
     Sys_Error("Not enough memory free;\n");
 
+  sq_clr(parms.membase, 0x0);
   parms.basedir = basedir;
   //SDL_Init(SDL_INIT_CDROM | SDL_INIT_AUDIO);
 
   Host_Init(&parms);
   oldtime = Sys_FloatTime();
   //profiler_enable();
-   while (1) {
-      newtime = Sys_FloatTime();
-      time = newtime - oldtime;
+  while (1) {
+    newtime = Sys_FloatTime();
+    time = newtime - oldtime;
 
-      irq_disable();  
-      Host_Frame(time);
-      irq_enable();   
+    Host_Frame(time);
+    oldtime = newtime;
 
-      oldtime = newtime;
-  }
-
+}
   return 1;
 }
 

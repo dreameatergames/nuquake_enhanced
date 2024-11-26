@@ -28,6 +28,7 @@ QW_CLIENT_OBJS = \
 	client/skin.o \
 	client/snd_dma.o \
 	client/snd_mem.o \
+	client/snd_mix.o \
     client/sbar.o   \
 	client/view.o \
 	client/wad.o \
@@ -47,17 +48,13 @@ QW_GL_OBJS = \
 	client/gl_warp.o
 
 QW_PLATFORM_OBJS = \
+	client/cd_null.o    \
 	dreamcast/dc_vid.o \
     dreamcast/dc_sys.o \
-    dreamcast/dc_in.o    \
-    client/cd_null.o    \
-	dreamcast/ram.o     \
+    ../quake/dreamcast/in_dreamcast.o    \
+	../quake/dreamcast/ram.o     \
 	dreamcast/aica.o 	\
-	dreamcast/snd_mix_dreamcast.o \
 	dreamcast/snddma_dreamcast.o \
-#	dreamcast/dc_input.o \
-#	dreamcast/dc_sound.o \
-#	dreamcast/dc_system.o
 
 OBJS = $(QW_CLIENT_OBJS) $(QW_GL_OBJS) $(QW_PLATFORM_OBJS)
 
@@ -89,29 +86,43 @@ LIBS = -L$(KOS_BASE)/lib/dreamcast -L$(KOS_BASE)/addons/lib/dreamcast -lGL -lm -
 include $(KOS_BASE)/Makefile.rules
 
 
-all: $(TARGET) 1ST_READ.BIN IP.BIN cdi
+all: deploy cdi
+
+deploy: $(TARGET) 1ST_READ.BIN IP.BIN
+	mkdir -p dc_release
+	cp $(TARGET) dc_release/
+	cp 1ST_READ.BIN dc_release/
+#	cp IP.BIN dc_release/
+	rm $(TARGET) $(TARGET).bin 1ST_READ.BIN 
+
 
 $(TARGET): $(QW_CLIENT_OBJS) $(QW_GL_OBJS) $(QW_PLATFORM_OBJS)
 	kos-c++ -o $(TARGET) $(OBJS) $(LIBS) $(LDFLAGS)
 	sh-elf-strip $(TARGET)
 
-
 1ST_READ.BIN: $(TARGET)
 	kos-objcopy -R .stack -O binary $(TARGET) $(TARGET).bin 
 	scramble $(TARGET).bin 1ST_READ.BIN
-	cp 1ST_READ.BIN ../build
 
-.PHONY: cdi
+
+default: all
+
+.PHONY: cdi deploy
 cdi: $(PROJECT_NAME).cdi	
 
 IP.BIN:
-	rm -f ../build/IP.BIN
-	makeip -v ../build/IP.BIN
+	mkdir -p dc_release
+	rm -f dc_release/IP.BIN
+	makeip -v dc_release/IP.BIN
 
 $(PROJECT_NAME).cdi: IP.BIN 1ST_READ.BIN
-	cd .. && mkisofs -C 0,11702 -V $(PROJECT_NAME) -G build/IP.BIN -r -J -l -o $(PROJECT_NAME).iso build
-	cd .. && makedisc $(PROJECT_NAME).cdi build build/IP.BIN $(TARGET)
- 
+	mkdir -p build
+	cp dc_release/IP.BIN dc_release/1ST_READ.BIN build/
+	mkisofs -C 0,11702 -V $(PROJECT_NAME) -G build/IP.BIN -r -J -l -o $(PROJECT_NAME).iso build
+	makedisc $(PROJECT_NAME).cdi build build/IP.BIN $(TARGET)
+	mv $(PROJECT_NAME).iso $(PROJECT_NAME).cdi dc_release/
+	rm -rf build
 
 clean:
 	rm -f $(QW_CLIENT_OBJS) $(QW_GL_OBJS) $(QW_PLATFORM_OBJS) $(TARGET) $(TARGET).bin
+	rm -rf dc_release

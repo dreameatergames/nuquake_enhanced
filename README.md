@@ -1,6 +1,4 @@
 # nuQuake Enhanced © 2024 HaydenKow/David Croshaw
-# nuQuakeWorld © 2024 HaydenKow/maximqad/David Croshaw
-
 ## Free and Open for the Community!
 
 ## Working:
@@ -20,7 +18,7 @@ __let me know if stuff is broken.__
 - Demos might not load
 - Some Mods Crash
 - No Networking
-## Compiling Instructions - Quake
+## Compiling Instructions
 ### Prerequisites
 - Kallistios(KOS) Toolchain Installation in default install location
 ### KOS Setup
@@ -30,7 +28,7 @@ __let me know if stuff is broken.__
 - ```make clean```
 - ```make```
 ### Compiling
-- ```make -f Makefile_quake.dc```
+- ```make -f Makefile.dc```
 - if recompiling ```rm -rf build_dc/```
 
 ## Shoutouts

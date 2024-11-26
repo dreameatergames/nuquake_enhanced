@@ -155,39 +155,61 @@ CL_SignonReply
 An svc_signonnum has been received, perform a client side setup
 =====================
 */
-void CL_SignonReply(void) {
-  char str[8192];
+/*
+    Name: Ian micheal
+    Date: 25/11/24 05:54
+    Description: Fixed nested comment warning and reduced stack usage in CL_SignonReply
+*/
 
-  Con_DPrintf("CL_SignonReply: %i\n", cls.signon);
 
-  switch (cls.signon) {
-    case 1:
-      MSG_WriteByte(&cls.message, clc_stringcmd);
-      MSG_WriteString(&cls.message, "prespawn");
-      break;
+// Buffer size reduced to minimize stack usage
+#define MAX_SIGNON_BUF 1024
 
-    case 2:
-      MSG_WriteByte(&cls.message, clc_stringcmd);
-      MSG_WriteString(&cls.message, va("name \"%s\"\n", cl_name.string));
+void CL_SignonReply(void)
+{
+    // Moved large buffer to static to avoid stack overflow
+    static char str[MAX_SIGNON_BUF];
 
-      MSG_WriteByte(&cls.message, clc_stringcmd);
-      MSG_WriteString(&cls.message, va("color %i %i\n", ((int)cl_color.value) >> 4, ((int)cl_color.value) & 15));
+    Con_DPrintf("CL_SignonReply: %i\n", cls.signon);
 
-      MSG_WriteByte(&cls.message, clc_stringcmd);
-      sprintf(str, "spawn %s", cls.spawnparms);
-      MSG_WriteString(&cls.message, str);
-      break;
+    switch (cls.signon)
+    {
+        case 1:
+            MSG_WriteByte(&cls.message, clc_stringcmd);
+            MSG_WriteString(&cls.message, "prespawn");
+            break;
 
-    case 3:
-      MSG_WriteByte(&cls.message, clc_stringcmd);
-      MSG_WriteString(&cls.message, "begin");
-      Cache_Report();  // print remaining memory
-      break;
+        case 2:
+            MSG_WriteByte(&cls.message, clc_stringcmd);
+            MSG_WriteString(&cls.message, va("name \"%s\"\n", cl_name.string));
 
-    case 4:
-      SCR_EndLoadingPlaque();  // allow normal screen updates
-      break;
-  }
+            MSG_WriteByte(&cls.message, clc_stringcmd);
+            MSG_WriteString(&cls.message, 
+                va("color %i %i\n", 
+                ((int)cl_color.value) >> 4, 
+                ((int)cl_color.value) & 15));
+
+            MSG_WriteByte(&cls.message, clc_stringcmd);
+            if (strlen(cls.spawnparms) + 6 >= MAX_SIGNON_BUF) {
+                // Handle potential buffer overflow
+                Con_Printf("Warning: spawn string too long\n");
+                str[0] = 0;
+            } else {
+                snprintf(str, sizeof(str), "spawn %s", cls.spawnparms);
+            }
+            MSG_WriteString(&cls.message, str);
+            break;
+
+        case 3:
+            MSG_WriteByte(&cls.message, clc_stringcmd);
+            MSG_WriteString(&cls.message, "begin");
+            Cache_Report();  // print remaining memory
+            break;
+
+        case 4:
+            SCR_EndLoadingPlaque();  // allow normal screen updates
+            break;
+    }
 }
 
 /*
@@ -224,22 +246,39 @@ void CL_NextDemo(void) {
 CL_PrintEntities_f
 ==============
 */
-void CL_PrintEntities_f(void) {
-#ifndef  QUIET
-  entity_t *ent;
-  int i;
 
-  for (i = 0, ent = cl_entities; i < cl.num_entities; i++, ent++) {
-    Con_Printf("%3i:", i);
-    if (!ent->model) {
-      Con_Printf("EMPTY\n");
-      continue;
+/*
+    Name: Ian micheal
+    Date: 25/11/24 05:54
+    Description: Fixed float-to-double conversions in entity print formatting
+*/
+
+void CL_PrintEntities_f(void)
+{
+#ifndef QUIET
+    entity_t *ent;
+    int i;
+
+    for (i = 0, ent = cl_entities; i < cl.num_entities; i++, ent++) {
+        Con_Printf("%3i:", i);
+        if (!ent->model) {
+            Con_Printf("EMPTY\n");
+            continue;
+        }
+        
+        // Cast all vector components to double explicitly to avoid promotion warnings
+        Con_Printf("%s:%2i  (%5.1f,%5.1f,%5.1f) [%5.1f %5.1f %5.1f]\n",
+                  ent->model->name,
+                  ent->frame,
+                  (double)ent->origin[0],
+                  (double)ent->origin[1],
+                  (double)ent->origin[2],
+                  (double)ent->angles[0],
+                  (double)ent->angles[1],
+                  (double)ent->angles[2]);
     }
-    Con_Printf("%s:%2i  (%5.1f,%5.1f,%5.1f) [%5.1f %5.1f %5.1f]\n", ent->model->name, ent->frame, ent->origin[0], ent->origin[1], ent->origin[2], ent->angles[0], ent->angles[1], ent->angles[2]);
-  }
-#endif // ! QUIET
+#endif // !QUIET
 }
-
 /*
 ===============
 SetPal

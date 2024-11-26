@@ -1,0 +1,13 @@
+*.o
+.*.swp
+*~
+*.a
+*.elf
+*.img
+dc-build.sh
+.buildconfig
+build/*
+builddir/*
+version.[c|h]
+pcbuild/*
+dcbuild/*
