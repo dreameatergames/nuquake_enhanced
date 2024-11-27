@@ -131,7 +131,7 @@ void GL_Bind(unsigned int texnum) {
 }
 
 void GL_OverscanAdjust(int *x, int *y) {
-  if (scr_safety.value > 1.0f) {
+  if (scr_safety.value > 4.0f) {
     if (*x < scr_safety.value) {
       *x += scr_safety.value;
     }

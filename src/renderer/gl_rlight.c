@@ -73,44 +73,64 @@ void AddLightBlend(float r, float g, float b, float a2)
 
 static glvert_fast_t dlight_vert[18];
 
+/*
+    Name: Ian micheal
+    Date: 27/11/24 14:38
+    Description: Fixed dynamic light
+	 rendering to properly handle muzzle flash effects by implementing view-relative positioning.
+	This addresses an issue where muzzle flash effects were only rendering on half the screen
+	 by ensuring correct light positioning relative to the view origin and proper height matching.
+*/
 void R_RenderDlight(dlight_t *light)
 {
-  vec3_t v;
-  float rad;
-  rad = light->radius * 0.35;
-  VectorSubtract(light->origin, r_origin, v);
-  if (Length(v) < rad)
-  { // view is inside the dlight
-    AddLightBlend(1, 0.5, 0, light->radius * 0.0003);
-    return;
-  }
-  glEnableClientState(GL_COLOR_ARRAY);
-  glDisableClientState(GL_TEXTURE_COORD_ARRAY);
-  glVertexPointer(3, GL_FLOAT, sizeof(glvert_fast_t), &dlight_vert[0].vert);
-  glTexCoordPointer(2, GL_FLOAT, sizeof(glvert_fast_t), &dlight_vert[0].texture);
+    vec3_t v;
+    float rad;
+    rad = light->radius * 0.35;
+
+    VectorSubtract(light->origin, r_origin, v);
+    
+    // Only handle muzzle flash here - let other effects use normal blend behavior
+    if (light->origin[2] == r_origin[2]) 
+    { 
+        AddLightBlend(0.8, 0.4, 0, light->radius * 0.0003);
+        VectorCopy(r_origin, light->origin);
+        VectorMA(light->origin, rad * 0.5, vpn, light->origin);
+    }
+
+    glEnableClientState(GL_COLOR_ARRAY);
+    glDisableClientState(GL_TEXTURE_COORD_ARRAY);
+    glVertexPointer(3, GL_FLOAT, sizeof(glvert_fast_t), &dlight_vert[0].vert);
+    glTexCoordPointer(2, GL_FLOAT, sizeof(glvert_fast_t), &dlight_vert[0].texture);
 #ifdef WIN98
-  glColorPointer(4, GL_UNSIGNED_BYTE, sizeof(glvert_fast_t), &dlight_vert[0].color);
+    glColorPointer(4, GL_UNSIGNED_BYTE, sizeof(glvert_fast_t), &dlight_vert[0].color);
 #else
-  glColorPointer(GL_BGRA, GL_UNSIGNED_BYTE, sizeof(glvert_fast_t), &dlight_vert[0].color);
+    glColorPointer(GL_BGRA, GL_UNSIGNED_BYTE, sizeof(glvert_fast_t), &dlight_vert[0].color);
 #endif
 
-  vec3f *pPosV = (vec3f *)((&dlight_vert[0].flags) + 1);
-  int vert = 0;
+    vec3f *pPosV = (vec3f *)((&dlight_vert[0].flags) + 1);
+    int vert = 0;
 
-  *pPosV = (vec3f){light->origin[0] - vpn[0] * rad, light->origin[1] - vpn[1] * rad, light->origin[2] - vpn[2] * rad};
-  pPosV = (vec3f *)((&dlight_vert[vert++].flags) + 1);
-
-  for (int i = 16; i >= 0; i--)
-  {
-    *pPosV = (vec3f){light->origin[0] + vright[0] * costablef[i] * rad + vup[0] * sintablef[i] * rad, light->origin[1] + vright[1] * costablef[i] * rad + vup[1] * sintablef[i] * rad, light->origin[2] + vright[2] * costablef[i] * rad + vup[2] * sintablef[i] * rad};
+    *pPosV = (vec3f){
+        light->origin[0],
+        light->origin[1],
+        light->origin[2]
+    };
     pPosV = (vec3f *)((&dlight_vert[vert++].flags) + 1);
-  }
 
-  glDrawArrays(GL_TRIANGLE_FAN, 0, 18);
-  glDisableClientState(GL_COLOR_ARRAY);
-  glEnableClientState(GL_TEXTURE_COORD_ARRAY);
+    for (int i = 16; i >= 0; i--)
+    {
+        *pPosV = (vec3f){
+            light->origin[0] + vright[0] * costablef[i] * rad + vup[0] * sintablef[i] * rad,
+            light->origin[1] + vright[1] * costablef[i] * rad + vup[1] * sintablef[i] * rad,
+            light->origin[2] + vright[2] * costablef[i] * rad + vup[2] * sintablef[i] * rad
+        };
+        pPosV = (vec3f *)((&dlight_vert[vert++].flags) + 1);
+    }
+
+    glDrawArrays(GL_TRIANGLE_FAN, 0, 18);
+    glDisableClientState(GL_COLOR_ARRAY);
+    glEnableClientState(GL_TEXTURE_COORD_ARRAY);
 }
-
 void R_InitLights(void)
 {
   dlight_vert[0] = (glvert_fast_t){.flags = 0, .vert = {0, 0, 0}, .texture = {0, 0}, .color = {.packed = PACK_BGRA8888((uint8_t)(0.0f * 255), (uint8_t)(0.1f * 255), (uint8_t)(0.2f * 255), (uint8_t)(1.0f * 255))}, .pad0 = {0}};
