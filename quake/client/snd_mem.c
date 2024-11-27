@@ -111,8 +111,8 @@ sfxcache_t *S_LoadSound (sfx_t *s)
 
 //Con_Printf ("S_LoadSound: %x\n", (int)stackbuf);
 // load it in
-    Q_strcpy(namebuffer, "sound/");
-    Q_strcat(namebuffer, s->name);
+    strcpy(namebuffer, "sound/");
+    strcat(namebuffer, s->name);
 
 //	Con_Printf ("loading %s\n",namebuffer);
 
@@ -205,7 +205,6 @@ void FindNextChunk(char *name)
     {
         data_p = last_chunk;
 
-<<<<<<<< HEAD:quake/client/snd_mem.c
         if (data_p >= iff_end)
         {   // didn't find the chunk
             data_p = NULL;
@@ -226,28 +225,6 @@ void FindNextChunk(char *name)
         if (!strncmp(byte_to_char(data_p), name, 4))
             return;
     }
-========
-		if (data_p >= iff_end)
-		{	// didn't find the chunk
-			data_p = NULL;
-			return;
-		}
-		
-		data_p += 4;
-		iff_chunk_len = GetLittleLong();
-		if (iff_chunk_len < 0)
-		{
-			data_p = NULL;
-			return;
-		}
-//		if (iff_chunk_len > 1024*1024)
-//			Sys_Error ("FindNextChunk: %i length is past the 1 meg sanity limit", iff_chunk_len);
-		data_p -= 8;
-		last_chunk = data_p + 8 + ( (iff_chunk_len + 1) & ~1 );
-		if (!Q_strncmp(data_p, name, 4))
-			return;
-	}
->>>>>>>> development:qw/client/snd_mem.c
 }
 
 void FindChunk(char *name)
@@ -257,7 +234,6 @@ void FindChunk(char *name)
 }
 
 
-#if 0
 void DumpChunks(void)
 {
 	char	str[5];
@@ -273,7 +249,6 @@ void DumpChunks(void)
 		data_p += (iff_chunk_len + 1) & ~1;
 	} while (data_p < iff_end);
 }
-#endif
 
 /*
 ============
@@ -295,7 +270,6 @@ wavinfo_t GetWavinfo(char *name, byte *wav, int wavlength)
     iff_data = wav;
     iff_end = wav + wavlength;
 
-<<<<<<<< HEAD:quake/client/snd_mem.c
     // find "RIFF" chunk
     FindChunk("RIFF");
     // Fixed signedness warning with explicit cast
@@ -304,15 +278,6 @@ wavinfo_t GetWavinfo(char *name, byte *wav, int wavlength)
         Con_Printf("Missing RIFF/WAVE chunks\n");
         return info;
     }
-========
-// find "RIFF" chunk
-	FindChunk("RIFF");
-	if (!(data_p && !Q_strncmp(data_p+8, "WAVE", 4)))
-	{
-		Con_Printf("Missing RIFF/WAVE chunks\n");
-		return info;
-	}
->>>>>>>> development:qw/client/snd_mem.c
 
     // get "fmt " chunk
     iff_data = data_p + 12;
