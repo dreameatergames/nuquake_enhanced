@@ -42,7 +42,7 @@ __let me know if stuff is broken.__
   - Fixing the rendering code
   - Debugging the main crash
 - Ian Michael
-- Code cleanin warnings and fixes for sound and menu
+  - Code cleanin warnings and fixes for sound and menu
   - SDL Sound Code and SDL Library
   - Inspiration and Encouragement
   - Tossing the save code over
