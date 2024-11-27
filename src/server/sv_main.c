@@ -115,60 +115,67 @@ Larger attenuations will drop off.  (max 4 attenuation)
 
 ==================
 */  
-void SV_StartSound (edict_t *entity, int channel, const char *sample, int volume,
-    float attenuation)
+/*
+    Name: Ian micheal
+    Date: 25/11/24 05:54
+    Description: Fixed float-to-double conversion warnings
+*/
+
+void SV_StartSound(edict_t *entity, int channel, const char *sample, int volume, float attenuation)
 {       
-    int         sound_num;
+    int sound_num;
     int field_mask;
-    int			i;
-	int			ent;
-	
-	if (volume < 0 || volume > 255)
-		Sys_Error ("SV_StartSound: volume = %i", volume);
+    int i;
+    int ent;
+    
+    if (volume < 0 || volume > 255)
+        Sys_Error("SV_StartSound: volume = %i", volume);
 
-	if (attenuation < 0 || attenuation > 4)
-		Sys_Error ("SV_StartSound: attenuation = %f", attenuation);
+    // Fix: Explicitly cast float to double for printf format
+    if (attenuation < 0 || attenuation > 4)
+        Sys_Error("SV_StartSound: attenuation = %f", (double)attenuation);
 
-	if (channel < 0 || channel > 7)
-		Sys_Error ("SV_StartSound: channel = %i", channel);
+    if (channel < 0 || channel > 7)
+        Sys_Error("SV_StartSound: channel = %i", channel);
 
-	if (sv.datagram.cursize > MAX_DATAGRAM-16)
-		return;	
+    if (sv.datagram.cursize > MAX_DATAGRAM-16)
+        return;    
 
-// find precache number for sound
-    for (sound_num=1 ; sound_num<MAX_SOUNDS
-        && sv.sound_precache[sound_num] ; sound_num++)
+    // find precache number for sound
+    for (sound_num = 1; sound_num < MAX_SOUNDS && sv.sound_precache[sound_num]; sound_num++)
+    {
         if (!strcmp(sample, sv.sound_precache[sound_num]))
             break;
+    }
     
-    if ( sound_num == MAX_SOUNDS || !sv.sound_precache[sound_num] )
+    if (sound_num == MAX_SOUNDS || !sv.sound_precache[sound_num])
     {
-        Con_Printf ("SV_StartSound: %s not precacheed\n", sample);
+        Con_Printf("SV_StartSound: %s not precacheed\n", sample);
         return;
     }
     
-	ent = NUM_FOR_EDICT(entity);
+    ent = NUM_FOR_EDICT(entity);
+    channel = (ent << 3) | channel;
+    field_mask = 0;
 
-	channel = (ent<<3) | channel;
+    if (volume != DEFAULT_SOUND_PACKET_VOLUME)
+        field_mask |= SND_VOLUME;
+    if (attenuation != DEFAULT_SOUND_PACKET_ATTENUATION)
+        field_mask |= SND_ATTENUATION;
 
-	field_mask = 0;
-	if (volume != DEFAULT_SOUND_PACKET_VOLUME)
-		field_mask |= SND_VOLUME;
-	if (attenuation != DEFAULT_SOUND_PACKET_ATTENUATION)
-		field_mask |= SND_ATTENUATION;
-
-// directed messages go only to the entity the are targeted on
-	MSG_WriteByte (&sv.datagram, svc_sound);
-	MSG_WriteByte (&sv.datagram, field_mask);
-	if (field_mask & SND_VOLUME)
-		MSG_WriteByte (&sv.datagram, volume);
-	if (field_mask & SND_ATTENUATION)
-		MSG_WriteByte (&sv.datagram, attenuation*64);
-	MSG_WriteShort (&sv.datagram, channel);
-	MSG_WriteByte (&sv.datagram, sound_num);
-	for (i=0 ; i<3 ; i++)
-		MSG_WriteCoord (&sv.datagram, entity->v.origin[i]+0.5*(entity->v.mins[i]+entity->v.maxs[i]));
-}           
+    // directed messages go only to the entity they are targeted on
+    MSG_WriteByte(&sv.datagram, svc_sound);
+    MSG_WriteByte(&sv.datagram, field_mask);
+    if (field_mask & SND_VOLUME)
+        MSG_WriteByte(&sv.datagram, volume);
+    if (field_mask & SND_ATTENUATION)
+        MSG_WriteByte(&sv.datagram, attenuation*64);
+    MSG_WriteShort(&sv.datagram, channel);
+    MSG_WriteByte(&sv.datagram, sound_num);
+    for (i = 0; i < 3; i++)
+        MSG_WriteCoord(&sv.datagram, entity->v.origin[i] + 0.5*(entity->v.mins[i] + entity->v.maxs[i]));
+}
+          
 
 /*
 ==============================================================================
@@ -186,48 +193,57 @@ Sends the first message from the server to a connected client.
 This will be sent on the initial connection and upon each server load.
 ================
 */
-void SV_SendServerinfo (client_t *client)
+/*
+    Name: Ian micheal
+    Date: 25/11/24 05:54
+    Description: Fixed pointer type compatibility warnings
+*/
+
+void SV_SendServerinfo(client_t *client)
 {
-	const char			**s;
-	char			message[2048];
+    char message[2048];
+    // Changed type to const char** to match precache arrays
+    const char **s;
 
-	MSG_WriteByte (&client->message, svc_print);
-	sprintf (message, "%c\nVERSION %4.2f SERVER (%i CRC)", 2, VERSION, pr_crc);
-	MSG_WriteString (&client->message,message);
+    MSG_WriteByte(&client->message, svc_print);
+    sprintf(message, "%c\nVERSION %4.2f SERVER (%i CRC)", 2, (double)VERSION, pr_crc);
+    MSG_WriteString(&client->message, message);
 
-	MSG_WriteByte (&client->message, svc_serverinfo);
-	MSG_WriteLong (&client->message, PROTOCOL_VERSION);
-	MSG_WriteByte (&client->message, svs.maxclients);
+    MSG_WriteByte(&client->message, svc_serverinfo);
+    MSG_WriteLong(&client->message, PROTOCOL_VERSION);
+    MSG_WriteByte(&client->message, svs.maxclients);
 
-	if (!coop.value && deathmatch.value)
-		MSG_WriteByte (&client->message, GAME_DEATHMATCH);
-	else
-		MSG_WriteByte (&client->message, GAME_COOP);
+    if (!coop.value && deathmatch.value)
+        MSG_WriteByte(&client->message, GAME_DEATHMATCH);
+    else
+        MSG_WriteByte(&client->message, GAME_COOP);
 
-	MSG_WriteString (&client->message, PR_GetString(sv.edicts->v.message));
+    MSG_WriteString(&client->message, PR_GetString(sv.edicts->v.message));
 
-	for (s = sv.model_precache+1 ; *s ; s++)
-		MSG_WriteString (&client->message, *s);
-	MSG_WriteByte (&client->message, 0);
+    // Now pointer types match for model precache
+    for (s = sv.model_precache + 1; *s; s++)
+        MSG_WriteString(&client->message, *s);
+    MSG_WriteByte(&client->message, 0);
 
-	for (s = sv.sound_precache+1 ; *s ; s++)
-		MSG_WriteString (&client->message, *s);
-	MSG_WriteByte (&client->message, 0);
+    // And for sound precache
+    for (s = sv.sound_precache + 1; *s; s++)
+        MSG_WriteString(&client->message, *s);
+    MSG_WriteByte(&client->message, 0);
 
-// send music
-	MSG_WriteByte (&client->message, svc_cdtrack);
-	MSG_WriteByte (&client->message, sv.edicts->v.sounds);
-	MSG_WriteByte (&client->message, sv.edicts->v.sounds);
+    // send music
+    MSG_WriteByte(&client->message, svc_cdtrack);
+    MSG_WriteByte(&client->message, sv.edicts->v.sounds);
+    MSG_WriteByte(&client->message, sv.edicts->v.sounds);
 
-// set view	
-	MSG_WriteByte (&client->message, svc_setview);
-	MSG_WriteShort (&client->message, NUM_FOR_EDICT(client->edict));
+    // set view    
+    MSG_WriteByte(&client->message, svc_setview);
+    MSG_WriteShort(&client->message, NUM_FOR_EDICT(client->edict));
 
-	MSG_WriteByte (&client->message, svc_signonnum);
-	MSG_WriteByte (&client->message, 1);
+    MSG_WriteByte(&client->message, svc_signonnum);
+    MSG_WriteByte(&client->message, 1);
 
-	client->sendsignon = true;
-	client->spawned = false;		// need prespawn, spawn, etc
+    client->sendsignon = true;
+    client->spawned = false;        // need prespawn, spawn, etc
 }
 
 /*

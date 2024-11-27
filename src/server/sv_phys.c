@@ -438,137 +438,134 @@ SV_PushMove
 
 ============
 */
-void SV_PushMove (edict_t *pusher, float movetime)
+/*
+    Name: Ian micheal
+    Date: 25/11/24 05:54
+    Description: Fixed excessive stack usage by moving large arrays to static storage
+*/
+
+// Moved large arrays to static storage to reduce stack usage
+static edict_t *moved_edict_static[MAX_EDICTS];
+static vec3_t moved_from_static[MAX_EDICTS];
+
+void SV_PushMove(edict_t *pusher, float movetime)
 {
-	int			i, e;
-	edict_t		*check, *block;
-	vec3_t		mins, maxs, move;
-	vec3_t		entorig, pushorig;
-	int			num_moved;
-	edict_t		*moved_edict[MAX_EDICTS];
-	vec3_t		moved_from[MAX_EDICTS];
+    int i, e;
+    edict_t *check, *block;
+    vec3_t mins, maxs, move;
+    vec3_t entorig, pushorig;
+    int num_moved;
+    float solid_backup;
 
-	// BlackAura (08-12-2002) - MOVETYPE_PUSH fix
-	float		solid_backup;
+    if (!pusher->v.velocity[0] && !pusher->v.velocity[1] && !pusher->v.velocity[2])
+    {
+        pusher->v.ltime += movetime;
+        return;
+    }
 
-	if (!pusher->v.velocity[0] && !pusher->v.velocity[1] && !pusher->v.velocity[2])
-	{
-		pusher->v.ltime += movetime;
-		return;
-	}
+    for (i = 0; i < 3; i++)
+    {
+        move[i] = pusher->v.velocity[i] * movetime;
+        mins[i] = pusher->v.absmin[i] + move[i];
+        maxs[i] = pusher->v.absmax[i] + move[i];
+    }
 
-	for (i=0 ; i<3 ; i++)
-	{
-		move[i] = pusher->v.velocity[i] * movetime;
-		mins[i] = pusher->v.absmin[i] + move[i];
-		maxs[i] = pusher->v.absmax[i] + move[i];
-	}
+    VectorCopy(pusher->v.origin, pushorig);
 
-	VectorCopy (pusher->v.origin, pushorig);
+    // move the pusher to it's final position
+    VectorAdd(pusher->v.origin, move, pusher->v.origin);
+    pusher->v.ltime += movetime;
+    SV_LinkEdict(pusher, false);
 
-// move the pusher to it's final position
+    // see if any solid entities are inside the final position
+    num_moved = 0;
+    check = NEXT_EDICT(sv.edicts);
+    for (e = 1; e < sv.num_edicts; e++, check = NEXT_EDICT(check))
+    {
+        if (check->free)
+            continue;
 
-	VectorAdd (pusher->v.origin, move, pusher->v.origin);
-	pusher->v.ltime += movetime;
-	SV_LinkEdict (pusher, false);
-
-
-// see if any solid entities are inside the final position
-	num_moved = 0;
-	check = NEXT_EDICT(sv.edicts);
-	for (e=1 ; e<sv.num_edicts ; e++, check = NEXT_EDICT(check))
-	{
-		if (check->free)
-			continue;
-		if (check->v.movetype == MOVETYPE_PUSH
-		|| check->v.movetype == MOVETYPE_NONE
+        if (check->v.movetype == MOVETYPE_PUSH
+            || check->v.movetype == MOVETYPE_NONE
 #ifdef QUAKE2
-		|| check->v.movetype == MOVETYPE_FOLLOW
+            || check->v.movetype == MOVETYPE_FOLLOW
 #endif
-		|| check->v.movetype == MOVETYPE_NOCLIP)
-			continue;
+            || check->v.movetype == MOVETYPE_NOCLIP)
+            continue;
 
-	// if the entity is standing on the pusher, it will definately be moved
-		if ( ! ( ((int)check->v.flags & FL_ONGROUND)
-		&& PROG_TO_EDICT(check->v.groundentity) == pusher) )
-		{
-			if ( check->v.absmin[0] >= maxs[0]
-			|| check->v.absmin[1] >= maxs[1]
-			|| check->v.absmin[2] >= maxs[2]
-			|| check->v.absmax[0] <= mins[0]
-			|| check->v.absmax[1] <= mins[1]
-			|| check->v.absmax[2] <= mins[2] )
-				continue;
+        // if the entity is standing on the pusher, it will definitely be moved
+        if (!((int)check->v.flags & FL_ONGROUND
+            && PROG_TO_EDICT(check->v.groundentity) == pusher))
+        {
+            if (check->v.absmin[0] >= maxs[0]
+                || check->v.absmin[1] >= maxs[1]
+                || check->v.absmin[2] >= maxs[2]
+                || check->v.absmax[0] <= mins[0]
+                || check->v.absmax[1] <= mins[1]
+                || check->v.absmax[2] <= mins[2])
+                continue;
 
-		// see if the ent's bbox is inside the pusher's final position
-			if (!SV_TestEntityPosition (check))
-				continue;
-		}
+            // see if the ent's bbox is inside the pusher's final position
+            if (!SV_TestEntityPosition(check))
+                continue;
+        }
 
-	// remove the onground flag for non-players
-		if (check->v.movetype != MOVETYPE_WALK)
-			check->v.flags = (int)check->v.flags & ~FL_ONGROUND;
+        // remove the onground flag for non-players
+        if (check->v.movetype != MOVETYPE_WALK)
+            check->v.flags = (int)check->v.flags & ~FL_ONGROUND;
 
-		VectorCopy (check->v.origin, entorig);
-		VectorCopy (check->v.origin, moved_from[num_moved]);
-		moved_edict[num_moved] = check;
-		num_moved++;
+        VectorCopy(check->v.origin, entorig);
+        VectorCopy(check->v.origin, moved_from_static[num_moved]);
+        moved_edict_static[num_moved] = check;
+        num_moved++;
 
-		// BlackAura (08-12-2002) - MOVETYPE_PUSH fix
-		solid_backup = pusher->v.solid;
-		if ( solid_backup == SOLID_BSP || solid_backup == SOLID_BBOX ||
-			solid_backup == SOLID_SLIDEBOX )
-		{
-			// try moving the contacted entity
-			pusher->v.solid = SOLID_NOT;
-			SV_PushEntity (check, move);
-			pusher->v.solid = solid_backup;
+        // try moving the contacted entity
+        solid_backup = pusher->v.solid;
+        if (solid_backup == SOLID_BSP || solid_backup == SOLID_BBOX ||
+            solid_backup == SOLID_SLIDEBOX)
+        {
+            pusher->v.solid = SOLID_NOT;
+            SV_PushEntity(check, move);
+            pusher->v.solid = solid_backup;
+            block = SV_TestEntityPosition(check);
+        }
+        else
+            block = NULL;
 
-			// If it's still inside the pusher, block
-			block = SV_TestEntityPosition (check);
-		}
-		else
-			block = NULL;
+        if (block)
+        {
+            if (check->v.mins[0] == check->v.maxs[0])
+                continue;
+            if (check->v.solid == SOLID_NOT || check->v.solid == SOLID_TRIGGER)
+            {
+                check->v.mins[0] = check->v.mins[1] = 0;
+                VectorCopy(check->v.mins, check->v.maxs);
+                continue;
+            }
 
-		// Blocked
-		if (block)
-		{	// fail the move
-			if (check->v.mins[0] == check->v.maxs[0])
-				continue;
-			if (check->v.solid == SOLID_NOT || check->v.solid == SOLID_TRIGGER)
-			{	// corpse
-				check->v.mins[0] = check->v.mins[1] = 0;
-				VectorCopy (check->v.mins, check->v.maxs);
-				continue;
-			}
+            VectorCopy(entorig, check->v.origin);
+            SV_LinkEdict(check, true);
+            VectorCopy(pushorig, pusher->v.origin);
+            SV_LinkEdict(pusher, false);
+            pusher->v.ltime -= movetime;
 
-			VectorCopy (entorig, check->v.origin);
-			SV_LinkEdict (check, true);
+            // if the pusher has a "blocked" function, call it
+            if (pusher->v.blocked)
+            {
+                pr_global_struct->self = EDICT_TO_PROG(pusher);
+                pr_global_struct->other = EDICT_TO_PROG(check);
+                PR_ExecuteProgram(pusher->v.blocked);
+            }
 
-			VectorCopy (pushorig, pusher->v.origin);
-			SV_LinkEdict (pusher, false);
-			pusher->v.ltime -= movetime;
-
-			// if the pusher has a "blocked" function, call it
-			// otherwise, just stay in place until the obstacle is gone
-			if (pusher->v.blocked)
-			{
-				pr_global_struct->self = EDICT_TO_PROG(pusher);
-				pr_global_struct->other = EDICT_TO_PROG(check);
-				PR_ExecuteProgram (pusher->v.blocked);
-			}
-
-		// move back any entities we already moved
-			for (i=0 ; i<num_moved ; i++)
-			{
-				VectorCopy (moved_from[i], moved_edict[i]->v.origin);
-				SV_LinkEdict (moved_edict[i], false);
-			}
-			return;
-		}
-	}
-
-
+            // move back any entities we already moved
+            for (i = 0; i < num_moved; i++)
+            {
+                VectorCopy(moved_from_static[i], moved_edict_static[i]->v.origin);
+                SV_LinkEdict(moved_edict_static[i], false);
+            }
+            return;
+        }
+    }
 }
 
 #ifdef QUAKE2
