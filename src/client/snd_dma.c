@@ -400,53 +400,58 @@ channel_t *SND_PickChannel(int entnum, int entchannel)
 SND_Spatialize
 =================
 */
+/*
+    Name: Ian micheal
+    Date: 25/11/24 05:54
+    Description: Fixed unused variables and sign comparison warnings in sound functions
+*/
+
 void SND_Spatialize(channel_t *ch)
 {
     vec_t dot;
-    vec_t ldist, rdist, dist;
+    vec_t dist;
     vec_t lscale, rscale, scale;
     vec3_t source_vec;
-	sfx_t *snd;
 
-// anything coming from the view entity will allways be full volume
-	if (ch->entnum == cl.viewentity)
-	{
-		ch->leftvol = ch->master_vol;
-		ch->rightvol = ch->master_vol;
-		return;
-	}
+    // Removed unused snd variable since it's not used in the function
 
-// calculate stereo seperation and distance attenuation
+    // anything coming from the view entity will always be full volume
+    if (ch->entnum == cl.viewentity)
+    {
+        ch->leftvol = ch->master_vol;
+        ch->rightvol = ch->master_vol;
+        return;
+    }
 
-	snd = ch->sfx;
-	VectorSubtract(ch->origin, listener_origin, source_vec);
-	
-	dist = VectorNormalize(source_vec) * ch->dist_mult;
-	
-	dot = DotProduct(listener_right, source_vec);
+    // calculate stereo separation and distance attenuation
+    VectorSubtract(ch->origin, listener_origin, source_vec);
+    
+    dist = VectorNormalize(source_vec) * ch->dist_mult;
+    dot = DotProduct(listener_right, source_vec);
 
-	if (shm->channels == 1)
-	{
-		rscale = 1.0;
-		lscale = 1.0;
-	}
-	else
-	{
-		rscale = 1.0 + dot;
-		lscale = 1.0 - dot;
-	}
+    if (shm->channels == 1)
+    {
+        rscale = 1.0;
+        lscale = 1.0;
+    }
+    else
+    {
+        rscale = 1.0 + dot;
+        lscale = 1.0 - dot;
+    }
 
-// add in distance effect
-	scale = (1.0 - dist) * rscale;
-	ch->rightvol = (int) (ch->master_vol * scale);
-	if (ch->rightvol < 0)
-		ch->rightvol = 0;
+    // add in distance effect
+    scale = (1.0 - dist) * rscale;
+    ch->rightvol = (int) (ch->master_vol * scale);
+    if (ch->rightvol < 0)
+        ch->rightvol = 0;
 
-	scale = (1.0 - dist) * lscale;
-	ch->leftvol = (int) (ch->master_vol * scale);
-	if (ch->leftvol < 0)
-		ch->leftvol = 0;
-}           
+    scale = (1.0 - dist) * lscale;
+    ch->leftvol = (int) (ch->master_vol * scale);
+    if (ch->leftvol < 0)
+        ch->leftvol = 0;
+}
+
 
 
 // =======================================================================
@@ -861,53 +866,53 @@ void S_ExtraUpdate (void)
 void S_Update_(void)
 {
 #ifndef SDL
+    unsigned int endtime;
+    int samps;
+    
+    if (!sound_started || (snd_blocked > 0))
+        return;
 
-	unsigned        endtime;
-	int				samps;
-	
-	if (!sound_started || (snd_blocked > 0))
-		return;
+    // Updates DMA time
+    GetSoundtime();
 
-// Updates DMA time
-	GetSoundtime();
+    // check to make sure that we haven't overshot
+    if (paintedtime < soundtime)
+    {
+        paintedtime = soundtime;
+    }
 
-// check to make sure that we haven't overshot
-	if (paintedtime < soundtime)
-	{
-		//Con_Printf ("S_Update_ : overflow\n");
-		paintedtime = soundtime;
-	}
-
-// mix ahead of current position
-	endtime = soundtime + _snd_mixahead.value * shm->speed;
-	samps = shm->samples >> (shm->channels-1);
-	if (endtime - soundtime > samps)
-		endtime = soundtime + samps;
+    // mix ahead of current position
+    endtime = soundtime + (int)(_snd_mixahead.value * shm->speed);
+    samps = shm->samples >> (shm->channels-1);
+    
+    // Fix sign comparison by casting samps to unsigned
+    if (endtime - soundtime > (unsigned int)samps)
+        endtime = soundtime + samps;
 
 #ifdef _WIN32
-// if the buffer was lost or stopped, restore it and/or restart it
-	{
-		DWORD	dwStatus;
+    // if the buffer was lost or stopped, restore it and/or restart it
+    {
+        DWORD dwStatus;
 
-		if (pDSBuf)
-		{
-			if (pDSBuf->lpVtbl->GetStatus (pDSBuf, &dwStatus) != DD_OK)
-				Con_Printf ("Couldn't get sound buffer status\n");
-			
-			if (dwStatus & DSBSTATUS_BUFFERLOST)
-				pDSBuf->lpVtbl->Restore (pDSBuf);
-			
-			if (!(dwStatus & DSBSTATUS_PLAYING))
-				pDSBuf->lpVtbl->Play(pDSBuf, 0, 0, DSBPLAY_LOOPING);
-		}
-	}
+        if (pDSBuf)
+        {
+            if (pDSBuf->lpVtbl->GetStatus(pDSBuf, &dwStatus) != DD_OK)
+                Con_Printf("Couldn't get sound buffer status\n");
+            
+            if (dwStatus & DSBSTATUS_BUFFERLOST)
+                pDSBuf->lpVtbl->Restore(pDSBuf);
+            
+            if (!(dwStatus & DSBSTATUS_PLAYING))
+                pDSBuf->lpVtbl->Play(pDSBuf, 0, 0, DSBPLAY_LOOPING);
+        }
+    }
 #endif
 
-	S_PaintChannels (endtime);
-
-	SNDDMA_Submit ();
+    S_PaintChannels(endtime);
+    SNDDMA_Submit();
 #endif /* ! SDL */
 }
+
 
 /*
 ===============================================================================

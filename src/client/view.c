@@ -313,69 +313,77 @@ qboolean V_CheckGamma (void)
 V_ParseDamage
 ===============
 */
-void V_ParseDamage (void)
+void V_ParseDamage(void)
 {
-	int		armor, blood;
-	vec3_t	from;
-	int		i;
-	vec3_t	forward, right, up;
-	entity_t	*ent;
-	float	side;
-	float	count;
+    int     armor, blood;
+    vec3_t  from;
+    int     i;
+    vec3_t  forward, right, up;
+    entity_t    *ent;
+    float   side;
+    float   count;
+    
+    armor = MSG_ReadByte();
+    blood = MSG_ReadByte();
+    for (i = 0; i < 3; i++)
+        from[i] = MSG_ReadCoord();
 
-	armor = MSG_ReadByte ();
-	blood = MSG_ReadByte ();
-	for (i=0 ; i<3 ; i++)
-		from[i] = MSG_ReadCoord ();
+    count = blood*0.5 + armor*0.5;
+    if (count < 10)
+        count = 10;
 
-	count = blood*0.5 + armor*0.5;
-	if (count < 10)
-		count = 10;
+    cl.faceanimtime = cl.time + 0.2;
+    cl.cshifts[CSHIFT_DAMAGE].percent += 3*count;
+    if (cl.cshifts[CSHIFT_DAMAGE].percent < 0)
+        cl.cshifts[CSHIFT_DAMAGE].percent = 0;
+    if (cl.cshifts[CSHIFT_DAMAGE].percent > 150)
+        cl.cshifts[CSHIFT_DAMAGE].percent = 150;
 
-	cl.faceanimtime = cl.time + 0.2;		// but sbar face into pain frame
+    if (armor > blood)
+    {
+        cl.cshifts[CSHIFT_DAMAGE].destcolor[0] = 200;
+        cl.cshifts[CSHIFT_DAMAGE].destcolor[1] = 100;
+        cl.cshifts[CSHIFT_DAMAGE].destcolor[2] = 100;
+    }
+    else if (armor)
+    {
+        cl.cshifts[CSHIFT_DAMAGE].destcolor[0] = 220;
+        cl.cshifts[CSHIFT_DAMAGE].destcolor[1] = 50;
+        cl.cshifts[CSHIFT_DAMAGE].destcolor[2] = 50;
+    }
+    else
+    {
+        cl.cshifts[CSHIFT_DAMAGE].destcolor[0] = 255;
+        cl.cshifts[CSHIFT_DAMAGE].destcolor[1] = 0;
+        cl.cshifts[CSHIFT_DAMAGE].destcolor[2] = 0;
+    }
 
-	cl.cshifts[CSHIFT_DAMAGE].percent += 3*count;
-	if (cl.cshifts[CSHIFT_DAMAGE].percent < 0)
-		cl.cshifts[CSHIFT_DAMAGE].percent = 0;
-	if (cl.cshifts[CSHIFT_DAMAGE].percent > 150)
-		cl.cshifts[CSHIFT_DAMAGE].percent = 150;
+    // Create a temporary entity with the view position and angles
+    ent = &cl_entities[cl.viewentity];
+    
+    // Create damage flash light using muzzle flash pattern
+    dlight_t *dl = CL_AllocDlight(cl.viewentity);
+    
+    // Set initial position to view origin
+    VectorCopy(r_refdef.vieworg, dl->origin);
+    
+    // Force light to be at view height - critical for full-screen effect
+    dl->origin[2] = r_origin[2];
+    
+    // Set light properties
+    dl->radius = count * 6;
+    dl->minlight = 32;
+    dl->die = cl.time + 0.1;
 
-	if (armor > blood)
-	{
-		cl.cshifts[CSHIFT_DAMAGE].destcolor[0] = 200;
-		cl.cshifts[CSHIFT_DAMAGE].destcolor[1] = 100;
-		cl.cshifts[CSHIFT_DAMAGE].destcolor[2] = 100;
-	}
-	else if (armor)
-	{
-		cl.cshifts[CSHIFT_DAMAGE].destcolor[0] = 220;
-		cl.cshifts[CSHIFT_DAMAGE].destcolor[1] = 50;
-		cl.cshifts[CSHIFT_DAMAGE].destcolor[2] = 50;
-	}
-	else
-	{
-		cl.cshifts[CSHIFT_DAMAGE].destcolor[0] = 255;
-		cl.cshifts[CSHIFT_DAMAGE].destcolor[1] = 0;
-		cl.cshifts[CSHIFT_DAMAGE].destcolor[2] = 0;
-	}
-
-//
-// calculate view angle kicks
-//
-	ent = &cl_entities[cl.viewentity];
-
-	VectorSubtract (from, ent->origin, from);
-	VectorNormalize (from);
-
-	AngleVectors (ent->angles, forward, right, up);
-
-	side = DotProduct (from, right);
-	v_dmg_roll = count*side*v_kickroll.value;
-
-	side = DotProduct (from, forward);
-	v_dmg_pitch = count*side*v_kickpitch.value;
-
-	v_dmg_time = v_kicktime.value;
+    // Calculate view angle kicks
+    VectorSubtract(from, ent->origin, from);
+    VectorNormalize(from);
+    AngleVectors(ent->angles, forward, right, up);
+    side = DotProduct(from, right);
+    v_dmg_roll = count*side*v_kickroll.value;
+    side = DotProduct(from, forward);
+    v_dmg_pitch = count*side*v_kickpitch.value;
+    v_dmg_time = v_kicktime.value;
 }
 
 
