@@ -1370,86 +1370,86 @@ byte *COM_LoadStackFile (const char *path, void *buffer, int bufsize)
 	return buf;
 }
 
-/*
-=================
+/*=================
 COM_LoadPackFile
-
 Takes an explicit (not game tree related) path to a pak file.
-
 Loads the header and directory, adding the files at the beginning
 of the list so they override previous pack files.
-=================
+
+/=================*/
+/*
+	Name: Ian Micheal 
+	Date: 25/11/24 04:44
+	Description: use float instead of double since we don't need double precision for this calculation.
+	Only converts to double at the last moment for printf.
 */
-pack_t *COM_LoadPackFile (char *packfile)
+
+pack_t *COM_LoadPackFile(char *packfile)
 {
-	dpackheader_t   header;
-	int                             i;
-	packfile_t              *newfiles;
-	int                             numpackfiles;
-	pack_t                  *pack;
-	int                             packhandle;
-	unsigned short          crc;
-	static dpackfile_t        *pak_info = NULL;
+    dpackheader_t   header;
+    int             i;
+    packfile_t      *newfiles;
+    int             numpackfiles;
+    pack_t          *pack;
+    int             packhandle;
+    unsigned short  crc;
+    static dpackfile_t *pak_info = NULL;
 
-	if (!pak_info)
-	{
-		pak_info = (dpackfile_t *)Hunk_TempAlloc(sizeof(dpackfile_t) * MAX_FILES_IN_PACK);
-		if(!pak_info){
-			printf("%.2f kb needed\n",  (float)(sizeof(dpackfile_t) * MAX_FILES_IN_PACK / 1024));
-			Sys_Error("not enough memory for info section!\n");
-		}
-	}
+    if (!pak_info)
+    {
+        pak_info = (dpackfile_t *)Hunk_TempAlloc(sizeof(dpackfile_t) * MAX_FILES_IN_PACK);
+        if (!pak_info) {
+            // Calculate size using consistent float type
+            size_t total_size = sizeof(dpackfile_t) * MAX_FILES_IN_PACK;
+            float kb_needed = (float)total_size / 1024.0f;  // Use float consistently
+            printf("%.2f kb needed\n", (double)kb_needed);  // Cast to double only for printf
+            Sys_Error("not enough memory for info section!\n");
+        }
+    }
 
-	if (Sys_FileOpenRead (packfile, &packhandle) == -1)
-	{
-  	Con_Printf ("Couldn't open %s\n", packfile);
-		return NULL;
-	}
-	Sys_FileRead (packhandle, (void *)&header, sizeof(header));
-	if (header.id[0] != 'P' || header.id[1] != 'A'
-	|| header.id[2] != 'C' || header.id[3] != 'K')
-		Sys_Error ("%s is not a packfile", packfile);
-	header.dirofs = LittleLong (header.dirofs);
-	header.dirlen = LittleLong (header.dirlen);
+    if (Sys_FileOpenRead(packfile, &packhandle) == -1)
+    {
+        Con_Printf("Couldn't open %s\n", packfile);
+        return NULL;
+    }
 
-	numpackfiles = header.dirlen / sizeof(dpackfile_t);
+    Sys_FileRead(packhandle, (void *)&header, sizeof(header));
+    if (header.id[0] != 'P' || header.id[1] != 'A'
+        || header.id[2] != 'C' || header.id[3] != 'K')
+        Sys_Error("%s is not a packfile", packfile);
 
-	if (numpackfiles > MAX_FILES_IN_PACK)
-		Sys_Error ("%s has %i files", packfile, numpackfiles);
+    header.dirofs = LittleLong(header.dirofs);
+    header.dirlen = LittleLong(header.dirlen);
 
-//	if (numpackfiles != PAK0_COUNT)
-//		com_modified = true;    // not the original file
+    numpackfiles = header.dirlen / sizeof(dpackfile_t);
+    if (numpackfiles > MAX_FILES_IN_PACK)
+        Sys_Error("%s has %i files", packfile, numpackfiles);
 
-	newfiles = (packfile_t *)Hunk_AllocName (numpackfiles * sizeof(packfile_t), "packfile");
+    newfiles = (packfile_t *)Hunk_AllocName(numpackfiles * sizeof(packfile_t), "packfile");
+    Sys_FileSeek(packhandle, header.dirofs);
+    Sys_FileRead(packhandle, (void *)pak_info, header.dirlen);
 
-	Sys_FileSeek (packhandle, header.dirofs);
-	Sys_FileRead (packhandle, (void *)pak_info, header.dirlen);
+    // crc the directory to check for modifications
+    CRC_Init(&crc);
+    for (i = 0; i < header.dirlen; i++)
+        CRC_ProcessByte(&crc, ((byte *)pak_info)[i]);
 
-// crc the directory to check for modifications
-	CRC_Init (&crc);
-	for (i=0 ; i<header.dirlen ; i++)
-		CRC_ProcessByte (&crc, ((byte *)pak_info)[i]);
-//	if (crc != PAK0_CRC)
-//		com_modified = true;
+    // parse the directory
+    for (i = 0; i < numpackfiles; i++)
+    {
+        strcpy(newfiles[i].name, pak_info[i].name);
+        newfiles[i].filepos = LittleLong(pak_info[i].filepos);
+        newfiles[i].filelen = LittleLong(pak_info[i].filelen);
+    }
 
+    pack = (pack_t *)Hunk_AllocName(sizeof(pack_t), "pak");
+    strcpy(pack->filename, packfile);
+    pack->handle = packhandle;
+    pack->numfiles = numpackfiles;
+    pack->files = newfiles;
 
-// parse the directory
-	for (i=0 ; i<numpackfiles ; i++)
-	{
-		strcpy (newfiles[i].name, pak_info[i].name);
-		newfiles[i].filepos = LittleLong(pak_info[i].filepos);
-		newfiles[i].filelen = LittleLong(pak_info[i].filelen);
-	}
-
-	pack = (pack_t *)Hunk_AllocName (sizeof (pack_t), "pak");
-	strcpy (pack->filename, packfile);
-	pack->handle = packhandle;
-	pack->numfiles = numpackfiles;
-	pack->files = newfiles;
-
-	return pack;
+    return pack;
 }
-
 
 /*
 ================
