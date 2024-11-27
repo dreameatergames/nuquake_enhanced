@@ -1,0 +1,128 @@
+TARGET = qwdc.elf
+PROJECT_NAME = qw_dc
+
+# QuakeWorld Dreamcast Objects
+QW_CLIENT_OBJS = \
+	client/cl_demo.o \
+	client/cl_ents.o \
+	client/cl_input.o \
+	client/cl_main.o \
+	client/cl_parse.o \
+	client/cl_pred.o \
+	client/cl_tent.o \
+	client/cl_cam.o \
+	client/cmd.o \
+	client/common.o \
+	client/console.o \
+	client/crc.o \
+	client/cvar.o \
+	client/keys.o \
+	client/mathlib.o \
+	client/md4.o \
+	client/menu.o \
+	client/net_chan.o \
+	client/net_udp.o \
+	client/pmove.o \
+	client/pmovetst.o \
+    client/r_part.o \
+	client/skin.o \
+	client/snd_dma.o \
+	client/snd_mem.o \
+	client/snd_mix.o \
+    client/sbar.o   \
+	client/view.o \
+	client/wad.o \
+	client/zone.o
+
+QW_GL_OBJS = \
+	client/gl_draw.o \
+	client/gl_mesh.o \
+	client/gl_model.o \
+	client/gl_ngraph.o \
+	client/gl_refrag.o \
+	client/gl_rlight.o \
+	client/gl_rmain.o \
+	client/gl_rmisc.o \
+	client/gl_rsurf.o \
+	client/gl_screen.o \
+	client/gl_warp.o
+
+QW_PLATFORM_OBJS = \
+	client/cd_null.o    \
+	dreamcast/dc_vid.o \
+    dreamcast/dc_sys.o \
+    ../quake/dreamcast/in_dreamcast.o    \
+	../quake/dreamcast/ram.o     \
+	dreamcast/aica.o 	\
+	dreamcast/snddma_dreamcast.o \
+
+OBJS = $(QW_CLIENT_OBJS) $(QW_GL_OBJS) $(QW_PLATFORM_OBJS)
+
+INCLUDE = \
+	-I$(KOS_BASE)/include \
+	-I$(KOS_BASE)/kernel/arch/dreamcast/include \
+	-I$(KOS_BASE)/addons/lib \
+	-I$(KOS_PORTS)/include \
+	-Iclient \
+	-Iserver \
+	-Idreamcast
+
+DEFINES = \
+	-D__DREAMCAST__ \
+	-DGLQUAKE \
+	-Dstricmp=strcasecmp \
+
+FLAGS = \
+    -Os -ffast-math -fomit-frame-pointer \
+    -fno-common -ml -m4-single-only \
+    -ffunction-sections -fdata-sections \
+    -mdiv=inv -maccumulate-outgoing-args -mpretend-cmove
+
+LDFLAGS += -Wl,--gc-sections -Wl,--strip-all -Wl,--build-id=none
+CFLAGS += $(INCLUDE) $(DEFINES) $(FLAGS)
+
+LIBS = -L$(KOS_BASE)/lib/dreamcast -L$(KOS_BASE)/addons/lib/dreamcast -lGL -lm -lkallisti
+
+include $(KOS_BASE)/Makefile.rules
+
+
+all: deploy cdi
+
+deploy: $(TARGET) 1ST_READ.BIN IP.BIN
+	mkdir -p dc_release
+	cp $(TARGET) dc_release/
+	cp 1ST_READ.BIN dc_release/
+#	cp IP.BIN dc_release/
+	rm $(TARGET) $(TARGET).bin 1ST_READ.BIN 
+
+
+$(TARGET): $(QW_CLIENT_OBJS) $(QW_GL_OBJS) $(QW_PLATFORM_OBJS)
+	kos-c++ -o $(TARGET) $(OBJS) $(LIBS) $(LDFLAGS)
+	sh-elf-strip $(TARGET)
+
+1ST_READ.BIN: $(TARGET)
+	kos-objcopy -R .stack -O binary $(TARGET) $(TARGET).bin 
+	scramble $(TARGET).bin 1ST_READ.BIN
+
+
+default: all
+
+.PHONY: cdi deploy
+cdi: $(PROJECT_NAME).cdi	
+
+IP.BIN:
+	mkdir -p dc_release
+	rm -f dc_release/IP.BIN
+	makeip -v dc_release/IP.BIN
+
+$(PROJECT_NAME).cdi: IP.BIN 1ST_READ.BIN
+	mkdir -p build
+	cp dc_release/IP.BIN dc_release/1ST_READ.BIN build/
+	mkisofs -C 0,11702 -V $(PROJECT_NAME) -G build/IP.BIN -r -J -l -o $(PROJECT_NAME).iso build
+	makedisc $(PROJECT_NAME).cdi build build/IP.BIN $(TARGET)
+	mv $(PROJECT_NAME).iso $(PROJECT_NAME).cdi dc_release/
+	rm -rf build
+
+clean:
+	rm -f $(QW_CLIENT_OBJS) $(QW_GL_OBJS) $(QW_PLATFORM_OBJS) $(TARGET) $(TARGET).bin
+	rm -rf dc_release
