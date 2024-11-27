@@ -57,6 +57,9 @@ const GLubyte *gl_version;
 const GLubyte *gl_extensions;
 
 qboolean is8bit = true;
+qboolean isPermedia = false;
+qboolean gl_mtexable = false;
+
 
 extern void VID_GenerateLighting(qboolean alpha);
 void VID_GenerateLighting_f(void);
@@ -199,18 +202,22 @@ void GL_Init(void)
   glEnableClientState(GL_TEXTURE_COORD_ARRAY);
 }
 
-void VID_Aspect_f(void)
-{
+void VID_Aspect_f(void) {
   if (Cmd_Argc() < 1)
     return;
 
-  int w = atoi(Cmd_Argv(1));
-  /* 4:3  = 640x480 */
-  vid.aspect = ((float)vid.height / (float)w) * (320.0 / 240.0);
-  BASEWIDTH = w;
+  if (atoi(Cmd_Argv(1))) {
+    /* Widescreen */
+    vid.aspect = ((float)853.0 / (float)480.0) * (320.0 / 240.0);
+  } else {
+    /* 4:3 */
+    vid.aspect = ((float)vid.height / (float)vid.width) * (320.0 / 240.0);
+    //vid.aspect = 4.0f/3.0f;
+  }
   extern void V_CalcRefdef(void);
   V_CalcRefdef();
 }
+
 
 /*
 =================
@@ -246,7 +253,7 @@ void VID_Cvar_Update(void)
   snd_noextraupdate.value = 1;
   gl_clear.value = 0;
   //r_wateralpha.value = 0.5;
-  //show_fps.value = 1;
+  show_fps.value = 1;
 }
 
 void VID_Init(unsigned char *palette)
