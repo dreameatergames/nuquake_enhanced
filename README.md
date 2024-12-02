@@ -41,7 +41,9 @@ __let me know if stuff is broken.__
 - Bruceleet
   - Fixing the rendering code
   - Debugging the main crash
-- Ian Michael
+- Ian Micheal
+ -  Auto baseline config reading to set all quake functions
+ -  Fix for muzzle flash and debugging for broken saving
   - Code cleanin warnings and fixes for sound and menu
   - SDL Sound Code and SDL Library
   - Inspiration and Encouragement
