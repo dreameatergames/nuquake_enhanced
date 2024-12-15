@@ -43,7 +43,7 @@ void R_InitLights(void);
 void GL_BuildLightmaps(void);
 qboolean VID_Is8bit(void);
 
-cvar_t mipbias = {"mipbias", "-7"};
+cvar_t mipbias = {"mipbias", "7"};
 
 /* Used for generating the lightmap multiple ways for debugging */
 void VID_GenerateLighting(qboolean alpha) {
