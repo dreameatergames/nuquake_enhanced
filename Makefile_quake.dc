@@ -53,7 +53,7 @@ LIB_LZO = $(DEP_DIR)/minilzo/libminilzo.a
 #LIB_SDL = $(DEP_DIR)/SDL-1.2.9/libSDL_129.a
 LIB_SDL = $(DEP_DIR)/SDL/libSDL.a
 
-LIBS = $(LIB_GLDC)  -lz $(LIB_SDL)
+LIBS = $(LIB_GLDC)  -lz $(LIB_SDL) -lppp
 INCS += -iquote src/common -iquote src/dreamcast
 
 CPPFLAGS ?= $(INC_FLAGS) -MMD -MP
