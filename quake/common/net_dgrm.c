@@ -25,7 +25,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #ifdef BAN_TEST
 #if defined(_WIN32)
 #include <windows.h>
-#elif defined (NeXT)
+#elif defined (NeXT) || defined (_arch_dreamcast)
 #include <sys/socket.h>
 #include <arpa/inet.h>
 #else
@@ -47,8 +47,10 @@ struct sockaddr_in
 	struct in_addr	sin_addr;
     char			sin_zero[8];
 };
+
 char *inet_ntoa(struct in_addr in);
 unsigned long inet_addr(const char *cp);
+
 #endif
 #endif	// BAN_TEST
 
@@ -79,7 +81,7 @@ struct
 } packetBuffer;
 
 extern int m_return_state;
-extern enum m_state;
+extern enum menu_state m_state;
 extern qboolean m_return_onerror;
 extern char m_return_reason[32];
 
@@ -282,6 +284,7 @@ qboolean Datagram_CanSendMessage (qsocket_t *sock)
 
 qboolean Datagram_CanSendUnreliableMessage (qsocket_t *sock)
 {
+	(void) sock;
 	return true;
 }
 
@@ -314,12 +317,12 @@ int Datagram_SendUnreliableMessage (qsocket_t *sock, sizebuf_t *data)
 
 int	Datagram_GetMessage (qsocket_t *sock)
 {
-	unsigned int	length;
-	unsigned int	flags;
+	uint32_t	length;
+	uint32_t	flags;
 	int				ret = 0;
 	struct qsockaddr readaddr;
-	unsigned int	sequence;
-	unsigned int	count;
+	uint32_t	sequence;
+	uint32_t	count;
 
 	if (!sock->canSend)
 		if ((net_time - sock->lastSendTime) > 1.0)
@@ -335,7 +338,7 @@ int	Datagram_GetMessage (qsocket_t *sock)
 		if (length == 0)
 			break;
 
-		if (length == -1)
+		if (length == (uint32_t) -1)
 		{
 			Con_Printf("Read error\n");
 			return -1;
@@ -522,14 +525,14 @@ PollProcedure	testPollProcedure = {NULL, 0.0, Test_Poll};
 static void Test_Poll(void)
 {
 	struct qsockaddr clientaddr;
-	int		control;
-	int		len;
+	uint32_t		control;
+	uint32_t		len;
 	char	name[32];
 	char	address[64];
 	int		colors;
 	int		frags;
 	int		connectTime;
-	byte	playerNumber;
+	uint8_t	playerNumber;
 
 	net_landriverlevel = testDriver;
 
@@ -544,17 +547,29 @@ static void Test_Poll(void)
 		MSG_BeginReading ();
 		control = BigLong(*((int *)net_message.data));
 		MSG_ReadLong();
-		if (control == -1)
+		
+		if (control == (uint32_t) -1)
+		{
 			break;
+		}
+		
 		if ((control & (~NETFLAG_LENGTH_MASK)) !=  NETFLAG_CTL)
+		{
 			break;
+		}
+		
 		if ((control & NETFLAG_LENGTH_MASK) != len)
+		{
 			break;
+		}
 
 		if (MSG_ReadByte() != CCREP_PLAYER_INFO)
+		{
 			Sys_Error("Unexpected repsonse to Player Info request\n");
+		}
 
 		playerNumber = MSG_ReadByte();
+		(void) playerNumber;
 		Q_strcpy(name, MSG_ReadString());
 		colors = MSG_ReadLong();
 		frags = MSG_ReadLong();
@@ -586,7 +601,7 @@ static void Test_f (void)
 	if (testInProgress)
 		return;
 
-	host = Cmd_Argv (1);
+	host = (char *) Cmd_Argv (1);
 
 	if (host && hostCacheCount)
 	{
@@ -650,8 +665,8 @@ PollProcedure	test2PollProcedure = {NULL, 0.0, Test2_Poll};
 static void Test2_Poll(void)
 {
 	struct qsockaddr clientaddr;
-	int		control;
-	int		len;
+	uint32_t		control;
+	uint32_t		len;
 	char	name[256];
 	char	value[256];
 
@@ -659,27 +674,45 @@ static void Test2_Poll(void)
 	name[0] = 0;
 
 	len = dfunc.Read (test2Socket, net_message.data, net_message.maxsize, &clientaddr);
+	
 	if (len < sizeof(int))
+	{
 		goto Reschedule;
+	}
 
 	net_message.cursize = len;
 
 	MSG_BeginReading ();
 	control = BigLong(*((int *)net_message.data));
 	MSG_ReadLong();
-	if (control == -1)
+	
+	if (control == (uint32_t) -1)
+	{
 		goto Error;
+	}
+	
 	if ((control & (~NETFLAG_LENGTH_MASK)) !=  NETFLAG_CTL)
+	{
 		goto Error;
+	}
+	
 	if ((control & NETFLAG_LENGTH_MASK) != len)
+	{
 		goto Error;
+	}
 
 	if (MSG_ReadByte() != CCREP_RULE_INFO)
+	{
 		goto Error;
+	}
 
 	Q_strcpy(name, MSG_ReadString());
+	
 	if (name[0] == 0)
+	{
 		goto Done;
+	}
+	
 	Q_strcpy(value, MSG_ReadString());
 
 	Con_Printf("%-16.16s  %-16.16s\n", name, value);
@@ -714,7 +747,7 @@ static void Test2_f (void)
 	if (test2InProgress)
 		return;
 
-	host = Cmd_Argv (1);
+	host = (char *) Cmd_Argv (1);
 
 	if (host && hostCacheCount)
 	{
@@ -831,13 +864,13 @@ static qsocket_t *_Datagram_CheckNewConnections (void)
 {
 	struct qsockaddr clientaddr;
 	struct qsockaddr newaddr;
-	int			newsock;
+	uint32_t	newsock;
 	int			acceptsock;
 	qsocket_t	*sock;
 	qsocket_t	*s;
-	int			len;
+	uint32_t	len;
 	int			command;
-	int			control;
+	uint32_t	control;
 	int			ret;
 
 	acceptsock = dfunc.CheckNewConnections();
@@ -854,12 +887,21 @@ static qsocket_t *_Datagram_CheckNewConnections (void)
 	MSG_BeginReading ();
 	control = BigLong(*((int *)net_message.data));
 	MSG_ReadLong();
-	if (control == -1)
+	
+	if (control == (uint32_t) -1)
+	{
 		return NULL;
+	}
+	
 	if ((control & (~NETFLAG_LENGTH_MASK)) !=  NETFLAG_CTL)
+	{
 		return NULL;
+	}
+	
 	if ((control & NETFLAG_LENGTH_MASK) != len)
+	{
 		return NULL;
+	}
 
 	command = MSG_ReadByte();
 	if (command == CCREQ_SERVER_INFO)
@@ -1053,7 +1095,7 @@ static qsocket_t *_Datagram_CheckNewConnections (void)
 
 	// allocate a network socket
 	newsock = dfunc.OpenSocket(0);
-	if (newsock == -1)
+	if (newsock == (uint32_t) -1)
 	{
 		NET_FreeQSocket(sock);
 		return NULL;
@@ -1107,7 +1149,7 @@ static void _Datagram_SearchForHosts (qboolean xmit)
 	int		i;
 	struct qsockaddr readaddr;
 	struct qsockaddr myaddr;
-	int		control;
+	uint32_t control;
 
 	dfunc.GetSocketAddr (dfunc.controlSock, &myaddr);
 	if (xmit)
@@ -1125,40 +1167,64 @@ static void _Datagram_SearchForHosts (qboolean xmit)
 
 	while ((ret = dfunc.Read (dfunc.controlSock, net_message.data, net_message.maxsize, &readaddr)) > 0)
 	{
-		if (ret < sizeof(int))
+		if (ret < (int) sizeof(int))
+		{
 			continue;
+		}
+		
 		net_message.cursize = ret;
 
 		// don't answer our own query
 		if (dfunc.AddrCompare(&readaddr, &myaddr) >= 0)
+		{
 			continue;
+		}
 
 		// is the cache full?
 		if (hostCacheCount == HOSTCACHESIZE)
+		{
 			continue;
+		}
 
 		MSG_BeginReading ();
 		control = BigLong(*((int *)net_message.data));
 		MSG_ReadLong();
-		if (control == -1)
+		
+		if (control == (uint32_t) -1)
+		{
 			continue;
+		}
+		
 		if ((control & (~NETFLAG_LENGTH_MASK)) !=  NETFLAG_CTL)
+		{
 			continue;
-		if ((control & NETFLAG_LENGTH_MASK) != ret)
+		}
+		
+		if ((control & NETFLAG_LENGTH_MASK) != (uint32_t) ret)
+		{
 			continue;
+		}
 
 		if (MSG_ReadByte() != CCREP_SERVER_INFO)
+		{
 			continue;
+		}
 
 		dfunc.GetAddrFromName(MSG_ReadString(), &readaddr);
 		// search the cache for this server
 		for (n = 0; n < hostCacheCount; n++)
+		{
 			if (dfunc.AddrCompare(&readaddr, &hostcache[n].addr) == 0)
+			{
 				break;
+			}
+		}
 
 		// is it already there?
 		if (n < hostCacheCount)
+		{
 			continue;
+		}
 
 		// add it
 		hostCacheCount++;
@@ -1182,7 +1248,10 @@ static void _Datagram_SearchForHosts (qboolean xmit)
 		for (i = 0; i < hostCacheCount; i++)
 		{
 			if (i == n)
+			{
 				continue;
+			}
+			
 			if (Q_strcasecmp (hostcache[n].name, hostcache[i].name) == 0)
 			{
 				i = Q_strlen(hostcache[n].name);
@@ -1192,7 +1261,9 @@ static void _Datagram_SearchForHosts (qboolean xmit)
 					hostcache[n].name[i+1] = 0;
 				}
 				else
+				{
 					hostcache[n].name[i-1]++;
+				}
 				i = -1;
 			}
 		}
@@ -1204,9 +1275,13 @@ void Datagram_SearchForHosts (qboolean xmit)
 	for (net_landriverlevel = 0; net_landriverlevel < net_numlandrivers; net_landriverlevel++)
 	{
 		if (hostCacheCount == HOSTCACHESIZE)
+		{
 			break;
+		}
 		if (net_landrivers[net_landriverlevel].initialized)
+		{
 			_Datagram_SearchForHosts (xmit);
+		}
 	}
 }
 
@@ -1219,27 +1294,35 @@ static qsocket_t *_Datagram_Connect (char *host)
 	int			newsock;
 	int			ret;
 	int			reps;
-	double		start_time;
-	int			control;
+	float		start_time;
+	uint32_t	control;
 	char		*reason;
 
 	// see if we can resolve the host name
 	if (dfunc.GetAddrFromName(host, &sendaddr) == -1)
+	{
 		return NULL;
+	}
 
 	newsock = dfunc.OpenSocket (0);
 	if (newsock == -1)
+	{
 		return NULL;
+	}
 
 	sock = NET_NewQSocket ();
 	if (sock == NULL)
+	{
 		goto ErrorReturn2;
+	}
 	sock->socket = newsock;
 	sock->landriver = net_landriverlevel;
 
 	// connect to the host
 	if (dfunc.Connect (newsock, &sendaddr) == -1)
+	{
 		goto ErrorReturn;
+	}
 
 	// send the connection request
 	Con_Printf("trying...\n"); SCR_UpdateScreen ();
@@ -1275,7 +1358,7 @@ static qsocket_t *_Datagram_Connect (char *host)
 					continue;
 				}
 
-				if (ret < sizeof(int))
+				if (ret < (int) sizeof(int))
 				{
 					ret = 0;
 					continue;
@@ -1286,7 +1369,7 @@ static qsocket_t *_Datagram_Connect (char *host)
 
 				control = BigLong(*((int *)net_message.data));
 				MSG_ReadLong();
-				if (control == -1)
+				if (control == (uint32_t) -1)
 				{
 					ret = 0;
 					continue;
@@ -1296,16 +1379,21 @@ static qsocket_t *_Datagram_Connect (char *host)
 					ret = 0;
 					continue;
 				}
-				if ((control & NETFLAG_LENGTH_MASK) != ret)
+				if ((control & NETFLAG_LENGTH_MASK) != (uint32_t) ret)
 				{
 					ret = 0;
 					continue;
 				}
 			}
 		}
+		
 		while (ret == 0 && (SetNetTime() - start_time) < 2.5);
+		
 		if (ret)
+		{
 			break;
+		}
+		
 		Con_Printf("still trying...\n"); SCR_UpdateScreen ();
 		start_time = SetNetTime();
 	}
@@ -1383,8 +1471,15 @@ qsocket_t *Datagram_Connect (char *host)
 	qsocket_t *ret = NULL;
 
 	for (net_landriverlevel = 0; net_landriverlevel < net_numlandrivers; net_landriverlevel++)
+	{
 		if (net_landrivers[net_landriverlevel].initialized)
+		{
 			if ((ret = _Datagram_Connect (host)) != NULL)
+			{
 				break;
+			}
+		}
+	}
 	return ret;
 }
+

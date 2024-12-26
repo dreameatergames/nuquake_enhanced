@@ -64,7 +64,6 @@ static unsigned long myAddr;
 
 int UDP_Init (void)
 {
-	struct hostent *local;
 	char	buff[MAXHOSTNAMELEN];
 	struct qsockaddr addr;
 	char *colon;
@@ -81,11 +80,12 @@ int UDP_Init (void)
 	}
 
 	netif_t *nif = net_default_dev;
-	if (nif->ip_addr) {
+	if (nif->ip_addr[0]) 
+	{
 		myAddr = (nif->ip_addr[3] << 24) |
-				(nif->ip_addr[2] << 16) |
-				(nif->ip_addr[1] << 8) |
-				(nif->ip_addr[0]);
+				 (nif->ip_addr[2] << 16) |
+				 (nif->ip_addr[1] << 8)  |
+				 (nif->ip_addr[0]);
 		
 		// for debugging
 		struct in_addr ip_addr;
@@ -93,11 +93,14 @@ int UDP_Init (void)
 		inet_ntop(AF_INET, &ip_addr, buff, INET_ADDRSTRLEN);
 		Con_Printf("PPP IP Address: %s\n", buff);
 		
-	} else {
+	} 
+	else 
+	{
 		Sys_Error("No IP address available\n");
 		return -1;
 	}
 #else
+	struct hostent *local;
 	gethostname(buff, MAXHOSTNAMELEN);
 	local = gethostbyname(buff);
 	myAddr = *(int *)local->h_addr_list[0];
@@ -269,6 +272,8 @@ static int PartialIPAddress (char *in, struct qsockaddr *hostaddr)
 
 int UDP_Connect (int socket, struct qsockaddr *addr)
 {
+	(void) socket;
+	(void) addr;
 	return 0;
 }
 
@@ -304,7 +309,7 @@ int UDP_CheckNewConnections (void)
 
 int UDP_Read (int socket, byte *buf, int len, struct qsockaddr *addr)
 {
-	int addrlen = sizeof (struct qsockaddr);
+	uint32_t addrlen = sizeof (struct qsockaddr);
 	int ret;
 
 	ret = recvfrom (socket, buf, len, 0, (struct sockaddr *)addr, &addrlen);
@@ -317,8 +322,8 @@ int UDP_Read (int socket, byte *buf, int len, struct qsockaddr *addr)
 
 int UDP_MakeSocketBroadcastCapable (int socket)
 {
-	int				i = 1;
 #ifndef _arch_dreamcast
+	int	i = 1;
 	// make this socket broadcast capable
 	if (setsockopt(socket, SOL_SOCKET, SO_BROADCAST, (char *)&i, sizeof(i)) < 0)
 		return -1;
@@ -392,7 +397,7 @@ int UDP_StringToAddr (char *string, struct qsockaddr *addr)
 
 int UDP_GetSocketAddr (int socket, struct qsockaddr *addr)
 {
-	int addrlen = sizeof(struct qsockaddr);
+	uint32_t addrlen = sizeof(struct qsockaddr);
 	unsigned int a;
 
 	Q_memset(addr, 0, sizeof(struct qsockaddr));

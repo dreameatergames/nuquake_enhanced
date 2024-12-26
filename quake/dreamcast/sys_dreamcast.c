@@ -27,6 +27,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include <malloc.h>
 
 #include <dc/sq.h>
+#include <dc/biosfont.h>
 
 #include "errno.h"
 /* Not using LZO1X right now */
@@ -371,7 +372,7 @@ void Sys_Sleep(void) {
 qboolean isDedicated = false;
 
 //-----------------------------------------------------------------------------
-extern void bfont_draw_str(uint16 *buffer, int bufwidth, int opaque, char *str);
+
 static void drawtext(int x, int y, char *string) {
   printf("%s\n", string);
   fflush(stdout);
