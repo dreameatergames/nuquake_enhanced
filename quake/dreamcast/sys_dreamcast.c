@@ -406,6 +406,8 @@ static void assert_hnd(const char *file, int line, const char *expr, const char 
 
 //#include <SDL/SDL.h>
 //extern void handle_libc_overrides(void);
+KOS_INIT_FLAGS(INIT_CDROM | INIT_CONTROLLER | INIT_KEYBOARD | INIT_MOUSE | INIT_NET | INIT_VMU);
+
 int main(int argc, char **argv) {
   (void)argc;
   (void)argv;

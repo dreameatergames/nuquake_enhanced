@@ -21,6 +21,11 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 #include "quakedef.h"
 #include "net_vcr.h"
+#if _arch_dreamcast
+#include <kos/net.h>
+#include <ppp/ppp.h>
+#include "dc/modem/modem.h"
+#endif
 
 qsocket_t	*net_activeSockets = NULL;
 qsocket_t	*net_freeSockets = NULL;
@@ -737,28 +742,46 @@ void NET_Init (void)
 	int			controlSocket;
 	qsocket_t	*s;
 
-	if (COM_CheckParm("-playback"))
+#if _arch_dreamcast
+	if (!net_default_dev)
 	{
-		net_numdrivers = 1;
-		net_drivers[0].Init = VCR_Init;
+		if(!modem_init())
+		{
+			//Con_DPrintf( S_ERROR "modem_init failed!\n");
+			printf("modem_init failed!\n");
+			return;
+		}
+		
+		ppp_init();
+		//Con_DPrintf("Dialing connection\n");
+		printf("Dialing connection\n");
+		int err;
+		
+		err = ppp_modem_init("11111", 0, NULL);
+		if(err != 0) 
+		{
+			//Con_DPrintf( S_ERROR "Couldn't dial a connection (%d)\n", err);
+			printf("Couldn't dial a connection (%d)\n", err);
+			return;
+		}
+		//Con_DPrintf("Establishing PPP link\n");
+		printf("Establishing PPP link\n");
+		ppp_set_login("dream", "dreamcast");
+		
+		err = ppp_connect();
+		if(err != 0) 
+		{
+			//Con_DPrintf( S_ERROR "Couldn't establish PPP link (%d)\n", err);
+			printf( "Couldn't establish PPP link (%d)\n", err);
+			return;
+		}
 	}
-
-	if (COM_CheckParm("-record"))
-		recording = true;
-
-	i = COM_CheckParm ("-port");
-	if (!i)
-		i = COM_CheckParm ("-udpport");
-	if (!i)
-		i = COM_CheckParm ("-ipxport");
-
-	if (i)
+	else
 	{
-		if (i < com_argc-1)
-			DEFAULTnet_hostport = atoi (com_argv[i+1]);
-		else
-			Sys_Error ("NET_Init: you must specify a number after -port");
+		printf("BBA found\n");
 	}
+#endif
+
 	net_hostport = DEFAULTnet_hostport;
 
 	if (COM_CheckParm("-listen") || cls.state == ca_dedicated)
@@ -812,9 +835,9 @@ void NET_Init (void)
 		}
 
 	if (*my_ipx_address)
-		Con_DPrintf("IPX address %s\n", my_ipx_address);
+		Con_Printf("IPX address %s\n", my_ipx_address);
 	if (*my_tcpip_address)
-		Con_DPrintf("TCP/IP address %s\n", my_tcpip_address);
+		Con_Printf("TCP/IP address %s\n", my_tcpip_address);
 }
 
 /*
