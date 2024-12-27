@@ -958,7 +958,7 @@ typedef struct
 	int             dirlen;
 } dpackheader_t;
 
-#define MAX_FILES_IN_PACK       4096
+#define MAX_FILES_IN_PACK       2048
 
 char    com_cachedir[MAX_OSPATH];
 char    com_gamedir[MAX_OSPATH];
@@ -1704,8 +1704,3 @@ void ftoa(float n, char* str, int length, int afterpoint) {
   }
 }
 
-void Q_strncpyz (char *dest, char *src, size_t size)
-{
-	strncpy (dest, src, size - 1);
-	dest[size-1] = 0;
-}

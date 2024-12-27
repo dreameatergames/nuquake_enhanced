@@ -1148,7 +1148,7 @@ GL_Upload32
 ===============
 */
 void GL_Upload32(unsigned *data, int width, int height, uint8_t flags) {
-#ifdef _arch_dreamcast
+#ifndef _arch_dreamcast
   int samples;
   int scaled_width, scaled_height;
   qboolean alpha = ((flags & TEX_ALPHA) == TEX_ALPHA);
@@ -1174,8 +1174,8 @@ void GL_Upload32(unsigned *data, int width, int height, uint8_t flags) {
     scaled_width = 8;
   }
 
-  //if (scaled_width * scaled_height > (int)sizeof(scaled) / 4)
-    //Sys_Error("GL_LoadTexture: too big");
+  if (scaled_width * scaled_height > (int)sizeof(scaled) / 4)
+    Sys_Error("GL_LoadTexture: too big");
 
   samples = alpha ? gl_alpha_format : gl_solid_format;
 
@@ -1447,87 +1447,6 @@ GL_LoadTexture_setup:
 
   return glt->texnum;
   // BlackAura - end
-}
-
-
-/*
-================
-GL_LoadTexture32
-================
-*/
-int GL_LoadTexture32 (char *identifier, int width, int height, byte *data, uint8_t flags)
-{
-  int i, s, lhcsum;  // BlackAura - edited
-  gltexture_t *glt;
-  
-
-  // BlackAura - begin
-  // LordHavoc: do a checksum to confirm the data really is the same as previous
-  // occurances. well this isn't exactly a checksum, it's better than that but
-  // not following any standards.
-  lhcsum = 0;
-  s = width * height;
-  for (i = 0; i < 256; i++) lhcsumtable[i] = i + 1;
-  for (i = 0; i < s; i++) lhcsum += (lhcsumtable[data[i] & 255]++);
-  // BlackAura - end
-
-  // see if the texture is already present
-  if (identifier[0]) {
-    for (i = 0, glt = gltextures; i < numgltextures; i++, glt++) {
-      if (!strcmp(identifier, glt->identifier)) {
-        // BlackAura - begin
-        // LordHavoc: everyone hates cache mismatchs, so I fixed it
-        if (lhcsum != glt->lhcsum || width != glt->width || height != glt->height) {
-          Con_DPrintf("GL_LoadTexture: cache mismatch, replacing old texture\n");
-          goto GL_LoadTexture_setup;  // drop out with glt pointing to the texture to replace
-        }
-        return glt->texnum;
-        // BlackAura - end
-      }
-    }
-  }
-
-  // LordHavoc: this was an else condition, causing disasterous results,
-  // whoever at id or threewave must've been half asleep...
-  glt = &gltextures[numgltextures];
-  numgltextures++;
-
-  int len = 0;
-  if(identifier){
-    len = strlen(identifier);
-    memcpy(glt->identifier, identifier, len);
-  }
-  glt->identifier[len] = '\0';
-
-  glGenTextures(1, &glt->texnum);
-
-GL_LoadTexture_setup:
-  glt->lhcsum = lhcsum;  // LordHavoc: used to verify textures are identical
-  // BlackAura - end
-  glt->width = width;
-  glt->height = height;
-  glt->flags = flags;
-
-
-#if 0
-	// Baker: this applies our -gamma parameter table
-	if (1) {
-		//extern	byte	vid_gamma_table[256];
-		for (i = 0; i < s; i++){
-			data[4 * i] = gammatable[data[4 * i]];
-			data[4 * i + 1] = gammatable[data[4 * i + 1]];
-			data[4 * i + 2] = gammatable[data[4 * i + 2]];
-		}
-	}
-#endif 
-
-	  // BlackAura - begin
-  if (!isDedicated) {
-    GL_Bind(glt->texnum);
-    GL_Upload32(data, width, height, flags);
-  }
-
-  return glt->texnum;
 }
 
 /****************************************/

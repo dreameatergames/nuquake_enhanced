@@ -53,8 +53,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 //=============================================================================
 
 
-#define Q1_BSPVERSION	29
-#define HL_BSPVERSION	30
+#define BSPVERSION	29
 #define BSPSW91VERSION	28
 #define	TOOLVERSION	2
 
