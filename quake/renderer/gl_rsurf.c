@@ -504,7 +504,7 @@ void R_BlendLightmaps (void)
 			theRect->w = BLOCK_WIDTH;
 			theRect->h = BLOCK_HEIGHT;
 			#ifdef _arch_dreamcast
-			printf("lightmap upload");
+		//	printf("lightmap upload");
 				glTexImage2D (GL_TEXTURE_2D, 0, GL_COLOR_INDEX8_EXT
 				, BLOCK_WIDTH, theRect->h, 0,
 				GL_COLOR_INDEX, GL_UNSIGNED_BYTE, lightmaps+(i*BLOCK_HEIGHT+theRect->t)*BLOCK_WIDTH*lightmap_bytes);

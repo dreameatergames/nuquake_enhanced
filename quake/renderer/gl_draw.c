@@ -59,7 +59,7 @@ int gl_lightmap_format = GL_RGBA;
 int gl_solid_format = GL_RGB;
 int gl_alpha_format = GL_RGBA;
 
-int gl_filter_min = GL_NEAREST_MIPMAP_LINEAR;
+int gl_filter_min = GL_LINEAR;
 int gl_filter_max = GL_LINEAR;
 
 typedef struct
@@ -131,7 +131,7 @@ void GL_Bind(unsigned int texnum) {
 }
 
 void GL_OverscanAdjust(int *x, int *y) {
-  if (scr_safety.value > 1.0f) {
+  if (scr_safety.value > 4.0f) {
     if (*x < scr_safety.value) {
       *x += scr_safety.value;
     }

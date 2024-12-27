@@ -496,7 +496,7 @@ int main(int argc, char **argv) {
 
   parms.argc = com_argc;
   parms.argv = com_argv;
-  //parms.memsize = 10 * 1024 * 1024;
+ // parms.memsize = 10 * 1024 * 1024;
   parms.memsize = 8 * 1024 * 1024;
 
   int t;
