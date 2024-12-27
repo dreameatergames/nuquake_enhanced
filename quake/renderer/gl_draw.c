@@ -59,7 +59,7 @@ int gl_lightmap_format = GL_RGBA;
 int gl_solid_format = GL_RGB;
 int gl_alpha_format = GL_RGBA;
 
-int gl_filter_min = GL_NEAREST_MIPMAP_LINEAR;
+int gl_filter_min = GL_LINEAR;
 int gl_filter_max = GL_LINEAR;
 
 typedef struct
