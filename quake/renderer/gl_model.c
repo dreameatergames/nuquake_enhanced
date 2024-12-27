@@ -407,7 +407,7 @@ void Mod_LoadTextures (lump_t *l)
 
 		if (!Q_strncmp(mt->name,"sky",3))
 		{
-			R_InitSky (tx);
+			R_InitSky (mt);
 			continue;
 		}
 		
