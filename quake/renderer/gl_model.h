@@ -411,6 +411,8 @@ typedef struct model_s
 	
 	qboolean	isworldmodel;
 
+	int bspversion;
+
 //
 // additional model data
 //

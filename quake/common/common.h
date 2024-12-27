@@ -124,7 +124,9 @@ void InsertLinkAfter (link_t *l, link_t *after);
 #define Q_memset memset
 #define Q_strrchr strrchr
 #define Q_atoi  atoi
+#define Q_strncmp strncmp
 void Q_memcpy (void *dest, const void *src, int count);
+void Q_strncpyz (char *dest, char *src, size_t size);
 
 
 //============================================================================

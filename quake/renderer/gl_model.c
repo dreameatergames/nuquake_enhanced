@@ -65,6 +65,9 @@ void Mod_Init (void)
 		gl_allowmip = 0;
 	}
 	memset (mod_novis, 0xff, sizeof(mod_novis));
+
+	// Load Half-Life WAD file for textures
+	//WAD3_LoadTextureWadFile("halflife.wad");
 }
 
 /*
@@ -402,8 +405,24 @@ void Mod_LoadTextures (lump_t *l)
 		tx->offsets[2] = mt->offsets[2] + (sizeof(texture_t) - sizeof(miptex_t));
 		tx->offsets[3] = mt->offsets[3] + (sizeof(texture_t) - sizeof(miptex_t));
 
-		if (!strncmp(mt->name,"sky",3))
-			R_InitSky (mt);
+		if (!Q_strncmp(mt->name,"sky",3))
+		{
+			R_InitSky (tx);
+			continue;
+		}
+		
+		if (loadmodel->bspversion == HL_BSPVERSION)
+		{
+			byte		*data;
+			if ((data = WAD3_LoadTexture(mt))) 
+			{
+				//com_netpath[0] = 0;		
+				//alpha_flag = ISALPHATEX(tx->name) ? TEX_ALPHA : 0;
+				tx->gl_texturenum = GL_LoadTexture32 (mt->name, tx->width, tx->height, (byte *)data, texture_flag | ((gl_allowmip == 1) ? TEX_MIP : TEX_NONE));
+				free(data);
+				continue;
+			}
+		}
 		else
 		{
 			// If world model and NOT sky texture
@@ -520,6 +539,29 @@ void Mod_LoadLighting (lump_t *l)
 		loadmodel->lightdata = NULL;
 		return;
 	}
+
+	if (loadmodel->bspversion == HL_BSPVERSION) 
+	{
+		int i;
+		loadmodel->lightdata = Hunk_AllocName(l->filelen, loadname);
+		// dest, source, count
+		memcpy (loadmodel->lightdata, mod_base + l->fileofs, l->filelen);
+
+		// Cheat!
+		// Run thru the lightmap data and average the colors to make it a shade of gray, haha!
+		for (i = 0; i < l->filelen; i += 3)
+		{
+			int grayscale;
+			byte out;
+			grayscale = (loadmodel->lightdata[i] + loadmodel->lightdata[i+1] + loadmodel->lightdata[i+2])/3;
+			if (grayscale > 255) grayscale = 255;
+			if (grayscale < 0) grayscale = 0;
+			out = (byte)grayscale;
+			loadmodel->lightdata[i] = loadmodel->lightdata[i+1] = loadmodel->lightdata[i+2] = out;
+		}
+		return;
+	}
+
 	loadmodel->lightdata = Hunk_AllocName ( l->filelen, loadname);
 	memcpy (loadmodel->lightdata, mod_base + l->fileofs, l->filelen);
 }
@@ -1184,11 +1226,11 @@ void Mod_LoadBrushModel (model_t *mod, void *buffer)
 		//printf("\n%s (%s) is %sa world model\n", loadmodel->name, host_mapname.string, (loadmodel->isworldmodel) ? " ": "NOT ");
 	}
 
-	i = LittleLong (header->version);
+	mod->bspversion = LittleLong (header->version);
 	/* shareware 0.91 doesnt have this */
   /*@Note: SW Hack */
-	if ( (i != BSPVERSION) && (i != BSPSW91VERSION) )
-		Sys_Error ("Mod_LoadBrushModel: %s has wrong version number (%i should be %i)", mod->name, i, BSPVERSION);
+	if (mod->bspversion != Q1_BSPVERSION && mod->bspversion != HL_BSPVERSION)
+		Host_Error ("Mod_LoadBrushModel: %s has wrong version number (%i should be %i (Quake) or %i (HalfLife))", mod->name, mod->bspversion, Q1_BSPVERSION, HL_BSPVERSION);
 
 // swap all the lumps
 	mod_base = (byte *)header;
