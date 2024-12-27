@@ -741,44 +741,47 @@ void NET_Init (void)
 	int			i;
 	int			controlSocket;
 	qsocket_t	*s;
+	qboolean	net_device_available = false;
 
 #if _arch_dreamcast
 	if (!net_default_dev)
 	{
 		if(!modem_init())
 		{
-			//Con_DPrintf( S_ERROR "modem_init failed!\n");
 			printf("modem_init failed!\n");
-			return;
 		}
-		
-		ppp_init();
-		//Con_DPrintf("Dialing connection\n");
-		printf("Dialing connection\n");
-		int err;
-		
-		err = ppp_modem_init("11111", 0, NULL);
-		if(err != 0) 
+		else
 		{
-			//Con_DPrintf( S_ERROR "Couldn't dial a connection (%d)\n", err);
-			printf("Couldn't dial a connection (%d)\n", err);
-			return;
-		}
-		//Con_DPrintf("Establishing PPP link\n");
-		printf("Establishing PPP link\n");
-		ppp_set_login("dream", "dreamcast");
-		
-		err = ppp_connect();
-		if(err != 0) 
-		{
-			//Con_DPrintf( S_ERROR "Couldn't establish PPP link (%d)\n", err);
-			printf( "Couldn't establish PPP link (%d)\n", err);
-			return;
+			ppp_init();
+			printf("Dialing connection\n");
+			int err;
+			
+			err = ppp_modem_init("11111", 0, NULL);
+			if(err != 0) 
+			{
+				printf("Couldn't dial a connection (%d)\n", err);
+			}
+			else
+			{
+				printf("Establishing PPP link\n");
+				ppp_set_login("dream", "dreamcast");
+				
+				err = ppp_connect();
+				if(err != 0) 
+				{
+					printf("Couldn't establish PPP link (%d)\n", err);
+				}
+				else
+				{
+					net_device_available = true;
+				}
+			}
 		}
 	}
 	else
 	{
 		printf("BBA found\n");
+		net_device_available = true;
 	}
 #endif
 
@@ -792,6 +795,7 @@ void NET_Init (void)
 
 	SetNetTime();
 
+	// Allocate sockets
 	for (i = 0; i < net_numsockets; i++)
 	{
 		s = (qsocket_t *)Hunk_AllocName(sizeof(qsocket_t), "qsocket");
@@ -803,6 +807,7 @@ void NET_Init (void)
 	// allocate space for network message buffer
 	SZ_Alloc (&net_message, NET_MAXMESSAGE);
 
+	// Register network-related console variables
 	Cvar_RegisterVariable (&net_messagetimeout);
 	Cvar_RegisterVariable (&hostname);
 	Cvar_RegisterVariable (&config_com_port);
@@ -817,23 +822,30 @@ void NET_Init (void)
 	Cvar_RegisterVariable (&idgods);
 #endif
 
+	// Register network-related commands
 	Cmd_AddCommand ("slist", NET_Slist_f);
 	Cmd_AddCommand ("listen", NET_Listen_f);
 	Cmd_AddCommand ("maxplayers", MaxPlayers_f);
 	Cmd_AddCommand ("port", NET_Port_f);
 
-	// initialize all the drivers
-	for (net_driverlevel=0 ; net_driverlevel<net_numdrivers ; net_driverlevel++)
-		{
+	// initialize drivers based on availability
+	for (net_driverlevel = 0; net_driverlevel < net_numdrivers; net_driverlevel++)
+	{
+		// Only initialize Loopback driver if no network device is available
+		if (!net_device_available && net_driverlevel > 0)
+			continue;
+
 		controlSocket = net_drivers[net_driverlevel].Init();
 		if (controlSocket == -1)
 			continue;
+		
 		net_drivers[net_driverlevel].initialized = true;
 		net_drivers[net_driverlevel].controlSock = controlSocket;
 		if (listening)
 			net_drivers[net_driverlevel].Listen (true);
-		}
+	}
 
+	// Print network addresses if available
 	if (*my_ipx_address)
 		Con_Printf("IPX address %s\n", my_ipx_address);
 	if (*my_tcpip_address)

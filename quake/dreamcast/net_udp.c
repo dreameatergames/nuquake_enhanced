@@ -75,7 +75,7 @@ int UDP_Init (void)
 #ifdef _arch_dreamcast
 	net_ipv4_get_stats();
 	if (!net_default_dev) {
-		Sys_Error("No network device available\n");
+		Con_Printf("No network device available\n");
 		return -1;
 	}
 
@@ -96,7 +96,7 @@ int UDP_Init (void)
 	} 
 	else 
 	{
-		Sys_Error("No IP address available\n");
+		Con_Printf("No IP address available\n");
 		return -1;
 	}
 #else
@@ -112,8 +112,11 @@ int UDP_Init (void)
 		Cvar_Set ("hostname", buff);
 	}
 
-	if ((net_controlsocket = UDP_OpenSocket (0)) == -1)
-		Sys_Error("UDP_Init: Unable to open control socket\n");
+	if ((net_controlsocket = UDP_OpenSocket (0)) == -1) 
+	{
+		Con_Printf("UDP_Init: Unable to open control socket\n");
+		return -1;
+	}
 
 	((struct sockaddr_in *)&broadcastaddr)->sin_family = AF_INET;
 	((struct sockaddr_in *)&broadcastaddr)->sin_addr.s_addr = INADDR_BROADCAST;
