@@ -115,6 +115,18 @@ void InsertLinkAfter (link_t *l, link_t *after);
 #define Q_MINLONG ((int)0x80000000)
 #define Q_MINFLOAT ((int)0x7fffffff)
 
+#define Q_strcpy strcpy
+#define Q_strcmp strcmp
+#define Q_strcasecmp strcasecmp
+#define Q_strncpy strncpy
+#define Q_strcat strcat
+#define Q_strlen strlen
+#define Q_memset memset
+#define Q_strrchr strrchr
+#define Q_atoi  atoi
+void Q_memcpy (void *dest, const void *src, int count);
+
+
 //============================================================================
 
 extern	qboolean		bigendien;
