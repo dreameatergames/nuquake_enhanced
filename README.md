@@ -7,6 +7,7 @@
 - Rendering
 - Keyboard + Mouse 
 - Controllers (analog too!)
+- Networking
 - Console (with keyboard)
 - Some mods
 
@@ -19,7 +20,7 @@ __let me know if stuff is broken.__
 - Demos might not load
 - Some Mods Crash
 - Saves not Working
-- No Networking
+
 ## Compiling Instructions
 ### Prerequisites
 - Kallistios(KOS) Toolchain Installation in default install location

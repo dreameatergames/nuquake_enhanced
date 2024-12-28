@@ -146,6 +146,9 @@ void CL_EstablishConnection(char *host) {
   cls.demonum = -1;  // not in the demo loop now
   cls.state = ca_connected;
   cls.signon = 0;  // need all the signon messages before playing
+
+  MSG_WriteByte(&cls.message, clc_nop);
+  
 }
 
 /*
@@ -539,24 +542,19 @@ static void CL_RelinkEntities(void) {
       dl->minlight = 32;
       dl->die = cl.time + 0.1;
     }
-if (ent->effects & EF_BRIGHTLIGHT) {
-    vec3_t fv, rv, uv;
-    dl = CL_AllocDlight(i);
-    
-    // Copy view position instead of entity position
-    VectorCopy(r_origin, dl->origin);
-    dl->origin[2] = r_origin[2];  // Ensure exact height match
-    
-    // Get view vectors for positioning
-    AngleVectors(cl.viewangles, fv, rv, uv);
-    
-    // Position light forward of view, similar to muzzle flash
-    VectorMA(dl->origin, 16, fv, dl->origin);
-    
-    dl->radius = 400 + (rand() & 31);
-    dl->minlight = 32;
-    dl->die = cl.time + 0.1;  // Increased duration slightly
-}
+    if (ent->effects & EF_BRIGHTLIGHT) {
+      dl = CL_AllocDlight(i);
+      VectorCopy(ent->origin, dl->origin);
+      dl->origin[2] += 16;
+      dl->radius = 400 + (rand() & 31);
+      dl->die = cl.time + 0.001;
+    }
+    if (ent->effects & EF_DIMLIGHT) {
+      dl = CL_AllocDlight(i);
+      VectorCopy(ent->origin, dl->origin);
+      dl->radius = 200 + (rand() & 31);
+      dl->die = cl.time + 0.001;
+    }
 
     if (ent->model->flags & EF_GIB)
       R_RocketTrail(oldorg, ent->origin, 2);

@@ -2,18 +2,54 @@ TARGET_EXEC ?= nuquake.elf
 
 BUILD_DIR ?= ./build_dc
 EXEC_DIR ?= $(BUILD_DIR)
-SRC_DIRS ?= ./quake
+SRC_DIRS ?= $(shell pwd)/quake
 ROOT_DIR := .
 DEP_DIR := $(ROOT_DIR)/deps
 
+EXCLUDE_DIRS := win32 linux null
+EXCLUDE_FILES := $(foreach dir,$(EXCLUDE_DIRS),$(wildcard quake/$(dir)/*.c))
 FILTER_PLATFORMS = ./quake/win32/% ./quake/linux/% ./quake/null/% ./quake/common/unused/% ./quake/client/unused/% ./quake/dreamcast/unused/%
 
-SRCS := $(filter-out $(FILTER_PLATFORMS), $(shell find $(SRC_DIRS) -name "*.c"))
+#SRCS := $(filter-out $(FILTER_PLATFORMS), $(shell find $(SRC_DIRS) -name "*.c"))
+# Use wildcard instead
+SRCS := $(wildcard quake/*.c) \
+        $(wildcard quake/*/*.c) \
+        $(wildcard quake/*/*/*.c)
+
+# Then filter out unwanted platforms
+SRCS := $(filter-out $(EXCLUDE_FILES),$(SRCS))
+SRCS := $(filter-out quake/common/unused/%,$(SRCS))
+SRCS := $(filter-out quake/client/unused/%,$(SRCS))
+SRCS := $(filter-out quake/dreamcast/unused/%,$(SRCS))
+# Add debug print to see what files are found
+$(info Found source files: $(SRCS))
 OBJS := $(SRCS:%=$(BUILD_DIR)/%.o)
 DEPS := $(OBJS:.o=.d)
 
-INC_DIRS := $(filter-out $(FILTER_PLATFORMS), $(shell find $(SRC_DIRS) -type d))
-INC_FLAGS := $(addprefix -I,$(INC_DIRS)) -Iinclude
+# Use wildcard to get directories instead
+INC_DIRS := quake \
+            quake/client \
+            quake/common \
+            quake/dreamcast \
+            quake/renderer \
+            quake/server \
+            quake/vm
+
+# Filter out unwanted platforms
+INC_DIRS := $(filter-out $(FILTER_PLATFORMS),$(INC_DIRS))
+
+# Debug print
+$(info Include directories: $(INC_DIRS))
+
+# Modify INCS to include both the project directories and external dependencies
+INCS := -I$(DEP_DIR)/libgl/include \
+        -I$(DEP_DIR)/cglm/include \
+        -I$(DEP_DIR)/SDL/include \
+        -I$(CURDIR) \
+        $(addprefix -I,$(INC_DIRS))
+
+# If you still have INC_FLAGS, either remove it or update it similarly
+INC_FLAGS := $(INCS)
 
 # -fno-trapping-math -fno-finite-math-only
 #BASE_CFLAGS =  -Wall -Wextra -Wformat=0 -Wstack-usage=8096 -Wcast-align -fdump-rtl-dfinish -fstack-usage -Wno-missing-field-initializers -Wno-missing-braces -Wdouble-promotion -Wstrict-aliasing -fstrict-aliasing -fsingle-precision-constant -Xlinker -Map=dreamcast.map -DGLQUAKE -DBUILD_LIBGL -std=gnu11 -fdiagnostics-color
@@ -53,7 +89,7 @@ LIB_LZO = $(DEP_DIR)/minilzo/libminilzo.a
 #LIB_SDL = $(DEP_DIR)/SDL-1.2.9/libSDL_129.a
 LIB_SDL = $(DEP_DIR)/SDL/libSDL.a
 
-LIBS = $(LIB_GLDC)  -lz $(LIB_SDL)
+LIBS = $(LIB_GLDC)  -lz $(LIB_SDL) -lppp
 INCS += -iquote src/common -iquote src/dreamcast
 
 CPPFLAGS ?= $(INC_FLAGS) -MMD -MP
