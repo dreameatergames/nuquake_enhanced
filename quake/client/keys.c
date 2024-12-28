@@ -298,7 +298,7 @@ void Key_Message (int key)
 		return;
 	}
 
-	if (key == K_ESCAPE || key == K_SPACE || key == K_ALT)
+	if (key == K_ESCAPE || key == K_ALT)
 	{
 		key_dest = key_game;
 		chat_bufferlen = 0;
