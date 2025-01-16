@@ -1102,61 +1102,63 @@ void Host_InitVCR (quakeparms_t *parms)
 	}
 }
 #endif
-void load_defaultConfig(void) {
+
+static void load_defaultConfig(void) {
 
 	Cbuf_AddText ( 
-"echo \"Loading default settings...\"\n"
-"m_side \"0.8\"\n"
-"m_forward \"1\"\n"
-"m_yaw \"0.022\"\n"
-"m_pitch \"0.022\"\n"
-"sensitivity \"3\"\n"
-"lookstrafe \"0\"\n"
-"lookspring \"0\"\n"
-"cl_backspeed \"400\"\n"
-"cl_forwardspeed \"400\"\n"
-"_cl_color \"22\"\n"
-"_cl_name \"player\"\n"
-"sbar \"4\"\n"
-"sbar_y \"20\"\n"
-"sbar_x \"12\"\n"
-"sbar_show_ammo \"1\"\n"
-"sbar_show_health \"1\"\n"
-"sbar_show_armor \"1\"\n"
-"sbar_show_powerups \"1\"\n"
-"sbar_show_runes \"1\"\n"
-"sbar_show_keys \"1\"\n"
-"sbar_show_weaponlist \"1\"\n"
-"sbar_show_ammolist \"1\"\n"
-"sbar_show_scores \"0\"\n"
-"_snd_mixahead \"0.1\"\n"
-"bgmvolume \"1\"\n"
-"volume \"0.7\"\n"
-"d_mipscale \"1\"\n"
-"r_drawviewmodel \"1\"\n"
-"r_drawentities \"1\"\n"
-"r_fullbright \"0\"\n"
-"r_waterwarp \"1\"\n"
-"viewsize \"100\"\n"
-"vmu_autosave \"1\"\n"
-"vmu_unit \"1\"\n"
-"vmu_port \"0\"\n"
-"sv_aim \"0.93\"\n"
-"sv_aim_h \"1\"\n"
-"saved4 \"0\"\n"
-"saved3 \"0\"\n"
-"saved2 \"0\"\n"
-"saved1 \"0\"\n"
-"savedgamecfg \"1\"\n"
-"vid_gamma  \"0.6\"\n"
-"scr_ofsy \"0\"\n"
-"cl_nobob \"0\"\n"
-"gl_polyblend \"1\"\n"
-"crosshair_color \"0\"\n"
-"crosshair \"1\"\n"
-"echo \"done Auto config.\"\n"
-);
+		"echo \"Loading default settings...\"\n"
+		"m_side \"0.8\"\n"
+		"m_forward \"1\"\n"
+		"m_yaw \"0.022\"\n"
+		"m_pitch \"0.022\"\n"
+		"sensitivity \"3\"\n"
+		"lookstrafe \"0\"\n"
+		"lookspring \"0\"\n"
+		"cl_backspeed \"400\"\n"
+		"cl_forwardspeed \"400\"\n"
+		"_cl_color \"22\"\n"
+		"_cl_name \"player\"\n"
+		"sbar \"4\"\n"
+		"sbar_y \"20\"\n"
+		"sbar_x \"12\"\n"
+		"sbar_show_ammo \"1\"\n"
+		"sbar_show_health \"1\"\n"
+		"sbar_show_armor \"1\"\n"
+		"sbar_show_powerups \"1\"\n"
+		"sbar_show_runes \"1\"\n"
+		"sbar_show_keys \"1\"\n"
+		"sbar_show_weaponlist \"1\"\n"
+		"sbar_show_ammolist \"1\"\n"
+		"sbar_show_scores \"0\"\n"
+		"_snd_mixahead \"0.1\"\n"
+		"bgmvolume \"1\"\n"
+		"volume \"0.7\"\n"
+		"d_mipscale \"1\"\n"
+		"r_drawviewmodel \"1\"\n"
+		"r_drawentities \"1\"\n"
+		"r_fullbright \"0\"\n"
+		"r_waterwarp \"1\"\n"
+		"viewsize \"100\"\n"
+		"vmu_autosave \"1\"\n"
+		"vmu_unit \"1\"\n"
+		"vmu_port \"0\"\n"
+		"sv_aim \"0.93\"\n"
+		"sv_aim_h \"1\"\n"
+		"saved4 \"0\"\n"
+		"saved3 \"0\"\n"
+		"saved2 \"0\"\n"
+		"saved1 \"0\"\n"
+		"savedgamecfg \"1\"\n"
+		"vid_gamma  \"0.6\"\n"
+		"scr_ofsy \"0\"\n"
+		"cl_nobob \"0\"\n"
+		"gl_polyblend \"1\"\n"
+		"crosshair_color \"0\"\n"
+		"crosshair \"1\"\n"
+		"echo \"done Auto config.\"\n"
+		);
 }
+
 /*
 ====================
 Host_Init
@@ -1248,9 +1250,8 @@ void Host_Init(quakeparms_t *parms)
 #endif
     }
 
- //	Cbuf_InsertText ("exec quake.rc\n");
-	Cbuf_AddText ("exec quake.rc\n");
-
+    Cbuf_InsertText("exec quake.rc\n");
+    
 /* Ian micheal- load default config begin */
 	load_defaultConfig();
 /* Ian micheal - load default config end */
@@ -1258,7 +1259,7 @@ void Host_Init(quakeparms_t *parms)
 /* Ian micheal- load options begin */
 	Host_ReadConfiguration();
 /* Ian micheal - load options end */
-
+    
     Hunk_AllocName(0, "-HOST_HUNKLEVEL-");
     host_hunklevel = Hunk_LowMark();
 

@@ -164,29 +164,61 @@ void R_BeginBatchingSurfacesQuad() {
 }
 
 void R_BatchSurfaceQuadText(int x, int y, float frow, float fcol, float size) {
-  //Vertex 1
-  //Quad vertex
-  r_batchedfastvertexes_text[r_numsurfvertexes_text + 0] = (glvert_fast_t){.flags = VERTEX, .vert = {x, y, 0}, .texture = {fcol, frow}, VTX_COLOR_WHITE, .pad0 = {0}};
+  // Add small padding to prevent texture bleeding
+  const float pad = 0.001f;
+  fcol += pad;
+  frow += pad;
+  size -= pad * 2;
+  
+  // First triangle (bottom-left, top-left, top-right)
+  r_batchedfastvertexes_text[r_numsurfvertexes_text + 0] = (glvert_fast_t){
+    .flags = VERTEX,
+    .vert = {x, y + text_size, 0},
+    .texture = {fcol, frow + size},
+    VTX_COLOR_WHITE,
+    .pad0 = {0}
+  };
 
-  //Vertex 2
-  //Quad vertex
-  r_batchedfastvertexes_text[r_numsurfvertexes_text + 1] = (glvert_fast_t){.flags = VERTEX, .vert = {x + text_size, y, 0}, .texture = {fcol + size, frow}, VTX_COLOR_WHITE, .pad0 = {0}};
+  r_batchedfastvertexes_text[r_numsurfvertexes_text + 1] = (glvert_fast_t){
+    .flags = VERTEX,
+    .vert = {x, y, 0},
+    .texture = {fcol, frow},
+    VTX_COLOR_WHITE,
+    .pad0 = {0}
+  };
 
-  //Vertex 4
-  //Quad vertex
-  r_batchedfastvertexes_text[r_numsurfvertexes_text + 2] = (glvert_fast_t){.flags = VERTEX_EOL, .vert = {x, y + text_size, 0}, .texture = {fcol, frow + size}, VTX_COLOR_WHITE, .pad0 = {0}};
+  r_batchedfastvertexes_text[r_numsurfvertexes_text + 2] = (glvert_fast_t){
+    .flags = VERTEX_EOL,
+    .vert = {x + text_size, y, 0},
+    .texture = {fcol + size, frow},
+    VTX_COLOR_WHITE,
+    .pad0 = {0}
+  };
 
-  //Vertex 4
-  //Quad vertex
-  r_batchedfastvertexes_text[r_numsurfvertexes_text + 3] = (glvert_fast_t){.flags = VERTEX, .vert = {x, y + text_size, 0}, .texture = {fcol, frow + size}, VTX_COLOR_WHITE, .pad0 = {0}};
+  // Second triangle (bottom-left, top-right, bottom-right)
+  r_batchedfastvertexes_text[r_numsurfvertexes_text + 3] = (glvert_fast_t){
+    .flags = VERTEX,
+    .vert = {x, y + text_size, 0},
+    .texture = {fcol, frow + size},
+    VTX_COLOR_WHITE,
+    .pad0 = {0}
+  };
 
-  //Vertex 2
-  //Quad vertex
-  r_batchedfastvertexes_text[r_numsurfvertexes_text + 4] = (glvert_fast_t){.flags = VERTEX, .vert = {x + text_size, y, 0}, .texture = {fcol + size, frow}, VTX_COLOR_WHITE, .pad0 = {0}};
+  r_batchedfastvertexes_text[r_numsurfvertexes_text + 4] = (glvert_fast_t){
+    .flags = VERTEX,
+    .vert = {x + text_size, y, 0},
+    .texture = {fcol + size, frow},
+    VTX_COLOR_WHITE,
+    .pad0 = {0}
+  };
 
-  //Vertex 3
-  //Quad vertex
-  r_batchedfastvertexes_text[r_numsurfvertexes_text + 5] = (glvert_fast_t){.flags = VERTEX_EOL, .vert = {x + text_size, y + text_size, 0}, .texture = {fcol + size, frow + size}, VTX_COLOR_WHITE, .pad0 = {0}};
+  r_batchedfastvertexes_text[r_numsurfvertexes_text + 5] = (glvert_fast_t){
+    .flags = VERTEX_EOL,
+    .vert = {x + text_size, y + text_size, 0},
+    .texture = {fcol + size, frow + size},
+    VTX_COLOR_WHITE,
+    .pad0 = {0}
+  };
 
   r_numsurfvertexes_text += 6;
 
