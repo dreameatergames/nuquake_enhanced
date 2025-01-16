@@ -264,7 +264,7 @@ void M_DrawTransPicTranslate (int x, int y, qpic_t *pic)
 	Draw_TransPicTranslate (x + ((vid.width - 320)>>1), y, pic, translationTable);
 }
 
-void DrawQuad(float x, float y, float w, float h, float u, float v, float uw, float vh);
+void DrawQuad(int x, int y, int w, int h, float u, float v, float uw, float vh);
 typedef struct
 {
 	int		texnum;
