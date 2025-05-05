@@ -42,7 +42,7 @@ INC_DIRS := $(filter-out $(FILTER_PLATFORMS),$(INC_DIRS))
 $(info Include directories: $(INC_DIRS))
 
 # Modify INCS to include both the project directories and external dependencies
-INCS := -I$(DEP_DIR)/libgl/include \
+INCS := -I$(KOS_PORTS)/include \
         -I$(DEP_DIR)/cglm/include \
         -I$(DEP_DIR)/SDL/include \
         -I$(CURDIR) \
@@ -73,7 +73,7 @@ debug: $(BUILD_DIR)/$(TARGET_EXEC)
 
 #INC_LZO = -I$(DEP_DIR)/minilzo
 #INC_ALDC = -I$(DEP_DIR)/aldc/include
-INCS :=  -I$(DEP_DIR)/libgl/include  -I$(DEP_DIR)/cglm/include -I$(DEP_DIR)/SDL/include
+INCS :=  -I$(KOS_PORTS)/include/GL -I$(DEP_DIR)/cglm/include -I$(DEP_DIR)/SDL/include
 #-I$(DEP_DIR)/SDL-1.2.9/inst/include
 
 
@@ -82,7 +82,7 @@ AS = kos-as
 
 STRIP = $(PREFIX)strip
 
-LIB_GLDC = $(DEP_DIR)/libgl/libGLdc.a
+LIB_GLDC = $(KOS_PORTS)/lib/libGL.a
 LIB_LZO = $(DEP_DIR)/minilzo/libminilzo.a
 #LIB_ALDC = $(DEP_DIR)/aldc/libAL.a
 #LIB_SDL = -lSDL
