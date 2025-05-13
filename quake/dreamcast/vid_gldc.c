@@ -266,8 +266,8 @@ void VID_Init(unsigned char *palette)
   Cmd_AddCommand("vid_gamma", VID_Gamma_f);
   Cmd_AddCommand("aspect", VID_Aspect_f);
 
-  vid.width = vid.conwidth = BASEWIDTH;
-  vid.height = vid.conheight = BASEHEIGHT;
+  vid.width = vid.conwidth = 320;
+  vid.height = vid.conheight = 240;
 
 #if 0 //Widescreen
   vid.aspect = ((float)853.0 / (float)480.0) * (320.0 / 240.0);

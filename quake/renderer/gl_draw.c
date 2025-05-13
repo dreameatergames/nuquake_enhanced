@@ -24,7 +24,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "quakedef.h"
 typedef unsigned char uint8_t;
 
-void DrawQuad(float x, float y, float w, float h, float u, float v, float uw, float vh);
+void DrawQuad(int x, int y, int w, int h, float u, float v, float uw, float vh);
 void DrawQuad_NoTex(float x, float y, float w, float h, int c);
 
 #define GL_COLOR_INDEX8_EXT 0x80E5
@@ -59,7 +59,7 @@ int gl_lightmap_format = GL_RGBA;
 int gl_solid_format = GL_RGB;
 int gl_alpha_format = GL_RGBA;
 
-int gl_filter_min = GL_NEAREST_MIPMAP_LINEAR;
+int gl_filter_min = GL_LINEAR;
 int gl_filter_max = GL_LINEAR;
 
 typedef struct
@@ -74,6 +74,17 @@ typedef struct
 static int numgltextures;
 #define MAX_GLTEXTURES 512
 gltexture_t gltextures[MAX_GLTEXTURES];
+
+/*
+* @Note: define static texture memory
+*/
+static unsigned char __attribute__((aligned(32)))  buffer_aligned[512 * 512 * 4];
+#ifndef _arch_dreamcast
+static unsigned int scaled[1024 * 512];  // [512*256];
+#else
+static unsigned char* scaled_raw = NULL;
+static unsigned char* scaled = NULL;
+#endif
 
 void GL_FreeTextures (void)
 {
@@ -131,7 +142,7 @@ void GL_Bind(unsigned int texnum) {
 }
 
 void GL_OverscanAdjust(int *x, int *y) {
-  if (scr_safety.value > 1.0f) {
+  if (scr_safety.value > 4.0f) {
     if (*x < scr_safety.value) {
       *x += scr_safety.value;
     }
@@ -173,6 +184,7 @@ void GL_OverscanAdjust(int *x, int *y) {
 #define MAX_SCRAPS 4
 #define BLOCK_WIDTH 256
 #define BLOCK_HEIGHT 256
+#define TEXTURE_PADDING 1  // Increased padding to ensure no bleeding
 
 int scrap_allocated[MAX_SCRAPS][BLOCK_WIDTH];
 byte __attribute__((aligned(32))) scrap_texels[MAX_SCRAPS][BLOCK_WIDTH * BLOCK_HEIGHT];
@@ -228,6 +240,8 @@ void Scrap_Upload(void) {
     GL_Bind(scrap_texnum + texnum);
     GL_Upload8(scrap_texels[texnum], BLOCK_WIDTH, BLOCK_HEIGHT, TEX_ALPHA);
   }
+  
+  glPixelStorei(GL_UNPACK_ALIGNMENT, 4);  
   scrap_dirty = false;
 }
 
@@ -639,9 +653,15 @@ void Draw_Character(int x, int y, int num) {
   row = num >> 4;
   col = num & 15;
 
-  v = row * 0.0625;
-  u = col * 0.0625;
-  size = 0.0625;
+  // Add a small offset to prevent texture bleeding
+  // and ensure proper alignment
+  v = row * 0.0625f + 0.001f;
+  u = col * 0.0625f + 0.001f;
+  size = 0.0625f - 0.002f;  // Slightly smaller to account for the offset
+
+  // Ensure x and y are properly aligned for the hardware
+  x = (x + 4) & ~7;  // Align to 8-pixel boundary
+  y = (y + 4) & ~7;
 
   GL_Bind(char_texture);
 
@@ -709,21 +729,38 @@ void Draw_AlphaPic(int x, int y, qpic_t *pic, float alpha) {
 
   if (scrap_dirty)
     Scrap_Upload();
+    
   gl = (glpic_t *)pic->data;
-  /*
-	* @Note: still unsure what the most correct/best way to draw these are.
-	* this still isnt working correctly all the time and is slower than PT
-	*/
+  
+  // Setup blending
   glEnable(GL_BLEND);
   glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-  glCullFace(GL_FRONT);
-  quad_alpha = alpha*255;
+  
+  // Disable culling for consistent rendering
+  glDisable(GL_CULL_FACE);
+  
+  // Set alpha
+  quad_alpha = (uint8_t)(alpha * 255.0f);
+  
+  // Bind texture and ensure proper filtering
   GL_Bind(gl->texnum);
-  DrawQuad(x, y, pic->width, pic->height, gl->sl, gl->tl, gl->sh - gl->sl, gl->th - gl->tl);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+  
+  // Ensure coordinates are hardware aligned
+  x = (x + 4) & ~7;
+  y = (y + 4) & ~7;
+  
+  // Draw the quad
+  DrawQuad(x, y, pic->width, pic->height, 
+           gl->sl, gl->tl, 
+           gl->sh - gl->sl, gl->th - gl->tl);
+  
+  // Restore state
   quad_alpha = 255;
+  glEnable(GL_CULL_FACE);
   glDisable(GL_BLEND);
 }
-
 /*
 =============
 Draw_Pic
@@ -766,13 +803,18 @@ void Draw_TransPicTranslate(int x, int y, qpic_t *pic, byte *translation) {
 
   GL_Bind(translate_texture);
 
+  // Use actual pic dimensions for scaling
+  float scale_h = (float)pic->height / 64.0f;
+  float scale_w = (float)pic->width / 64.0f;
+
   dest = trans;
   for (v = 0; v < 64; v++, dest += 64) {
-    src = &menuplyr_pixels[((v * pic->height) >> 6) * pic->width];
+    src = &menuplyr_pixels[(int)(v * scale_h) * pic->width];
     for (u = 0; u < 64; u++) {
-      p = src[(u * pic->width) >> 6];
+
+      p = src[(int)(u * scale_w)];
       if (p == 255)
-        dest[u] = p;
+        dest[u] = 0;  // Make transparent pixels actually transparent
       else
         dest[u] = d_8to24table[translation[p]];
     }
@@ -1132,17 +1174,6 @@ void GL_MipMap8Bit(byte *in, int width, int height) {
 }
 
 /*
-* @Note: define static texture memory
-*/
-static unsigned char __attribute__((aligned(32)))  buffer_aligned[512 * 512 * 4];
-#ifndef _arch_dreamcast
-static unsigned int scaled[1024 * 512];  // [512*256];
-#else
-static unsigned char* scaled_raw = NULL;
-static unsigned char* scaled = NULL;
-#endif
-
-/*
 ===============
 GL_Upload32
 ===============
@@ -1490,23 +1521,54 @@ void DrawQuad_NoTex(float x, float y, float w, float h, int c) {
   glEnable(GL_TEXTURE_2D);
 }
 
-void DrawQuad(float x, float y, float w, float h, float u, float v, float uw, float vh) {
+void DrawQuad(int x, int y, int w, int h, float u, float v, float uw, float vh) {
   glvert_fast_t quadvert[4];
-  //Vertex 1
-  //Quad vertex
-  quadvert[0] = (glvert_fast_t){.flags = VERTEX, .vert = {x, y, 0}, .texture = {u, v}, .color = { .packed = PACK_BGRA8888(255,255,255,quad_alpha)}, .pad0 = {0}};
+  
+  // Ensure coordinates are hardware aligned
+  x = (x + 4) & ~7;
+  y = (y + 4) & ~7;
+  
+  // Adjust texture coordinates to prevent chopping
+  float u2 = u + uw;
+  float v2 = v + vh;
+  
+  // Triangle strip order: bottom-left, top-left, bottom-right, top-right
+  // Vertex 1 (bottom-left)
+  quadvert[0] = (glvert_fast_t){
+    .flags = VERTEX,
+    .vert = {(float)x, (float)(y + h), 0},
+    .texture = {u, v2},
+    .color = { .packed = PACK_BGRA8888(255,255,255,quad_alpha)},
+    .pad0 = {0}
+  };
 
-  //Vertex 4
-  //Quad vertex
-  quadvert[1] = (glvert_fast_t){.flags = VERTEX, .vert = {x, y + h, 0}, .texture = {u, v + vh}, .color = { .packed = PACK_BGRA8888(255,255,255,quad_alpha)}, .pad0 = {0}};
+  // Vertex 2 (top-left)
+  quadvert[1] = (glvert_fast_t){
+    .flags = VERTEX,
+    .vert = {(float)x, (float)y, 0},
+    .texture = {u, v},
+    .color = { .packed = PACK_BGRA8888(255,255,255,quad_alpha)},
+    .pad0 = {0}
+  };
 
-  //Vertex 2
-  //Quad vertex
-  quadvert[2] = (glvert_fast_t){.flags = VERTEX, .vert = {x + w, y, 0}, .texture = {u + uw, v}, .color = { .packed = PACK_BGRA8888(255,255,255,quad_alpha)}, .pad0 = {0}};
+  // Vertex 3 (bottom-right)
+  quadvert[2] = (glvert_fast_t){
+    .flags = VERTEX,
+    .vert = {(float)(x + w), (float)(y + h), 0},
+    .texture = {u2, v2},
+    .color = { .packed = PACK_BGRA8888(255,255,255,quad_alpha)},
+    .pad0 = {0}
+  };
 
-  //Vertex 3
-  //Quad vertex
-  quadvert[3] = (glvert_fast_t){.flags = VERTEX_EOL, .vert = {x + w, y + h, 0}, .texture = {u + uw, v + vh}, .color = { .packed = PACK_BGRA8888(255,255,255,quad_alpha)}, .pad0 = {0}};
+  // Vertex 4 (top-right)
+  quadvert[3] = (glvert_fast_t){
+    .flags = VERTEX_EOL,
+    .vert = {(float)(x + w), (float)y, 0},
+    .texture = {u2, v},
+    .color = { .packed = PACK_BGRA8888(255,255,255,quad_alpha)},
+    .pad0 = {0}
+  };
+
   glEnableClientState(GL_COLOR_ARRAY);
   glEnableClientState(GL_TEXTURE_COORD_ARRAY);
   glVertexPointer(3, GL_FLOAT, sizeof(glvert_fast_t), &quadvert[0].vert);
