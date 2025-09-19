@@ -16,6 +16,8 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 #ifdef _arch_dreamcast
+#include <malloc.h>
+#include <dc/pvr.h>
 #include <sys/dirent.h>
 #else
 #include <dirent.h>
@@ -29,9 +31,6 @@ void DrawQuad(float x, float y, float w, float h, float u, float v, float uw, fl
 void BitmapLoad(char *path, GLuint *temp_tex);
 void glScaleF(float x, float y, float z);
 void GL_Set2D(void);
-
-extern uint32_t pvr_mem_available(void);
-extern void malloc_stats(void);
 
 extern unsigned int char_texture;
 
