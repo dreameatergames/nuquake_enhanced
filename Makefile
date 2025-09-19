@@ -42,9 +42,9 @@ INC_DIRS := $(filter-out $(FILTER_PLATFORMS),$(INC_DIRS))
 $(info Include directories: $(INC_DIRS))
 
 # Modify INCS to include both the project directories and external dependencies
-INCS := -I$(DEP_DIR)/libgl/include \
+INCS := -I$(KOS_PORTS)/include/GL \
         -I$(DEP_DIR)/cglm/include \
-        -I$(DEP_DIR)/SDL/include \
+        -I$(DEP_DIR)/include/SDL \
         -I$(CURDIR) \
         $(addprefix -I,$(INC_DIRS))
 
@@ -73,7 +73,7 @@ debug: $(BUILD_DIR)/$(TARGET_EXEC)
 
 #INC_LZO = -I$(DEP_DIR)/minilzo
 #INC_ALDC = -I$(DEP_DIR)/aldc/include
-INCS :=  -I$(DEP_DIR)/libgl/include  -I$(DEP_DIR)/cglm/include -I$(DEP_DIR)/SDL/include
+INCS :=  -I$(KOS_PORTS)/include/GL  -I$(DEP_DIR)/cglm/include -I$(DEP_DIR)/SDL/include
 #-I$(DEP_DIR)/SDL-1.2.9/inst/include
 
 
@@ -82,10 +82,10 @@ AS = kos-as
 
 STRIP = $(PREFIX)strip
 
-LIB_GLDC = $(DEP_DIR)/libgl/libGLdc.a
+LIB_GLDC = $(KOS_PORTS)/lib/libGL.a
 LIB_LZO = $(DEP_DIR)/minilzo/libminilzo.a
 #LIB_ALDC = $(DEP_DIR)/aldc/libAL.a
-#LIB_SDL = -lSDL
+#LIB_SDL = $(KOS_PORTS)/lib/libSDL.a
 #LIB_SDL = $(DEP_DIR)/SDL-1.2.9/libSDL_129.a
 LIB_SDL = $(DEP_DIR)/SDL/libSDL.a
 
@@ -113,8 +113,8 @@ $(BUILD_DIR)/%.c.o: %.c
 #GLdc :
 #	@$(MAKE) -C deps/libgl CFLAGS=-DBUILD_LIBGL build
 
-$(LIB_GLDC):
-	$(MAKE) -C deps/libgl
+#$(LIB_GLDC):
+#	$(MAKE) -C deps/libgl
 
 $(LIB_LZO):
 	$(MAKE) -C deps/minilzo
