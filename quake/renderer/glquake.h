@@ -27,6 +27,9 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #endif
 #ifdef _arch_dreamcast
 
+#include <malloc.h>
+#include <dc/pvr.h>
+
 #ifndef BUILD_LIBGL
 #include <GL/gl.h>
 //#include <GL/glu.h> //@Note: unneeded anymore
@@ -38,9 +41,6 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "glext.h"
 #endif
 
-extern uint32_t pvr_mem_available(void);
-extern void malloc_stats(void);
-extern void pvr_mem_stats(void);
 #else
 #include <GL/gl.h>
 #include <GL/glext.h>
