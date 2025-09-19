@@ -1,4 +1,10 @@
+<<<<<<< HEAD
+*.o
+*.BIN
+/build_dc
+=======
 
 1ST_READ.BIN
 /build_dc
 dreamcast.map
+>>>>>>> testing
