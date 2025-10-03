@@ -97,4 +97,6 @@ void 	Cvar_WriteVariables (FILE *f);
 
 cvar_t *Cvar_FindVar (const char *var_name);
 
+void Cvar_Set_f(void);	//DP_CVAR_SET originally, but needed for csqc.
+
 extern cvar_t	*cvar_vars;

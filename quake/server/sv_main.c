@@ -24,6 +24,10 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 server_t		sv;
 server_static_t	svs;
 
+#ifdef EXT_CSQC
+cvar_t	sv_csqc_progname = {"sv_csqc_progname", "csprogs.dat"};
+#endif
+
 char	localmodels[MAX_MODELS][5];			// inline model names for precache
 
 //============================================================================
@@ -57,6 +61,10 @@ void SV_Init (void)
 	Cvar_RegisterVariable (&sv_idealpitchscale);
 	Cvar_RegisterVariable (&sv_aim);
 	Cvar_RegisterVariable (&sv_nostep);
+
+#ifdef EXT_CSQC
+	Cvar_RegisterVariable (&sv_csqc_progname);
+#endif
 
 	for (i=0 ; i<MAX_MODELS ; i++)
 		sprintf (localmodels[i], "*%i", i);
@@ -208,6 +216,25 @@ void SV_SendServerinfo(client_t *client)
     MSG_WriteByte(&client->message, svc_print);
     sprintf(message, "%c\nVERSION %4.2f SERVER (%i CRC)", 2, (double)VERSION, pr_crc);
     MSG_WriteString(&client->message, message);
+
+#ifdef EXT_CSQC
+	MSG_WriteByte (&client->message, svc_stufftext);
+	sprintf (message, "//csqc_progname \"%s\"\n", sv.csqc_progname);
+	MSG_WriteString (&client->message,message);
+	MSG_WriteByte (&client->message, svc_stufftext);
+	sprintf (message, "//csqc_progsize 0x%x\n", sv.csqc_progsize);
+	MSG_WriteString (&client->message,message);
+	MSG_WriteByte (&client->message, svc_stufftext);
+	sprintf (message, "//csqc_progcrc 0x%x\n", sv.csqc_progcrc);
+	MSG_WriteString (&client->message,message);
+
+	memset(client->statcachefloat, 0, sizeof(client->statcachefloat));
+	memset(client->statcacheint, 0, sizeof(client->statcacheint));
+	for (i = 0; i < MAX_CL_STATS; i++)
+		if (client->statcachestring[i])
+			free(client->statcachestring[i]);
+	memset(client->statcachestring, 0, sizeof(client->statcachestring));
+#endif
 
     MSG_WriteByte(&client->message, svc_serverinfo);
     MSG_WriteLong(&client->message, PROTOCOL_VERSION);
@@ -587,7 +614,20 @@ SV_WriteClientdataToMessage
 
 ==================
 */
-void SV_WriteClientdataToMessage (edict_t *ent, sizebuf_t *msg)
+void SV_WriteClientdataToMessage (edict_t *ent, sizebuf_t *msg
+#ifdef EXT_CSQC
+	, int *statcacheint, float *statcachefloat, char **statcachestring
+
+#define STATCACHEB(s) do {statcacheint[s]=0;statcachefloat[s]=(unsigned char)newstatfloat[s];}while(0)
+#define STATCACHEC(s) do {statcacheint[s]=0;statcachefloat[s]=(char)newstatfloat[s];}while(0)
+#define STATCACHESH(s) do {statcacheint[s]=0;statcachefloat[s]=(short)newstatfloat[s];}while(0)
+#define STATCACHEL(s) do {statcachefloat[s]=0;statcacheint[s]=(int)newstatint[s];}while(0)
+#else
+#define STATCACHEB(s)
+#define STATCACHESH(s)
+#define STATCACHEL(s)
+#endif
+	)
 {
 	int		bits;
 	int		i;
@@ -596,7 +636,6 @@ void SV_WriteClientdataToMessage (edict_t *ent, sizebuf_t *msg)
 #ifndef QUAKE2
 	eval_t	*val;
 #endif
-
 //
 // send a damage message
 //
@@ -674,12 +713,35 @@ void SV_WriteClientdataToMessage (edict_t *ent, sizebuf_t *msg)
 		bits |= SU_WEAPON;
 
 // send the data
+#ifdef EXT_CSQC
+	if (host_client->usingcsqc || host_client->isindependant)
+	{
+		//if they're using independant physics, then they need some slightly different data
+		//namely an ack of their last input packet
+		//but if they're running csqc, then chances are they probably also want the revised thing, as it has better stat usage anyway.
+		//basically any chance to use the revised protocol.
+		MSG_WriteByte (msg, svc_indep_clientdata);
 
-	MSG_WriteByte (msg, svc_clientdata);
+		//these bits no longer make sense
+		bits &= ~(SU_VIEWHEIGHT|SU_ITEMS|SU_WEAPONFRAME|SU_ARMOR|SU_WEAPON);
+	}
+	else
+#endif
+	{
+		MSG_WriteByte (msg, svc_clientdata);
+	}
 	MSG_WriteShort (msg, bits);
 
-	if (bits & SU_VIEWHEIGHT)
-		MSG_WriteChar (msg, ent->v.view_ofs[2]);
+#ifdef EXT_CSQC
+	if (host_client->usingcsqc)
+		MSG_WriteLong (msg, host_client->lastinputsequence);
+	else
+#endif
+	{
+		if (bits & SU_VIEWHEIGHT)
+			MSG_WriteChar (msg, newstatfloat[STAT_VIEWHEIGHT]);
+		STATCACHEC(STAT_VIEWHEIGHT);
+	}
 
 	if (bits & SU_IDEALPITCH)
 		MSG_WriteChar (msg, ent->v.idealpitch);
@@ -691,6 +753,10 @@ void SV_WriteClientdataToMessage (edict_t *ent, sizebuf_t *msg)
 		if (bits & (SU_VELOCITY1<<i))
 			MSG_WriteChar (msg, ent->v.velocity[i]/16);
 	}
+
+#ifdef EXT_CSQC
+	if (!host_client->usingcsqc)
+#endif
 
 // [always sent]	if (bits & SU_ITEMS)
 	MSG_WriteLong (msg, items);
@@ -724,6 +790,87 @@ void SV_WriteClientdataToMessage (edict_t *ent, sizebuf_t *msg)
 			}
 		}
 	}
+	#ifdef EXT_CSQC
+	//okay, so that's the standard stats written
+	//we probably broke stuff, yay for legacy
+	for (i = 0; i < MAX_CL_STATS; i++)
+	{
+		//if its a float, try and compact it to an int if we can
+		if (newstatfloat[i])
+		{
+			newstatint[i] = (int)newstatfloat[i];
+			if ((float)newstatint[i] != newstatfloat[i])
+				newstatint[i] = 0;
+			else
+				newstatfloat[i] = 0;
+		}
+
+		if (newstatint[i])
+		{
+			if (statcacheint[i] != newstatint[i])
+			{
+				statcacheint[i] = newstatint[i];
+				statcachefloat[i] = newstatint[i];
+				if ((newstatint[i]&~255))
+				{
+					MSG_WriteByte(msg, svc_updatestat_long);
+					MSG_WriteByte(msg, i);
+					MSG_WriteLong(msg, statcacheint[i]);
+				}
+				else
+				{
+					MSG_WriteByte(msg, svc_updatestat_byte);
+					MSG_WriteByte(msg, i);
+					MSG_WriteByte(msg, statcacheint[i]&255);
+				}
+			}
+		}
+		else if (newstatfloat[i])
+		{
+			if (statcachefloat[i] != newstatfloat[i])
+			{
+				statcacheint[i] = newstatfloat[i];
+				statcachefloat[i] = newstatfloat[i];
+
+				MSG_WriteByte(msg, svc_updatestat_float);
+				MSG_WriteByte(msg, i);
+				MSG_WriteFloat(msg, statcachefloat[i]);
+			}
+		}
+		else if (statcacheint[i] || statcachefloat[i])
+		{
+			MSG_WriteByte(msg, svc_updatestat_byte);
+			MSG_WriteByte(msg, i);
+			MSG_WriteByte(msg, 0);
+			statcacheint[i] = 0;
+			statcachefloat[i] = 0;
+		}
+
+		if (newstatstring[i] && *newstatstring[i])
+		{
+			if (!statcachestring[i] || !strcmp(statcachestring[i], newstatstring[i]))
+			{
+				if (statcachestring[i])
+					free(statcachestring[i]);
+				statcachestring[i] = strdup(newstatstring[i]);
+
+				if (statcachestring[i])
+				{
+					MSG_WriteByte(msg, svc_updatestat_string);
+					MSG_WriteString(msg, statcachestring[i]);
+				}
+			}
+		}
+		else if (statcachestring[i])
+		{
+			free(statcachestring[i]);
+			statcachestring[i] = NULL;
+			MSG_WriteByte(msg, svc_updatestat_string);
+			MSG_WriteByte(msg, i);
+			MSG_WriteString(msg, "");
+		}
+	}
+#endif
 }
 
 /*
@@ -744,7 +891,11 @@ qboolean SV_SendClientDatagram (client_t *client)
 	MSG_WriteFloat (&msg, sv.time);
 
 // add the client specific data to the datagram
-	SV_WriteClientdataToMessage (client->edict, &msg);
+	SV_WriteClientdataToMessage (client->edict, &msg
+#ifdef EXT_CSQC
+		, client->statcacheint, client->statcachefloat, client->statcachestring
+#endif
+		);
 
 	SV_WriteEntitiesToClient (client->edict, &msg);
 
@@ -836,6 +987,10 @@ void SV_SendClientMessages (void)
 	
 // update frags, names, etc
 	SV_UpdateToReliableMessages ();
+
+#ifdef EXT_CSQC
+	SV_CSQC_CheckSendFlags();
+#endif
 
 // build individual updates
 	for (i=0, host_client = svs.clients ; i<svs.maxclients ; i++, host_client++)
@@ -1105,6 +1260,57 @@ void SV_SpawnServer (char *server)
 
 // load progs to get entity field count
 	PR_LoadProgs ();
+
+	#ifdef EXT_CSQC
+	//CSQC. work out if we're going to ask clients to use it
+	{
+		unsigned char *file;
+		unsigned short rcrc;
+		dfunction_t *f;
+		ddef_t *d;
+
+		/*these fields are added for csqc*/
+		sv.qcfield.sendentity = ED_QueryField("SendEntity");
+		sv.qcfield.sendflags = ED_QueryField("SendFlags");
+		sv.qcfield.pvsflags = ED_QueryField("pvsflags");
+		sv.qcfield.version = ED_QueryField("Version");
+
+
+		f = ED_FindFunction("SV_RunClientCommand");
+		sv.qcglob.RunClientCommand = f?f - pr_functions:0;
+
+		d = ED_FindGlobal("input_timelength");
+		sv.qcglob.input_timelength = d?pr_globals+d->ofs:NULL;
+		d = ED_FindGlobal("input_angles");
+		sv.qcglob.input_angles = d?pr_globals+d->ofs:NULL;
+		d = ED_FindGlobal("input_movevalues");
+		sv.qcglob.input_movevalues = d?pr_globals+d->ofs:NULL;
+		d = ED_FindGlobal("input_buttons");
+		sv.qcglob.input_buttons = d?pr_globals+d->ofs:NULL;
+		d = ED_FindGlobal("input_impulse");
+		sv.qcglob.input_impulse = d?pr_globals+d->ofs:NULL;
+
+		strcpy(sv.csqc_progname, sv_csqc_progname.string);
+		if (*sv.csqc_progname)
+			file = COM_LoadTempFile(sv.csqc_progname);
+		else
+			file = NULL;
+		if (file)
+		{
+			sv.csqc_progsize = com_filesize;
+			CRC_Init(&rcrc);
+			for (i = 0; i < com_filesize; i++)
+				CRC_ProcessByte(&rcrc, file[i]);
+			sv.csqc_progcrc = rcrc;
+		}
+		else
+		{
+			strcpy(sv.csqc_progname, "");
+			sv.csqc_progsize = 0;
+			sv.csqc_progcrc = 0;
+		}
+	}
+#endif
 
 // allocate server memory
 	sv.max_edicts = MAX_EDICTS;

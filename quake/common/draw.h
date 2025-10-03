@@ -38,3 +38,4 @@ void Draw_FadeScreen (void);
 void Draw_String (int x, int y, char *str);
 qpic_t *Draw_PicFromWad (char *name);
 qpic_t *Draw_CachePic (char *path);
+qpic_t *Draw_CachePic_CSQC (char *path);	//doesn't fail, and can get wad images too.

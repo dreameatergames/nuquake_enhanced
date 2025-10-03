@@ -524,6 +524,38 @@ void Cmd_AddCommand(char *cmd_name, xcommand_t function) {
   cmd_functions = cmd;
 }
 
+#ifdef EXT_CSQC
+//EXT_CSQC: register a new command mid-level
+void	Cmd_AddDynCommand (char *cmd_name, xcommand_t function)
+{
+	cmd_function_t	*cmd;
+
+// fail if the command is a variable name
+	if (Cvar_VariableString(cmd_name)[0])
+	{
+		Con_Printf ("Cmd_AddCommand: %s already defined as a var\n", cmd_name);
+		return;
+	}
+	
+// fail if the command already exists
+	for (cmd=cmd_functions ; cmd ; cmd=cmd->next)
+	{
+		if (!Q_strcmp (cmd_name, cmd->name))
+		{
+			if (cmd->function != function)
+				Con_Printf ("Cmd_AddCommand: %s already defined\n", cmd_name);
+			return;
+		}
+	}
+
+	cmd = Z_Malloc (sizeof(cmd_function_t));
+	cmd->name = cmd_name;
+	cmd->function = function;
+	cmd->next = cmd_functions;
+	cmd_functions = cmd;
+}
+#endif
+
 /*
 ============
 Cmd_Exists

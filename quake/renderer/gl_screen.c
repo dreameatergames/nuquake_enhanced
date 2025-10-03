@@ -901,6 +901,17 @@ void SCR_UpdateScreen (void)
 
 	GL_BeginRendering (&glx, &gly, &glwidth, &glheight);
 
+#ifdef EXT_CSQC
+	if (CSQC_DrawView())
+	{
+		GL_Set2D ();
+		SCR_SetUpToDrawConsole ();
+		SCR_DrawConsole ();	
+		M_Draw ();
+	}
+	else
+#endif
+
 	//
 	// determine size of refresh window
 	//

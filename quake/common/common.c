@@ -550,6 +550,9 @@ char *COM_FileExtension (char *in)
 COM_FileBase
 ============
 */
+//CSQCENGINEDEVS: If you've not fixed this yet, then you may have an easy security hole with csqc enabled
+//  this is because csqc can pass through strings as they are without any network truncation
+//	ensure that no more bytes are written to out than is really possible
 void COM_FileBase (const char *in, char *out)
 {
 	const char *s, *s2;
@@ -895,6 +898,7 @@ char    *va(char *format, ...)
 	static char             string[1024];
 
 	va_start (argptr, format);
+	//CSQCENGINEDEVS: If you've not fixed this yet, then you may have an easy security hole with csqc enabled
 	vsprintf (string, format,argptr);
 	va_end (argptr);
 
@@ -1369,6 +1373,18 @@ byte *COM_LoadStackFile (const char *path, void *buffer, int bufsize)
 
 	return buf;
 }
+
+#ifdef EXT_CSQC //not really ext_csqc specific, but hey
+byte *COM_LoadMallocFile (char *path)
+{
+	return COM_LoadFile (path, 0);
+}
+
+void COM_FreeMallocFile (byte *file)
+{
+	free(file);
+}
+#endif
 
 /*=================
 COM_LoadPackFile

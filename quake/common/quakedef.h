@@ -103,6 +103,10 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #define	MAX_MODELS		256			// these are sent over the net as bytes
 #define	MAX_SOUNDS		256			// so they cannot be blindly increased
 
+#ifdef EXT_CSQC
+#define MAX_CSQCMODELS	512			// csqc has its own freely extendable limits
+#endif
+
 #define	SAVEGAME_COMMENT_LENGTH	39
 
 #define	MAX_STYLESTRING	64
@@ -110,6 +114,9 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 //
 // stats are integers communicated to the client by the server
 //
+#ifdef EXT_CSQC
+#define	MAX_CL_STATS		128
+#else
 #define	MAX_CL_STATS		32
 #define	STAT_HEALTH			0
 #define	STAT_FRAGS			1

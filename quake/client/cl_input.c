@@ -333,7 +333,121 @@ void CL_BaseMove (usercmd_t *cmd)
 CL_SendMove
 ==============
 */
+#ifdef EXT_CSQC
+void CL_SendMoveCompat (usercmd_t *cmd);
+
+void CL_SendMove (usercmd_t *cmdstd)
+{
+	int		i, c;
+	int		bits;
+	sizebuf_t	buf;
+	byte	data[128];
+	usercmdextra_t cmde;
+	usercmdextra_t *cmd = &cmde;
+
+	//invoke the legacy code
+	//ENGINECODERS: you probably want to combine the cmd building code of these two functions into one.
+	if (!CSQC_IsLoaded())
+	{
+		CL_SendMoveCompat(cmdstd);
+		return;
+	}
+	
+	buf.maxsize = 128;
+	buf.cursize = 0;
+	buf.data = data;
+	
+	cl.cmd = *cmdstd;
+	cmd->std = &cl.cmd;
+
+//
+// finish off the command, starting with the button bits
+//
+	bits = 0;
+	
+	if ( in_attack.state & 3 )
+		bits |= 1;
+	in_attack.state &= ~2;
+	
+	if (in_jump.state & 3)
+		bits |= 2;
+	in_jump.state &= ~2;
+
+	cmd->buttons = bits;
+	cmd->msec = 0;
+	cmd->servertime = cl.mtime[0];
+	cmd->fclienttime = cl.time;
+	cmd->impulse = in_impulse;
+	for (i = 0; i < 3; i++)
+		cmd->std->viewangles[i] = cl.viewangles[i];
+	in_impulse = 0;
+
+	//ask csqc if that's okay
+	CSQC_Input_Frame(cmd);
+
+	//we have our packet, save it to the log
+	cls.inputlog_cmd[cls.inputlog_sequenceout&INPUTLOG_MASK] = *cmd;
+	cls.inputlog_cmd_std[cls.inputlog_sequenceout&INPUTLOG_MASK] = *cmd->std;
+	//I hate qccx
+	cls.inputlog_cmd[cls.inputlog_sequenceout&INPUTLOG_MASK].std = &cls.inputlog_cmd_std[cls.inputlog_sequenceout&INPUTLOG_MASK];
+
+	cls.inputlog_sequenceout++;
+
+//
+// send the movement message
+//
+	c = cls.inputlog_sequencein;
+	//cap it to send 3 max
+	if (c < cls.inputlog_sequenceout-3)
+		c = cls.inputlog_sequenceout-3;
+
+	for (; c < cls.inputlog_sequenceout; c++)
+	{
+		cmd = &cls.inputlog_cmd[c&INPUTLOG_MASK];
+		MSG_WriteByte (&buf, clc_move_logged);
+		MSG_WriteLong(&buf, c);
+		MSG_WriteFloat (&buf, cmd->servertime);	// so server can get ping times
+
+		for (i=0 ; i<3 ; i++)
+			MSG_WriteShort (&buf, (cmd->std->viewangles[i]*65535)/360 + 0.5);
+
+		MSG_WriteShort (&buf, cmd->std->forwardmove);
+		MSG_WriteShort (&buf, cmd->std->sidemove);
+		MSG_WriteShort (&buf, cmd->std->upmove);
+
+		MSG_WriteByte (&buf, cmd->buttons);
+		MSG_WriteByte (&buf, cmd->impulse);
+
+#ifdef QUAKE2
+		MSG_WriteByte (&buf, cmd->lightlevel);
+#endif
+	}
+
+//
+// deliver the message
+//
+	if (cls.demoplayback)
+		return;
+
+//
+// allways dump the first two message, because it may contain leftover inputs
+// from the last level
+//
+	if (++cl.movemessages <= 2)
+		return;
+	
+	if (NET_SendUnreliableMessage (cls.netcon, &buf) == -1)
+	{
+		Con_Printf ("CL_SendMove: lost server connection\n");
+		CL_Disconnect ();
+	}
+	
+}
+
+void CL_SendMoveCompat (usercmd_t *cmd)
+#else
 void CL_SendMove (usercmd_t *cmd)
+#endif
 {
 	int		i;
 	int		bits;

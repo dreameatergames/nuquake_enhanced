@@ -379,6 +379,21 @@ qpic_t *Draw_CachePic(char *path) {
   return &pic->pic;
 }
 
+qpic_t	*Draw_CachePic_CSQC (char *path)
+{
+	qpic_t *p;
+
+	p = Draw_TryCachePic(path);
+	if (p)
+		return p;
+
+	p = Draw_TryPicFromWad(path);
+	if (p)
+		return p;
+
+	return NULL;
+}
+
 void Draw_CharToConback(int num, byte *dest) {
   int row, col;
   byte *source;

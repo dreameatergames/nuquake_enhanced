@@ -57,6 +57,20 @@ CL_ClearState
 =====================
 */
 void CL_ClearState(void) {
+  	int			i;
+
+	//this func is called at the start of each new map
+#ifdef EXT_CSQC
+	CSQC_ClearState();
+
+	//we dynamically allocated these string stats
+	//so we need to make sure they're freed.
+	for (i = 0; i < MAX_CL_STATS; i++)
+	{
+		if (cl.statsstr[i])
+			free(cl.statsstr[i]);
+	}
+#endif
   if (!sv.active)
     Host_ClearMemory();
 
@@ -87,6 +101,10 @@ This is also called on Host_Error, so it shouldn't cause any errors
 =====================
 */
 void CL_Disconnect(void) {
+  #ifdef EXT_CSQC
+	CSQC_Shutdown();
+  #endif
+
   // stop sounds (especially looping!)
   S_StopAllSounds(true);
 
@@ -183,6 +201,7 @@ void CL_SignonReply(void)
             break;
 
         case 2:
+        
             MSG_WriteByte(&cls.message, clc_stringcmd);
             MSG_WriteString(&cls.message, va("name \"%s\"\n", cl_name.string));
 
@@ -200,6 +219,11 @@ void CL_SignonReply(void)
             } else {
                 snprintf(str, sizeof(str), "spawn %s", cls.spawnparms);
             }
+            #ifdef EXT_CSQC
+        		sprintf (str, "spawn %s %i", cls.spawnparms, CSQC_IsLoaded()?1:0);
+        #else
+        		sprintf (str, "spawn %s", cls.spawnparms);
+        #endif
             MSG_WriteString(&cls.message, str);
             break;
 
@@ -445,6 +469,10 @@ static void CL_RelinkEntities(void) {
   vec3_t oldorg;
   dlight_t *dl;
 
+#ifdef EXT_CSQC
+	CSQC_DeltaStart(cl.time);
+#endif
+
   // determine partial update time
   frac = CL_LerpPoint();
 
@@ -487,7 +515,10 @@ static void CL_RelinkEntities(void) {
       ent->rotate_start_time = 0;
       continue;
     }
-
+#ifdef EXT_CSQC
+		if (CSQC_DeltaUpdate(i, ent))
+			continue;
+#endif
     VectorCopy(ent->origin, oldorg);
 
     if (ent->forcelink) {  // the entity was not updated in the last message
@@ -582,16 +613,25 @@ if (ent->effects & EF_BRIGHTLIGHT) {
 
     ent->forcelink = false;
 
-    if (i == cl.viewentity && !chase_active.value)
-      continue;
+		ent->renderflags = 0;
+		if (i == cl.viewentity && !chase_active.value)
+		{
+#ifdef EXT_CSQC
+			ent->renderflags |= RF_EXTERNALMODEL;
+#else
+			continue;
+#endif
+		}
 
     if (cl_numvisedicts < MAX_VISEDICTS) {
       cl_visedicts[cl_numvisedicts] = ent;
       cl_numvisedicts++;
     }
   }
+#ifdef EXT_CSQC
+	CSQC_DeltaEnd();
+#endif
 }
-
 /*
 ===============
 CL_ReadFromServer
@@ -620,8 +660,7 @@ int CL_ReadFromServer(void) {
   if (cl_shownet.value)
     Con_Printf("\n");
 
-  CL_RelinkEntities();
-  CL_UpdateTEnts();
+	CL_NewFrame();
 
   //
   // bring the links up to date
@@ -681,7 +720,9 @@ void CL_Init(void) {
 
   CL_InitInput();
   CL_InitTEnts();
-
+#ifdef EXT_CSQC
+	CSQC_RegisterCvarsAndThings();
+#endif
   //
   // register our commands
   //

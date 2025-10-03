@@ -65,6 +65,55 @@ char *svc_strings[] =
 	"svc_cdtrack",			// [byte] track [byte] looptrack
 	"svc_sellscreen",
 	"svc_cutscene"
+
+	"svc_35",
+	"svc_36",
+	"svc_37",
+	"svc_38",
+	"svc_39",
+	"svc_40",
+	"svc_41",
+	"svc_42",
+	"svc_43",
+	"svc_44",
+	"svc_45",
+	"svc_46",
+	"svc_47",
+	"svc_48",
+	"svc_49",
+	"svc_50",
+	"svc_updatestat_byte",	// 51: [byte] [byte] (value chosen to match DP)
+	"svc_52",
+	"svc_53",
+	"svc_54",
+	"svc_55",
+	"svc_56",
+	"svc_57",
+	"svc_csqcentities",
+	"svc_59",
+	"svc_60",
+	"svc_61",
+	"svc_62",
+	"svc_63",
+	"svc_64",
+	"svc_65",
+	"svc_66",
+	"svc_67",
+	"svc_68",
+	"svc_69",
+	"svc_70",
+	"svc_71",
+	"svc_72",
+	"svc_73",
+	"svc_74",
+	"svc_75",
+	"svc_76",
+	"svc_77",
+	"svc_78",
+	"svc_79",
+	"svc_updatestat_float",	//80 - [byte] [float]
+	"svc_updatestat_string",	//81 - [byte] [string]
+	"svc_indep_clientdata"	//82
 };
 
 //=============================================================================
@@ -131,6 +180,10 @@ void CL_ParseStartSoundPacket(void)
 
 	for (i=0 ; i<3 ; i++)
 		pos[i] = MSG_ReadCoord ();
+#ifdef EXT_CSQC
+	if (CSQC_StartSound(ent, channel, cl.sound_precache[sound_num]->name, pos, volume/255.0, attenuation))
+		return;
+#endif
 
     S_StartSound (ent, channel, cl.sound_precache[sound_num], pos, volume/255.0, attenuation);
 }
@@ -313,6 +366,9 @@ void CL_ParseServerInfo (void)
 	}
 	S_EndPrecaching ();
 
+#ifdef EXT_CSQC
+	CSQC_Init();
+#endif
 // local state
 	cl_entities[0].model = cl.worldmodel = cl.model_precache[1];
 
@@ -321,6 +377,10 @@ void CL_ParseServerInfo (void)
 	Hunk_Check ();		// make sure nothing is hurt
 
 	noclip_anglehack = false;		// noclip is turned off at start
+
+#ifdef EXT_CSQC
+	CSQC_WorldLoaded();
+#endif
 }
 
 
@@ -401,10 +461,16 @@ void CL_ParseUpdate (int bits)
 		}
 		else
 			forcelink = true;	// hack to make null model players work
+
 #ifdef GLQUAKE
 		if (num > 0 && num <= cl.maxclients)
 			R_TranslatePlayerSkin (num - 1);
 #endif
+
+#ifdef EXT_CSQC
+	ent->modelindex = modnum;
+#endif
+
 	}
 
 	if (bits & U_FRAME)
@@ -424,6 +490,9 @@ void CL_ParseUpdate (int bits)
 			Sys_Error ("i >= cl.maxclients");
 		ent->colormap = cl.scores[i-1].translations;
 	}
+#ifdef EXT_CSQC
+	ent->colormapnum = i;
+#endif
 
 #ifdef GLQUAKE
 	if (bits & U_SKIN)
@@ -525,6 +594,13 @@ void CL_ParseClientdata (int bits)
 {
 	int		i, j;
 
+	#ifdef EXT_CSQC
+	if (revisedmode)
+	{
+		cls.inputlog_sequencein = MSG_ReadLong();
+	}
+#endif
+
 	if (bits & SU_VIEWHEIGHT)
 		cl.viewheight = MSG_ReadChar ();
 	else
@@ -547,7 +623,10 @@ void CL_ParseClientdata (int bits)
 		else
 			cl.mvelocity[0][i] = 0;
 	}
-
+#ifdef EXT_CSQC
+	if (revisedmode)
+		return;
+#endif
 // [always sent]	if (bits & SU_ITEMS)
 		i = MSG_ReadLong ();
 
@@ -630,6 +709,27 @@ void CL_ParseClientdata (int bits)
 			Sbar_Changed ();
 		}
 	}
+
+#ifdef EXT_CSQC
+	//I'm not gonna fix this properly here
+	//ENGINECODERS: I recommend that you do though :)
+	cl.stats[STAT_ITEMS] = cl.items;
+	cl.stats[STAT_VIEWHEIGHT] = cl.viewheight;
+
+	//copy over the updated stats to keep the floats up to date
+	cl.statsfl[STAT_ITEMS] = cl.stats[STAT_ITEMS];
+	cl.statsfl[STAT_VIEWHEIGHT] = cl.stats[STAT_VIEWHEIGHT];
+	cl.statsfl[STAT_WEAPONFRAME] = cl.stats[STAT_WEAPONFRAME];
+	cl.statsfl[STAT_ARMOR] = cl.stats[STAT_ARMOR];
+	cl.statsfl[STAT_WEAPON] = cl.stats[STAT_WEAPON];
+	cl.statsfl[STAT_HEALTH] = cl.stats[STAT_HEALTH];
+	cl.statsfl[STAT_AMMO] = cl.stats[STAT_AMMO];
+	cl.statsfl[STAT_SHELLS] = cl.stats[STAT_SHELLS];
+	cl.statsfl[STAT_NAILS] = cl.stats[STAT_NAILS];
+	cl.statsfl[STAT_ROCKETS] = cl.stats[STAT_ROCKETS];
+	cl.statsfl[STAT_CELLS] = cl.stats[STAT_CELLS];
+	cl.statsfl[STAT_ACTIVEWEAPON] = cl.stats[STAT_ACTIVEWEAPON];
+#endif
 }
 
 /*
@@ -786,7 +886,15 @@ int CL_ParseServerMessage (void)
 			i = MSG_ReadShort ();
 			CL_ParseClientdata (i);
 			break;
-
+#ifdef EXT_CSQC
+		case svc_indep_clientdata:
+			i = MSG_ReadShort ();
+			CL_ParseClientdata (i, true);
+			break;
+		case svc_csqcentities:
+			CSQC_ParseEntities();
+			break;
+#endif
 		case svc_version:
 			i = MSG_ReadLong ();
 			if (i != PROTOCOL_VERSION)
@@ -803,10 +911,16 @@ int CL_ParseServerMessage (void)
 
 		case svc_centerprint:
 			SCR_CenterPrint (MSG_ReadString ());
+#ifdef EXT_CSQC
+			if (!CSQC_CenterPrint(s))
+#endif
 			break;
 
 		case svc_stufftext:
 			Cbuf_AddText (MSG_ReadString ());
+#ifdef EXT_CSQC
+			if (!CSQC_StuffCmd(s))
+#endif
 			break;
 
 		case svc_damage:
@@ -915,13 +1029,48 @@ int CL_ParseServerMessage (void)
 		case svc_foundsecret:
 			cl.stats[STAT_SECRETS]++;
 			break;
-
+#ifdef EXT_CSQC
+		case svc_updatestat_byte:
+			i = MSG_ReadByte ();
+			if (i < 0 || i >= MAX_CL_STATS)
+				Sys_Error ("svc_updatestat: %i is invalid", i);
+			cl.stats[i] = MSG_ReadByte ();
+			cl.statsfl[i] = cl.stats[i];
+			Sbar_Changed();
+			break;
+		case svc_updatestat_long:
+			i = MSG_ReadByte ();
+			if (i < 0 || i >= MAX_CL_STATS)
+				Sys_Error ("svc_updatestat: %i is invalid", i);
+			cl.stats[i] = MSG_ReadLong ();
+			cl.statsfl[i] = cl.stats[i];
+			Sbar_Changed();
+			break;
+		case svc_updatestat_float:
+			i = MSG_ReadByte ();
+			if (i < 0 || i >= MAX_CL_STATS)
+				Sys_Error ("svc_updatestat: %i is invalid", i);
+			cl.statsfl[i] = MSG_ReadFloat ();
+			cl.stats[i] = cl.statsfl[i];
+			Sbar_Changed();
+			break;
+		case svc_updatestat_string:
+			i = MSG_ReadByte ();
+			if (i < 0 || i >= MAX_CL_STATS)
+				Sys_Error ("svc_updatestat: %i is invalid", i);
+			if (cl.statsstr[i])
+				free(cl.statsstr[i]);
+			cl.statsstr[i] = strdup(MSG_ReadString());
+			Sbar_Changed();	//not really required
+			break;
+#else
 		case svc_updatestat:
 			i = MSG_ReadByte ();
 			if (i < 0 || i >= MAX_CL_STATS)
 				Sys_Error ("svc_updatestat: %i is invalid", i);
 			cl.stats[i] = MSG_ReadLong ();;
 			break;
+#endif
 
 		case svc_spawnstaticsound:
 			CL_ParseStaticSound ();

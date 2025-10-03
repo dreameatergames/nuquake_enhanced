@@ -474,7 +474,56 @@ void SV_ReadClientMove (usercmd_t *move)
 // read light level
 	host_client->edict->v.light_level = MSG_ReadByte ();
 #endif
+
+#ifdef EXT_CSQC
+	host_client->isindependant = false;
+#endif
 }
+
+#ifdef EXT_CSQC
+void SV_ReadClientMove_Logged (void)
+{
+	int i;
+	int commandsequence;
+	usercmdextra_t cmd;
+	usercmd_t cmdstd;
+	cmd.std = &cmdstd;
+
+	commandsequence = MSG_ReadLong();
+
+	cmd.servertime = MSG_ReadFloat();
+	for (i = 0; i < 3; i++)
+		cmd.std->viewangles[i] = (MSG_ReadShort()/65535.0f) * 360;
+	cmd.std->forwardmove = MSG_ReadShort();
+	cmd.std->sidemove = MSG_ReadShort();
+	cmd.std->upmove = MSG_ReadShort();
+		
+	cmd.buttons = MSG_ReadByte();
+	cmd.impulse = MSG_ReadByte();
+
+#ifdef QUAKE2
+	cmd->std->lightlevel = MSG_ReadByte();
+#endif
+	
+	if (commandsequence <= host_client->lastinputsequence)
+		return;
+	host_client->lastinputsequence = commandsequence;
+
+	//mark the time for pings
+	host_client->ping_times[host_client->num_pings%NUM_PING_TIMES]
+		= sv.time - cmd.servertime;
+	host_client->num_pings++;
+
+	host_client->cmd = cmdstd;
+
+	host_client->isindependant = true;
+
+	if (!SV_RunFullQCMovement(host_client, &cmd))
+	{
+		host_client->isindependant = false;
+	}
+}
+#endif
 
 /*
 ===================
@@ -588,6 +637,11 @@ nextmsg:
 			case clc_move:
 				SV_ReadClientMove (&host_client->cmd);
 				break;
+#ifdef EXT_CSQC
+			case clc_move_logged:
+				SV_ReadClientMove_Logged();
+				break;
+#endif
 			}
 		}
 	} while (ret == 1);

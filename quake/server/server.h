@@ -69,11 +69,51 @@ typedef struct
 
 	sizebuf_t	signon;
 	byte		signon_buf[8192];
+
+#ifdef EXT_CSQC
+	//adding this at the end should not harm qccx hacks
+	char		csqc_progname[MAX_QPATH];
+	unsigned int	csqc_progsize;
+	unsigned int	csqc_progcrc;
+
+	struct qcglob_s {
+		func_t RunClientCommand;
+		float *input_timelength;
+		float *input_angles;
+		float *input_movevalues;
+		float *input_buttons;
+		float *input_impulse;
+	} qcglob;
+	struct qcfields_s {
+		unsigned int sendentity;
+		unsigned int sendflags;
+		unsigned int pvsflags;
+		unsigned int version;
+	} qcfield;
+#endif
 } server_t;
 
 
 #define	NUM_PING_TIMES		16
 #define	NUM_SPAWN_PARMS		16
+
+#ifdef EXT_CSQC
+
+#define PVSF_NORMALPVS	0
+#define PVSF_NOTRACECHECK	1 //in this engine, this is fully supported - we don't support trace checks :)
+#define PVSF_USEPHS		2	//requires a PVS database, so is not mandatory
+#define PVSF_IGNOREPVS	3
+#define PVSF_PVSMASK	3
+
+typedef struct {
+	int numents;
+	int entflags[256];
+	int entnum[256];
+} csqcentframe_t;
+#define MAX_CSQCFRAMES 64
+#define MASK_CSQCFRAMES (MAX_CSQCFRAMES-1)
+
+#endif
 
 typedef struct client_s
 {
@@ -106,6 +146,22 @@ typedef struct client_s
 
 // client known data for deltas	
 	int				old_frags;
+
+	#ifdef EXT_CSQC
+	//adding this at the end should not harm qccx hacks
+	qboolean usingcsqc;
+	qboolean isindependant;
+	unsigned int lastinputsequence;
+
+	int statcacheint[MAX_CL_STATS];
+	float statcachefloat[MAX_CL_STATS];
+	char *statcachestring[MAX_CL_STATS];
+	unsigned int pendingcsqcentityflags[MAX_EDICTS];	//okay, that makes this structure a bit bigger - but hey, its dynamically allocated anyway
+
+	unsigned int lastentframe;
+	unsigned int curentframe;
+	csqcentframe_t csqcframes[MAX_CSQCFRAMES];
+#endif
 } client_t;
 
 
@@ -241,7 +297,11 @@ void SV_Physics (void);
 qboolean SV_CheckBottom (edict_t *ent);
 qboolean SV_movestep (edict_t *ent, vec3_t move, qboolean relink);
 
-void SV_WriteClientdataToMessage (edict_t *ent, sizebuf_t *msg);
+void SV_WriteClientdataToMessage (edict_t *ent, sizebuf_t *msg
+#ifdef EXT_CSQC
+	, int *statcacheint, float *statcachefloat, char **statcachestring
+#endif
+	);
 
 void SV_MoveToGoal (void);
 

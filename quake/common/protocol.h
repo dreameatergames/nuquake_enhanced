@@ -130,6 +130,17 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 #define svc_cutscene		34
 
+
+#ifdef EXT_CSQC
+//ENGINECODERS: Make sure this doesn't conflict with your existing svcs
+#define	svc_updatestat_long		svc_updatestat	// [byte] [long] (listed again, you should properly rename the old in your engine)
+#define	svc_updatestat_byte		51	// [byte] [byte] (value chosen to match DP)
+#define	svc_updatestat_float	80	// [byte] [float]
+#define	svc_updatestat_string	81	// [byte] [string]
+#define svc_indep_clientdata	82	//
+#define svc_csqcentities		58	//
+#endif
+
 //
 // client to server
 //
@@ -138,6 +149,11 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #define	clc_disconnect	2
 #define	clc_move		3			// [usercmd_t]
 #define	clc_stringcmd	4		// [string] message
+
+#ifdef EXT_CSQC
+#define	clc_move_logged	80			// [usercmdextra_t]
+#define	clc_qcrequest	81
+#endif
 
 
 //

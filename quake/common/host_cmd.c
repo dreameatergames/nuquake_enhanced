@@ -1226,6 +1226,10 @@ void Host_Spawn_f (void)
 		return;
 	}
 
+	#ifdef EXT_CSQC
+	host_client->usingcsqc = atoi(Cmd_Argv(1));
+#endif
+
 // run the entrance script
 	if (sv.loadgame)
 	{	// loaded games are fully inited allready
@@ -1251,6 +1255,9 @@ void Host_Spawn_f (void)
 
 		pr_global_struct->time = sv.time;
 		pr_global_struct->self = EDICT_TO_PROG(sv_player);
+#ifdef EXT_CSQC
+		G_FLOAT(OFS_PARM0) = host_client->usingcsqc;
+#endif
 		PR_ExecuteProgram (pr_global_struct->ClientConnect);
 
 		if ((Sys_FloatTime() - host_client->netconnection->connecttime) <= sv.time)
@@ -1320,7 +1327,11 @@ void Host_Spawn_f (void)
 		MSG_WriteAngle (&host_client->message, ent->v.angles[i] );
 	MSG_WriteAngle (&host_client->message, 0 );
 
-	SV_WriteClientdataToMessage (sv_player, &host_client->message);
+	SV_WriteClientdataToMessage (sv_player, &host_client->message
+#ifdef EXT_CSQC
+		, host_client->statcacheint, host_client->statcachefloat, host_client->statcachestring
+#endif
+	);
 
 	MSG_WriteByte (&host_client->message, svc_signonnum);
 	MSG_WriteByte (&host_client->message, 3);

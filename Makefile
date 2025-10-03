@@ -55,7 +55,7 @@ INC_FLAGS := $(INCS)
 #BASE_CFLAGS =  -Wall -Wextra -Wformat=0 -Wstack-usage=8096 -Wcast-align -fdump-rtl-dfinish -fstack-usage -Wno-missing-field-initializers -Wno-missing-braces -Wdouble-promotion -Wstrict-aliasing -fstrict-aliasing -fsingle-precision-constant -Xlinker -Map=dreamcast.map -DGLQUAKE -DBUILD_LIBGL -std=gnu11 -fdiagnostics-color
 BASE_DEFINES = -DENABLE_DC_MATH
 #-DENABLE_DC_MATH
-BASE_CFLAGS =  $(BASE_DEFINES) -Wall -Wextra -Wformat=0 -Wstack-usage=8096 -Wno-cast-align -Wno-missing-field-initializers -Wno-missing-braces -Wdouble-promotion -Wstrict-aliasing -fstrict-aliasing -fsingle-precision-constant -Xlinker -Map=dreamcast.map -DGLQUAKE -DBUILD_LIBGL -std=gnu11 -fdiagnostics-color
+BASE_CFLAGS =  $(BASE_DEFINES) -Wall -Wextra -Wformat=0 -Wstack-usage=8096 -Wno-cast-align -Wno-missing-field-initializers -Wno-missing-braces -Wdouble-promotion -Wstrict-aliasing -fstrict-aliasing -fsingle-precision-constant -Xlinker -Map=dreamcast.map -DGLQUAKE -DEXT_CSQC -DBUILD_LIBGL -std=gnu11 -fdiagnostics-color
 EXTRA_CFLAGS = -ffast-math -mdiv=inv -maccumulate-outgoing-args -mpretend-cmove -Wl,--gc-sections
 RELEASE_CFLAGS = $(BASE_CFLAGS) $(INC_FLAGS) $(EXTRA_CFLAGS) -O3 -DQUIET -DNDEBUG
 DEBUG_CFLAGS = $(BASE_CFLAGS) $(INC_FLAGS) -Og -fno-omit-frame-pointer -DFRAME_POINTERS

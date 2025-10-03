@@ -32,6 +32,21 @@ typedef struct
 #endif
 } usercmd_t;
 
+#ifdef EXT_CSQC
+//we don't extend usercmd_t - that would break qccx.
+//instead we maintain a pointer to it
+//a clean implementation would do this with a single structure
+typedef struct
+{
+	usercmd_t *std;
+	unsigned int msec;
+	unsigned int buttons;
+	unsigned int impulse;
+	float servertime;
+	float fclienttime;
+} usercmdextra_t;
+#endif
+
 typedef struct
 {
 	int		length;
@@ -137,7 +152,14 @@ typedef struct
 	int			signon;			// 0 to SIGNONS
 	struct qsocket_s	*netcon;
 	sizebuf_t	message;		// writing buffer to send to server
-	
+#ifdef EXT_CSQC
+#define INPUTLOG_MAX (1<<6)	//must be power of 2
+#define INPUTLOG_MASK (INPUTLOG_MAX-1)	//must be power of 2
+	unsigned int inputlog_sequenceout;
+	unsigned int inputlog_sequencein;
+	usercmd_t inputlog_cmd_std[INPUTLOG_MAX];
+	usercmdextra_t inputlog_cmd[INPUTLOG_MAX];
+#endif
 } client_static_t;
 
 extern client_static_t	cls;
@@ -156,6 +178,11 @@ typedef struct
 
 // information for local display
 	int			stats[MAX_CL_STATS];	// health, etc
+#ifdef EXT_CSQC
+	int			statsfl[MAX_CL_STATS];	// health, etc
+	char		*statsstr[MAX_CL_STATS];	// health, etc
+	float		sensitivityscale;
+#endif
 	int			items;			// inventory bit flags
 	float	item_gettime[32];	// cl.time of aquiring item, for blinking
 	float		faceanimtime;	// use anim frame if cl.time < this
@@ -208,7 +235,14 @@ typedef struct
 // information that is static for the entire time connected to a server
 //
 	struct model_s		*model_precache[MAX_MODELS];
+#ifdef EXT_CSQC
+	struct model_s		*model_csqcprecache[MAX_CSQCMODELS];
+#endif
 	struct sfx_s		*sound_precache[MAX_SOUNDS];
+
+#ifdef EXT_CSQC
+	char				model_csqcname[MAX_CSQCMODELS][MAX_QPATH];
+#endif
 
 	char		levelname[40];	// for display on solo scoreboard
 	int			viewentity;		// cl_entitites[cl.viewentity] = player
@@ -371,3 +405,20 @@ void V_SetContentsColor (int contents);
 //
 void CL_InitTEnts (void);
 void CL_SignonReply (void);
+
+qboolean CSQC_DrawView(void);
+qboolean CSQC_IsLoaded(void);
+void CSQC_Input_Frame(usercmdextra_t *cmd);
+void CSQC_ClearState(void);
+void CSQC_Shutdown(void);
+void CSQC_DeltaStart(float time);
+qboolean CSQC_DeltaUpdate(int srcnumber, entity_t *src);
+void CSQC_DeltaEnd(void);
+void CSQC_RegisterCvarsAndThings(void);
+int CSQC_StartSound(int entnum, int channel, char *soundname, vec3_t pos, float vol, float attenuation);
+qboolean CSQC_Init (void);
+void CSQC_WorldLoaded(void);
+qboolean CSQC_CenterPrint(char *cmd);
+qboolean CSQC_StuffCmd(char *cmd);
+void CSQC_ParseEntities(void);
+qboolean CSQC_ConsoleCommand(char *cmd);

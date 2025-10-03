@@ -385,6 +385,7 @@ void Con_Printf (char *fmt, ...)
 	static qboolean	inupdate;
 
 	va_start (argptr,fmt);
+	//CSQCENGINEDEVS: If you've not fixed this yet, then you may have an easy security hole with csqc enabled (also exploitable otherwise)
 	vsprintf (msg,fmt,argptr);
 	va_end (argptr);
 
@@ -434,6 +435,7 @@ void Con_DPrintf (char *fmt, ...)
 		return;			// don't confuse non-developers with techie stuff...
 
 	va_start (argptr,fmt);
+	//CSQCENGINEDEVS: If you've not fixed this yet, then you may have an easy security hole with csqc enabled (also exploitable otherwise)
 	vsprintf (msg,fmt,argptr);
 	va_end (argptr);
 

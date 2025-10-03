@@ -37,7 +37,19 @@ typedef struct efrag_s {
 typedef struct entity_s {
   qboolean forcelink;  // model changed
 
-  int update_type;
+#ifdef EXT_CSQC
+	unsigned int			renderflags;
+#define RF_DEPTHHACK (1<<0)
+#define RF_WEAPONMODEL (1<<1)
+#define RF_EXTERNALMODEL (1<<2)
+#define RF_ADDATIVE (1<<3)
+#define RF_NOSHADOW (1<<4)
+
+	unsigned int			modelindex;
+	unsigned int			colormapnum;
+#else
+	int						update_type;
+#endif
 
   entity_state_t baseline;  // to fill in defaults in updates
 
@@ -108,6 +120,11 @@ typedef struct
   float fov_x, fov_y;
 
   int ambientlight;
+#ifdef EXT_CSQC
+	int			flags;
+	//flags:
+#define RDF_NOWORLDMODEL 1
+#endif
 } refdef_t;
 
 //

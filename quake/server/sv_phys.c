@@ -1574,7 +1574,99 @@ void SV_Physics (void)
 
 	sv.time += host_frametime;
 }
+#ifdef EXT_CSQC
+//EXT_CSQC_1 (called when a movement command is received. runs full acceleration + movement)
+qboolean SV_RunFullQCMovement(client_t *client, usercmdextra_t *ucmd)
+{
+	if (sv.qcglob.RunClientCommand)
+	{
+		if (!sv_player->v.fixangle)
+		{
+			sv_player->v.v_angle[0] = ucmd->std->viewangles[0];
+			sv_player->v.v_angle[1] = ucmd->std->viewangles[1];
+			sv_player->v.v_angle[2] = ucmd->std->viewangles[2];
+		}
 
+		sv_player->v.button0 = ucmd->buttons & 1;
+		sv_player->v.button2 = (ucmd->buttons >> 1) & 1;
+
+		if (ucmd->impulse)
+			sv_player->v.impulse = ucmd->impulse;
+
+		SV_CheckVelocity(sv_player);
+
+	//
+	// angles
+	// show 1/3 the pitch angle and all the roll angle
+		if (sv_player->v.health > 0)
+		{
+			if (!sv_player->v.fixangle)
+			{
+				sv_player->v.angles[PITCH] = -sv_player->v.v_angle[PITCH]/3;
+				sv_player->v.angles[YAW] = sv_player->v.v_angle[YAW];
+			}
+			sv_player->v.angles[ROLL] =
+				V_CalcRoll (sv_player->v.angles, sv_player->v.velocity)*4;
+		}
+
+		//prethink should be consistant with what the engine normally does
+		pr_global_struct->self = EDICT_TO_PROG(client->edict);
+		PR_ExecuteProgram (pr_global_struct->PlayerPreThink);
+		SV_RunThink (client->edict);
+
+
+
+
+
+
+
+
+
+
+		*sv.qcglob.input_timelength = ucmd->msec/1000.0f;
+		sv.qcglob.input_angles[0] = ucmd->std->viewangles[0];
+		sv.qcglob.input_angles[1] = ucmd->std->viewangles[1];
+		sv.qcglob.input_angles[2] = ucmd->std->viewangles[2];
+
+		sv.qcglob.input_movevalues[0] = ucmd->std->forwardmove;
+		sv.qcglob.input_movevalues[1] = ucmd->std->sidemove;
+		sv.qcglob.input_movevalues[2] = ucmd->std->upmove;
+		*sv.qcglob.input_buttons = ucmd->buttons;
+		*sv.qcglob.input_impulse = ucmd->impulse;
+
+		pr_global_struct->self = EDICT_TO_PROG(client->edict);
+		PR_ExecuteProgram(sv.qcglob.RunClientCommand);
+
+
+		//postthink should be consistant with what the engine normally does
+		pr_global_struct->self = EDICT_TO_PROG(client->edict);
+		PR_ExecuteProgram (pr_global_struct->PlayerPostThink);
+		SV_RunThink (client->edict);
+ 		return true;
+	}
+	else
+	{
+		VectorCopy (ucmd->std->viewangles, host_client->edict->v.v_angle);
+		if (ucmd->impulse)
+			host_client->edict->v.impulse = ucmd->impulse;
+		host_client->edict->v.button0 = ucmd->buttons & 1;
+		host_client->edict->v.button2 = (ucmd->buttons & 2)>>1;
+
+#ifdef QUAKE2
+// read light level
+		host_client->edict->v.light_level = ucmd->std->lightlevel;
+#endif
+
+		if (host_client->usingcsqc)
+		{
+			SV_ClientThink(ucmd->std);
+			SV_Physics_Client(host_client->edict, 0, false);
+			return true;
+		}
+	}
+	return false;
+}
+#endif
 
 #ifdef QUAKE2
 trace_t SV_Trace_Toss (edict_t *ent, edict_t *ignore)
