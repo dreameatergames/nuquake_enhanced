@@ -118,6 +118,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #define	MAX_CL_STATS		128
 #else
 #define	MAX_CL_STATS		32
+#endif
 #define	STAT_HEALTH			0
 #define	STAT_FRAGS			1
 #define	STAT_WEAPON			2

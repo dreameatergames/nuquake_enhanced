@@ -590,7 +590,7 @@ CL_ParseClientdata
 Server information pertaining to this client only
 ==================
 */
-void CL_ParseClientdata (int bits)
+void CL_ParseClientdata (int bits, qboolean revisedmode)
 {
 	int		i, j;
 
@@ -713,12 +713,12 @@ void CL_ParseClientdata (int bits)
 #ifdef EXT_CSQC
 	//I'm not gonna fix this properly here
 	//ENGINECODERS: I recommend that you do though :)
-	cl.stats[STAT_ITEMS] = cl.items;
+	cl.stats[STAT_ITEMS] = cl.items; //Compiler throwing out an error??? May be related to Ian Michael Optimizations
 	cl.stats[STAT_VIEWHEIGHT] = cl.viewheight;
 
 	//copy over the updated stats to keep the floats up to date
 	cl.statsfl[STAT_ITEMS] = cl.stats[STAT_ITEMS];
-	cl.statsfl[STAT_VIEWHEIGHT] = cl.stats[STAT_VIEWHEIGHT];
+	cl.statsfl[STAT_VIEWHEIGHT] = cl.stats[STAT_VIEWHEIGHT];  //Compiler throwing out an error??? May be related to Ian Michael Optimizations
 	cl.statsfl[STAT_WEAPONFRAME] = cl.stats[STAT_WEAPONFRAME];
 	cl.statsfl[STAT_ARMOR] = cl.stats[STAT_ARMOR];
 	cl.statsfl[STAT_WEAPON] = cl.stats[STAT_WEAPON];
@@ -828,6 +828,7 @@ int CL_ParseServerMessage (void)
 {
 	int			cmd;
 	int			i;
+	char *s;
 
 //
 // if recording demos, copy the message out
@@ -884,7 +885,7 @@ int CL_ParseServerMessage (void)
 
 		case svc_clientdata:
 			i = MSG_ReadShort ();
-			CL_ParseClientdata (i);
+			CL_ParseClientdata (i, true);
 			break;
 #ifdef EXT_CSQC
 		case svc_indep_clientdata:
