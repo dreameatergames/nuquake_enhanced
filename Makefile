@@ -43,8 +43,8 @@ $(info Include directories: $(INC_DIRS))
 
 # Modify INCS to include both the project directories and external dependencies
 INCS := -I$(KOS_PORTS)/include \
-        -I$(DEP_DIR)/cglm/include \
-        -I$(DEP_DIR)/SDL/include \
+		-I$(KOS_PORTS)/include/clgm \
+       	-I$(KOS_PORTS)/include/SDL \
         -I$(CURDIR) \
         $(addprefix -I,$(INC_DIRS))
 
@@ -71,10 +71,8 @@ release: $(BUILD_DIR)/$(TARGET_EXEC)
 
 debug: $(BUILD_DIR)/$(TARGET_EXEC)
 
-#INC_LZO = -I$(DEP_DIR)/minilzo
-#INC_ALDC = -I$(DEP_DIR)/aldc/include
-INCS :=  -I$(KOS_PORTS)/include/GL -I$(DEP_DIR)/cglm/include -I$(DEP_DIR)/SDL/include
-#-I$(DEP_DIR)/SDL-1.2.9/inst/include
+INCS :=  -I$(KOS_PORTS)/include/GL -I$(KOS_PORTS)/include/clgm -I$(KOS_PORTS)/include/SDL
+
 
 
 CC = kos-cc
@@ -83,14 +81,11 @@ AS = kos-as
 STRIP = $(PREFIX)strip
 
 LIB_GLDC = $(KOS_PORTS)/lib/libGL.a
-LIB_LZO = $(DEP_DIR)/minilzo/libminilzo.a
-#LIB_ALDC = $(DEP_DIR)/aldc/libAL.a
-#LIB_SDL = -lSDL
-#LIB_SDL = $(DEP_DIR)/SDL-1.2.9/libSDL_129.a
-LIB_SDL = $(DEP_DIR)/SDL/libSDL.a
+LIB_LZO = $(KOS_PORTS)/lib/libminilzo.a
+LIB_SDL = $(KOS_PORTS)/lib/libSDL.a
 
 LIBS = $(LIB_GLDC)  -lz $(LIB_SDL) -lppp
-INCS += -iquote src/common -iquote src/dreamcast
+INCS += -iquote quake/common -iquote quake/dreamcast
 
 CPPFLAGS ?= $(INC_FLAGS) -MMD -MP
 
@@ -113,16 +108,16 @@ $(BUILD_DIR)/%.c.o: %.c
 #GLdc :
 #	@$(MAKE) -C deps/libgl CFLAGS=-DBUILD_LIBGL build
 
-$(LIB_GLDC):
-	$(MAKE) -C deps/libgl
+#$(LIB_GLDC):
+#	$(MAKE) -C deps/libgl
 
-$(LIB_LZO):
-	$(MAKE) -C deps/minilzo
+#$(LIB_LZO):
+#	$(MAKE) -C deps/minilzo
 
 .PHONY: clean
 
 clean:
-	$(RM) -r $(BUILD_DIR)/quake
+	$(RM) -r $(BUILD_DIR)/build_dc
 
 
 .PHONY: build
