@@ -117,7 +117,7 @@ extern PROC glVertexPointerEXT;
 #endif
 
 #ifdef _arch_dreamcast
-void glDepthRange(GLclampf n, GLclampf f);
+void glDepthRange(GLdouble n, GLdouble f);
 #endif
 
 // r_local.h -- private refresh defs

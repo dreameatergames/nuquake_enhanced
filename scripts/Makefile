@@ -43,8 +43,8 @@ $(info Include directories: $(INC_DIRS))
 
 # Modify INCS to include both the project directories and external dependencies
 INCS := -I$(KOS_PORTS)/include \
-		-I$(KOS_PORTS)/include/clgm \
-       	-I$(KOS_PORTS)/include/SDL \
+  #      -I$(DEP_DIR)/cglm/include \
+       # -I$(DEP_DIR)/SDL/include \
         -I$(CURDIR) \
         $(addprefix -I,$(INC_DIRS))
 
@@ -71,8 +71,10 @@ release: $(BUILD_DIR)/$(TARGET_EXEC)
 
 debug: $(BUILD_DIR)/$(TARGET_EXEC)
 
+#INC_LZO = -I$(DEP_DIR)/minilzo
+#INC_ALDC = -I$(DEP_DIR)/aldc/include
 INCS :=  -I$(KOS_PORTS)/include/GL -I$(KOS_PORTS)/include/clgm -I$(KOS_PORTS)/include/SDL
-
+#-I$(DEP_DIR)/SDL-1.2.9/inst/include
 
 
 CC = kos-cc
@@ -82,6 +84,9 @@ STRIP = $(PREFIX)strip
 
 LIB_GLDC = $(KOS_PORTS)/lib/libGL.a
 LIB_LZO = $(KOS_PORTS)/lib/libminilzo.a
+#LIB_ALDC = $(DEP_DIR)/aldc/libAL.a
+#LIB_SDL = -lSDL
+#LIB_SDL = $(DEP_DIR)/SDL-1.2.9/libSDL_129.a
 LIB_SDL = $(KOS_PORTS)/lib/libSDL.a
 
 LIBS = $(LIB_GLDC)  -lz $(LIB_SDL) -lppp
@@ -108,11 +113,11 @@ $(BUILD_DIR)/%.c.o: %.c
 #GLdc :
 #	@$(MAKE) -C deps/libgl CFLAGS=-DBUILD_LIBGL build
 
-#$(LIB_GLDC):
-#	$(MAKE) -C deps/libgl
+$(LIB_GLDC):
+	$(MAKE) -C deps/libgl
 
-#$(LIB_LZO):
-#	$(MAKE) -C deps/minilzo
+$(LIB_LZO):
+	$(MAKE) -C deps/minilzo
 
 .PHONY: clean
 
