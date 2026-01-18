@@ -1311,25 +1311,22 @@ done:;
 
 static void GL_Upload8_EXT(byte *restrict data, int width, int height,
                            uint8_t flags) {
-#ifdef _arch_dreamcast // BlackAura - begin
-  qboolean mipmap = ((flags & TEX_MIP) == TEX_MIP);
+#ifdef _arch_dreamcast
+  // GLdc bug: mipmap VRAM offsets unaligned for GL_COLOR_INDEX8_EXT textures
+  // Disable mipmaps entirely for paletted textures
+  (void)flags;
 
   int scaled_width, scaled_height;
-  if (width != height) {
-    mipmap = false;
-  }
 
   for (scaled_width = 1; scaled_width < width; scaled_width <<= 1)
     ;
   for (scaled_height = 1; scaled_height < height; scaled_height <<= 1)
     ;
 
-  if (height < 8 || scaled_height < 8) {
+  if (scaled_height < 8)
     scaled_height = 8;
-  }
-  if (width < 8 || scaled_width < 8) {
+  if (scaled_width < 8)
     scaled_width = 8;
-  }
 
   if (scaled_width > (int)gl_max_size.value)
     scaled_width = gl_max_size.value;
@@ -1341,75 +1338,26 @@ static void GL_Upload8_EXT(byte *restrict data, int width, int height,
   if (scaled_height == 256)
     scaled_height >>= (int)gl_picmip.value;
 
-#if 0 /*def DEBUG*/
-  printf("GL_Upload8: %dx%d\t %d bytes\n", scaled_width, scaled_height, scaled_width*scaled_height);
-  printf("GL Mem left:%u\n", (unsigned int)glGetFreeVRAM_INTERNAL_KOS());
-#endif
-
-  if (!scaled) {
-    scaled_raw = buffer_aligned; // Hunk_TempAlloc(256 * 256 + 32);
-    scaled = scaled_raw; //(unsigned char*)ALIGN((uint32_t)scaled_raw, 32);
-  }
-
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER,
-                  (mipmap) ? gl_filter_min : gl_filter_max);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, gl_filter_max);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, gl_filter_max);
+
   if ((scaled_width == width) && (scaled_height == height)) {
-    uint32_t ptr_unchecked = (uint32_t)data;
-    uint32_t ptr_aligned = ALIGN((uint32_t)data, 32);
-    if (ptr_unchecked != ptr_aligned) {
-      memcpy(buffer_aligned, data, scaled_width * scaled_height * 1);
-      glTexImage2D(GL_TEXTURE_2D, 0, GL_COLOR_INDEX8_EXT, scaled_width,
-                   scaled_height, 0, GL_COLOR_INDEX, GL_UNSIGNED_BYTE,
-                   buffer_aligned);
-    } else {
-      glTexImage2D(GL_TEXTURE_2D, 0, GL_COLOR_INDEX8_EXT, scaled_width,
-                   scaled_height, 0, GL_COLOR_INDEX, GL_UNSIGNED_BYTE, data);
-    }
-    if (mipmap)
-      memcpy(scaled, data, width * height);
-    else {
-      return;
-    }
+    memcpy(buffer_aligned, data, scaled_width * scaled_height);
   } else {
-    GL_Resample8BitTexture(data, width, height, scaled, scaled_width,
+    GL_Resample8BitTexture(data, width, height, buffer_aligned, scaled_width,
                            scaled_height);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_COLOR_INDEX8_EXT, scaled_width,
-                 scaled_height, 0, GL_COLOR_INDEX, GL_UNSIGNED_BYTE, scaled);
   }
 
-  if ((scaled_width == scaled_height) && mipmap) {
-    // Only using scaled_width from now on;
-    // #define PARANOID
-    int miplevel = 0;
-#ifdef PARANOID
-    printf("Begin mip for %dx%d hopefully %d: ", scaled_width, scaled_height,
-           log2(scaled_width));
-#endif
-    while (scaled_width > 1) {
-      GL_MipMap8Bit(scaled, scaled_width, scaled_width);
-      scaled_width >>= 1;
-
-      glTexImage2D(GL_TEXTURE_2D, ++miplevel, GL_COLOR_INDEX8_EXT, scaled_width,
-                   scaled_width, 0, GL_COLOR_INDEX, GL_UNSIGNED_BYTE, scaled);
-#ifdef PARANOID
-      printf("..%d", miplevel);
-#endif
-    }
-#ifdef PARANOID
-    printf("\n");
-#endif
-#undef PARANOID
-  }
-  return;
+  glTexImage2D(GL_TEXTURE_2D, 0, GL_COLOR_INDEX8_EXT, scaled_width,
+               scaled_height, 0, GL_COLOR_INDEX, GL_UNSIGNED_BYTE,
+               buffer_aligned);
 #else
   (void)data;
   (void)width;
   (void)height;
   (void)flags;
-#endif // BlackAura
+#endif
 }
-
 /*
 ===============
 GL_Upload8
