@@ -18,20 +18,20 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 */
 #include <arch/arch.h>
-#include <dc/video.h>
 #include <assert.h>
+#include <dc/video.h>
 #include <limits.h>
+#include <malloc.h>
 #include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <malloc.h>
 
-#include <dc/sq.h>
 #include <dc/biosfont.h>
+#include <dc/sq.h>
 
 #include "errno.h"
 /* Not using LZO1X right now */
-//#include "minilzo.h"
+// #include "minilzo.h"
 #include "quakedef.h"
 
 #if 0
@@ -60,8 +60,7 @@ extern void setSystemRam(void);
 
 extern void arch_stk_trace(int n);
 void *__stack_chk_guard = (void *)0x69420A55;
-void __stack_chk_fail(void)
-{
+void __stack_chk_fail(void) {
   char strbuffer[1024];
   uint32_t pr = arch_get_ret_addr();
 
@@ -75,37 +74,35 @@ void __stack_chk_fail(void)
   drawtext(32, 96, strbuffer);
   arch_stk_trace(2);
 
-
 #ifdef FRAME_POINTERS
-/* Lifted from Kallistios: kernel/arch/dreamcast/kernel/stack.c
-   stack.c
-   (c)2002 Dan Potter
-*/
-  int y=96+32;
+  /* Lifted from Kallistios: kernel/arch/dreamcast/kernel/stack.c
+     stack.c
+     (c)2002 Dan Potter
+  */
+  int y = 96 + 32;
   uint32_t fp = arch_get_fptr();
   int n = 3;
-  drawtext(32, (y+=32), "-------- Stack Trace (innermost first) ---------");
+  drawtext(32, (y += 32), "-------- Stack Trace (innermost first) ---------");
 #if 1
-  while((fp > 0x100) && (fp != 0xffffffff)) {
-      if((fp & 3) || (fp < 0x8c000000) || (fp > 0x8d000000)) {
-          drawtext(32, (y+=32),"   (invalid frame pointer)\n");
-          break;
-      }
+  while ((fp > 0x100) && (fp != 0xffffffff)) {
+    if ((fp & 3) || (fp < 0x8c000000) || (fp > 0x8d000000)) {
+      drawtext(32, (y += 32), "   (invalid frame pointer)\n");
+      break;
+    }
 
-      if(n <= 0) {
-          sprintf(strbuffer, "   %08lx\n", arch_fptr_ret_addr(fp));
-          drawtext(32, (y+=32), strbuffer);
-      }
-      else n--;
+    if (n <= 0) {
+      sprintf(strbuffer, "   %08lx\n", arch_fptr_ret_addr(fp));
+      drawtext(32, (y += 32), strbuffer);
+    } else
+      n--;
 
-      fp = arch_fptr_next(fp);
+    fp = arch_fptr_next(fp);
   }
 #endif
-  drawtext(32, (y+=32), "-------------- End Stack Trace -----------------\n");
+  drawtext(32, (y += 32), "-------------- End Stack Trace -----------------\n");
 #else
   drawtext(32, 128, "Stack Trace: frame pointers not enabled!\n");
 #endif
-
 }
 
 /*
@@ -117,7 +114,7 @@ FILE IO
 */
 
 #define MAX_HANDLES 10
-//#define MAX_HANDLES 8
+// #define MAX_HANDLES 8
 FILE *sys_handles[MAX_HANDLES];
 
 int findhandle(void) {
@@ -129,7 +126,6 @@ int findhandle(void) {
   Sys_Error("out of handles");
   return -1;
 }
-
 
 /*
 ================
@@ -269,7 +265,7 @@ int Sys_FileWrite(int handle, void *data, int count) {
   int x;
   x = fwrite(data, 1, count, sys_handles[handle]);
   if (x == -1) {
-    printf("%s: ERRO!\n",__func__);
+    printf("%s: ERRO!\n", __func__);
   }
 
 #ifndef NO_CD
@@ -287,13 +283,9 @@ int Sys_FileTime(char *path) {
   return ((stat(path, &buffer) == 0) ? 1 : -1);
 }
 
-void Sys_mkdir(char *path) {
-  (void)path;
-}
+void Sys_mkdir(char *path) { (void)path; }
 
-int VCR_Init(void) {
-  return 0;
-}
+int VCR_Init(void) { return 0; }
 
 /*
 ===============================================================================
@@ -318,21 +310,21 @@ void Sys_Error(char *error, ...) {
 }
 
 void Sys_Printf(char *fmt, ...) {
-	va_list		argptr;
-	char		text[1024];
+  va_list argptr;
+  char text[1024];
 
-	va_start (argptr,fmt);
-	vsprintf (text, fmt, argptr);
-	va_end (argptr);
+  va_start(argptr, fmt);
+  vsprintf(text, fmt, argptr);
+  va_end(argptr);
 
-  //#ifndef QUIET
-	printf("%s", text);
-  //#endif
+  // #ifndef QUIET
+  printf("%s", text);
+  // #endif
 }
 
 extern void glKosSwapBuffers_NO_PT(void);
 void Sys_Quit(void) {
- //glKosSwapBuffers_NO_PT();
+  // glKosSwapBuffers_NO_PT();
   glKosSwapBuffers();
   Host_Shutdown();
   vid_set_mode(DM_640x480, PM_RGB565);
@@ -341,7 +333,7 @@ void Sys_Quit(void) {
   /* Display the error message on screen */
   drawtext(32, 64, "nuQuake shutdown...");
   arch_menu();
-  //arch_exit();
+  // arch_exit();
 }
 
 #include <sys/time.h>
@@ -361,13 +353,9 @@ float Sys_FloatTime(void) {
   return (tp.tv_sec - secbase) + tp.tv_usec / 1000000.0f;
 }
 
+char *Sys_ConsoleInput(void) { return NULL; }
 
-char *Sys_ConsoleInput(void) {
-  return NULL;
-}
-
-void Sys_Sleep(void) {
-}
+void Sys_Sleep(void) {}
 
 qboolean isDedicated = false;
 
@@ -380,7 +368,8 @@ static void drawtext(int x, int y, char *string) {
   bfont_draw_str(vram_s + offset, 640, 1, string);
 }
 
-static void assert_hnd(const char *file, int line, const char *expr, const char *msg, const char *func) {
+static void assert_hnd(const char *file, int line, const char *expr,
+                       const char *msg, const char *func) {
   char strbuffer[1024];
 
   /* Reset video mode, clear screen */
@@ -403,11 +392,12 @@ static void assert_hnd(const char *file, int line, const char *expr, const char 
 
 //=============================================================================
 
-//KOS_INIT_FLAGS(INIT_NONE | INIT_NO_DCLOAD | INIT_IRQ | INIT_THD_PREEMPT);
+// KOS_INIT_FLAGS(INIT_NONE | INIT_NO_DCLOAD | INIT_IRQ | INIT_THD_PREEMPT);
 
-//#include <SDL/SDL.h>
-//extern void handle_libc_overrides(void);
-KOS_INIT_FLAGS(INIT_CDROM | INIT_CONTROLLER | INIT_KEYBOARD | INIT_MOUSE | INIT_NET | INIT_VMU);
+// #include <SDL/SDL.h>
+// extern void handle_libc_overrides(void);
+KOS_INIT_FLAGS(INIT_CDROM | INIT_CONTROLLER | INIT_KEYBOARD | INIT_MOUSE |
+               INIT_VMU | INIT_NET);
 
 int main(int argc, char **argv) {
   (void)argc;
@@ -417,12 +407,12 @@ int main(int argc, char **argv) {
   setbuf(stdout, NULL);
   fflush(stdout);
 
-  //handle_libc_overrides();
-  // Set up assertion handler
-  assert_set_handler(assert_hnd);
+  // handle_libc_overrides();
+  //  Set up assertion handler
+  // assert_set_handler(assert_hnd);
 
   setSystemRam();
-  //broken?
+  // broken?
 
   GLdcConfig config;
   glKosInitConfig(&config);
@@ -441,7 +431,7 @@ int main(int argc, char **argv) {
   config.initial_immediate_capacity = 256 * 3;
   glKosInitEx(&config);
 
-  //glKosInit();
+  // glKosInit();
   memset(&parms, 0, sizeof(quakeparms_t));
 
   /* 17.6, 55.2 fps*/
@@ -456,37 +446,37 @@ int main(int argc, char **argv) {
     }
 #endif
 
-  char *basedirs[7] = {
-      "/cd",          /* just dumped files */
-      "/cd/QUAKE",    /* installed  */
-      "/cd/QUAKE_SW", /* shareware */
-      "/cd/data",     /* official CD-ROM */
-      "/pc/quake",    /* debug */
-      "/pc/quake_sw", /* debug */
-      NULL};
+  char *basedirs[7] = {"/pc",          /* just dumped files */
+                       "/pc/QUAKE",    /* installed  */
+                       "/pc/QUAKE_SW", /* shareware */
+                       "/pc/data",     /* official CD-ROM */
+                       "/pc/quake",    /* debug */
+                       "/pc/quake_sw", /* debug */
+                       NULL};
 
   char *basedir;
 #if 1
-//Load Directly
-	int i;
-	for(i=0;(basedir = basedirs[i])!=NULL;i++) {
-		int fd  = fs_open(basedir, O_RDONLY | O_DIR);
-		if (fd < 0) continue;
-			fs_close(fd);
-			break;
-	}
-	if (basedir==NULL)
-		Sys_Error("can't find quake dir");
-	static char *args[10] = {"quake",NULL};
+  // Load Directly
+  int i;
+  for (i = 0; (basedir = basedirs[i]) != NULL; i++) {
+    int fd = fs_open(basedir, O_RDONLY | O_DIR);
+    if (fd < 0)
+      continue;
+    fs_close(fd);
+    break;
+  }
+  if (basedir == NULL)
+    Sys_Error("can't find quake dir");
+  static char *args[10] = {"quake", NULL};
 #else
 #if 1
-  //Display Mod Menu
+  // Display Mod Menu
   char *args[10] = {"quake", NULL};
   argc = 1;
   argv = args;
   basedir = menu(&argc, argv, basedirs, 6);
 #else
-  //Don't use mod menu
+  // Don't use mod menu
   static char *args[10] = {"quake", "-game", "kickflip", NULL};
   basedir = "/cd/data";
   argc = 3;
@@ -499,7 +489,7 @@ int main(int argc, char **argv) {
 
   parms.argc = com_argc;
   parms.argv = com_argv;
- // parms.memsize = 10 * 1024 * 1024;
+  // parms.memsize = 10 * 1024 * 1024;
   parms.memsize = 8 * 1024 * 1024;
 
   int t;
@@ -513,7 +503,7 @@ int main(int argc, char **argv) {
   INFO_MSG("Ram Info:");
   printf("Memsize: %dMB\n", parms.memsize / 1024 / 1024);
   parms.membase = memalign(0x20, parms.memsize);
- 	getRamStatus();
+  getRamStatus();
   malloc_stats();
   printf("PVR Mem left:%u\n", (unsigned int)pvr_mem_available());
 #ifdef GL_EXT_dreamcast_yalloc
@@ -525,134 +515,17 @@ int main(int argc, char **argv) {
 
   sq_clr(parms.membase, 0x0);
   parms.basedir = basedir;
-  //SDL_Init(SDL_INIT_CDROM | SDL_INIT_AUDIO);
+  // SDL_Init(SDL_INIT_CDROM | SDL_INIT_AUDIO);
 
   Host_Init(&parms);
   oldtime = Sys_FloatTime();
-  //profiler_enable();
+  // profiler_enable();
   while (1) {
     newtime = Sys_FloatTime();
     time = newtime - oldtime;
 
     Host_Frame(time);
     oldtime = newtime;
-
-}
+  }
   return 1;
 }
-
-#if 0
-#include <stdio.h>
-#include <assert.h>
-#include <arch/rtc.h>
-#include <kos/fs.h>
-#include <kos/thread.h>
-#include <kos/fs_pty.h>
-#include <kos/fs_ramdisk.h>
-#include <kos/library.h>
-#include <kos/net.h>
-#include <kos/dbgio.h>
-#include <dc/fs_iso9660.h>
-#include <dc/cdrom.h>
-#include <dc/fs_vmu.h>
-#include <dc/vmufs.h>
-#include <dc/cdrom.h>
-#include <dc/spu.h>
-#include <dc/pvr.h>
-#include <dc/maple.h>
-#include <dc/sound/sound.h>
-#include <dc/scif.h>
-#include <dc/fs_dcload.h>
-#include <dc/fs_dclsocket.h>
-#include <arch/irq.h>
-#include <arch/timer.h>
-#include <dc/fb_console.h>
-int arch_auto_init() {
-
-  /* Initialize memory management */
-  mm_init();
-
-  /* Do this immediately so we can receive exceptions for init code
-     and use ints for dbgio receive. */
-  irq_init();         /* IRQs */
-  irq_disable();          /* Turn on exceptions */
-
-  fs_dcload_init_console();   /* Init dc-load console, if applicable */
-
-  // Init SCIF for debug stuff (maybe)
-  scif_init();
-
-  /* Init debug IO */
-  dbgio_init();
-
-  timer_init();           /* Timers */
-  hardware_sys_init();        /* DC low-level hardware init */
-
-  /* Initialize our timer */
-  timer_ms_enable();
-  rtc_init();
-
-  /* Threads */
-  thd_init(THD_MODE_PREEMPT);
-
-  nmmgr_init();
-
-  fs_init();          /* VFS */
-  fs_pty_init();          /* Pty */
-  fs_ramdisk_init();      /* Ramdisk */
-
-  /* DC peripheral init */
-	/* Init sound */
-	spu_init();
-	spu_dma_init();
-
-	/* Init CD-ROM.. NOTE: NO GD-ROM SUPPORT. ONLY CDs/CDRs. */
-	cdrom_init();
-
-	/* Setup maple bus */
-	maple_init();
-
-	/* Init video */
-	vid_init(DEFAULT_VID_MODE, DEFAULT_PIXEL_MODE);
-
-  if(!(__kos_init_flags & INIT_NO_DCLOAD) && *DCLOADMAGICADDR == DCLOADMAGICVALUE) {
-      dbglog(DBG_INFO, "dc-load console support enabled\n");
-      fs_dcload_init();
-  }
-
-  fs_iso9660_init();
-  vmufs_init();
-  fs_vmu_init();
-
-  // Initialize library handling
-  library_init();
-
-  /* Now comes the optional stuff */
-  if(__kos_init_flags & INIT_IRQ) {
-      irq_enable();       /* Turn on IRQs */
-  }
-
-  return 0;
-}
-
-void  arch_auto_shutdown() {
-    fs_dclsocket_shutdown();
-    net_shutdown();
-
-    irq_disable();
-    snd_shutdown();
-    timer_shutdown();
-    hardware_shutdown();
-    pvr_shutdown();
-    library_shutdown();
-    fs_dcload_shutdown();
-    fs_vmu_shutdown();
-    vmufs_shutdown();
-    fs_iso9660_shutdown();
-    fs_ramdisk_shutdown();
-    fs_pty_shutdown();
-    fs_shutdown();
-    thd_shutdown();
-    rtc_shutdown();
-}
-#endif

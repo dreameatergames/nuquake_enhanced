@@ -82,7 +82,7 @@ STRIP = $(PREFIX)strip
 
 LIB_GLDC = $(KOS_PORTS)/lib/libGL.a
 LIB_LZO = $(KOS_PORTS)/lib/libminilzo.a
-LIB_SDL = $(KOS_PORTS)/lib/libSDL.a
+LIB_SDL = -lSDL
 
 LIBS = $(LIB_GLDC)  -lz $(LIB_SDL) -lppp
 INCS += -iquote quake/common -iquote quake/dreamcast
@@ -117,7 +117,7 @@ $(BUILD_DIR)/%.c.o: %.c
 .PHONY: clean
 
 clean:
-	$(RM) -r $(BUILD_DIR)/build_dc
+	$(RM) -r $(BUILD_DIR)
 
 
 .PHONY: build
