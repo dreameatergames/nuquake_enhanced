@@ -36,7 +36,7 @@ cvar_t gl_max_size = {"gl_max_size", "256"};
 cvar_t gl_picmip = {"gl_picmip", "0"};
 extern cvar_t scr_safety;
 
-byte *draw_chars;  // 8*8 graphic characters
+byte *draw_chars; // 8*8 graphic characters
 qpic_t *draw_disc;
 qpic_t *draw_backtile;
 
@@ -46,8 +46,7 @@ unsigned int char_texture = 0;
 int vid_halfwidth = 0;
 int vid_halfheight = 0;
 
-typedef struct
-{
+typedef struct {
   int texnum;
   float sl, tl, sh, th;
 } glpic_t;
@@ -62,8 +61,7 @@ int gl_alpha_format = GL_RGBA;
 int gl_filter_min = GL_LINEAR;
 int gl_filter_max = GL_LINEAR;
 
-typedef struct
-{
+typedef struct {
   GLuint texnum;
   int width, height;
   int lhcsum;
@@ -76,55 +74,59 @@ static int numgltextures;
 gltexture_t gltextures[MAX_GLTEXTURES];
 
 /*
-* @Note: define static texture memory
-*/
-static unsigned char __attribute__((aligned(32)))  buffer_aligned[512 * 512 * 4];
+ * @Note: define static texture memory
+ */
+static unsigned char __attribute__((aligned(32))) buffer_aligned[512 * 512 * 4];
 #ifndef _arch_dreamcast
-static unsigned int scaled[1024 * 512];  // [512*256];
+static unsigned int scaled[1024 * 512]; // [512*256];
 #else
-static unsigned char* scaled_raw = NULL;
-static unsigned char* scaled = NULL;
+static unsigned char *scaled_raw = NULL;
+static unsigned char *scaled = NULL;
 #endif
 
-void GL_FreeTextures (void)
-{
-	int i, j;
+void GL_FreeTextures(void) {
+  int i, j;
 
-	//Con_DPrintf("GL_FreeTextures: Entry.\n");
-/*
-	if (gl_free_world_textures.value == 0)
-	{
-		Con_DPrintf("GL_FreeTextures: Not Clearing old Map Textures.\n");
-		return;
-	}
-*/
-	Con_DPrintf("GL_FreeTextures: Freeing textures (numgltextures = %i) \n", numgltextures);
+  // Con_DPrintf("GL_FreeTextures: Entry.\n");
+  /*
+          if (gl_free_world_textures.value == 0)
+          {
+                  Con_DPrintf("GL_FreeTextures: Not Clearing old Map
+     Textures.\n"); return;
+          }
+  */
+  Con_DPrintf("GL_FreeTextures: Freeing textures (numgltextures = %i) \n",
+              numgltextures);
 
-	for (i = j = 0; i < numgltextures; ++i, ++j)
-	{
-		if (gltextures[i].flags & TEX_WORLD)//Only clear out world textures... for now.
-		{
-			//Con_DPrintf("GL_FreeTextures: Clearing texture %s\n", gltextures[i].identifier);
-			glDeleteTextures(1, (GLuint*)(&gltextures[i].texnum));
+  for (i = j = 0; i < numgltextures; ++i, ++j) {
+    if (gltextures[i].flags &
+        TEX_WORLD) // Only clear out world textures... for now.
+    {
+      // Con_DPrintf("GL_FreeTextures: Clearing texture %s\n",
+      // gltextures[i].identifier);
+      glDeleteTextures(1, (GLuint *)(&gltextures[i].texnum));
       memset(&gltextures[i], 0, sizeof(gltexture_t));
-			--j;
-		}
-		else if (j < i) {
-      //Con_DDPrintf("GL_FreeTextures: NOT Clearing texture %s\n", gltextures[i].identifier);
-			gltextures[j] = gltextures[i];
-		}
-	}
+      --j;
+    } else if (j < i) {
+      // Con_DDPrintf("GL_FreeTextures: NOT Clearing texture %s\n",
+      // gltextures[i].identifier);
+      gltextures[j] = gltextures[i];
+    }
+  }
 
-	numgltextures = j;
+  numgltextures = j;
 #ifdef GL_EXT_dreamcast_yalloc
-	Con_DPrintf("GL_FreeTextures: Completed (numgltextures = %i) \n", numgltextures);
+  Con_DPrintf("GL_FreeTextures: Completed (numgltextures = %i) \n",
+              numgltextures);
   Con_Printf("GL Mem Before:%u\n", (unsigned int)glGetFreeVRAM_INTERNAL_KOS());
-  Con_Printf("GL Mem Block:%u\n", (unsigned int)glGetContinuousVRAM_INTERNAL_KOS());
-  //glDumpVRAM_INTERNAL_KOS();
+  Con_Printf("GL Mem Block:%u\n",
+             (unsigned int)glGetContinuousVRAM_INTERNAL_KOS());
+  // glDumpVRAM_INTERNAL_KOS();
   glDefragmentVRAM_INTERNAL_KOS();
   Con_Printf("GL Mem After:%u\n", (unsigned int)glGetFreeVRAM_INTERNAL_KOS());
-  Con_Printf("GL Mem Block:%u\n", (unsigned int)glGetContinuousVRAM_INTERNAL_KOS());
-  //glDumpVRAM_INTERNAL_KOS();
+  Con_Printf("GL Mem Block:%u\n",
+             (unsigned int)glGetContinuousVRAM_INTERNAL_KOS());
+  // glDumpVRAM_INTERNAL_KOS();
 #endif
 }
 
@@ -158,15 +160,15 @@ void GL_OverscanAdjust(int *x, int *y) {
 
     /* Old */
     /*if( *x < vid_halfwidth){
-			*x += scr_safety.value;
-		} else {
-			*x -= scr_safety.value;
-		}
-		if( *y < vid_halfheight){
-			*y += scr_safety.value;
-		} else {
-			*y -= scr_safety.value;
-		}*/
+                        *x += scr_safety.value;
+                } else {
+                        *x -= scr_safety.value;
+                }
+                if( *y < vid_halfheight){
+                        *y += scr_safety.value;
+                } else {
+                        *y -= scr_safety.value;
+                }*/
   }
 }
 
@@ -184,10 +186,11 @@ void GL_OverscanAdjust(int *x, int *y) {
 #define MAX_SCRAPS 4
 #define BLOCK_WIDTH 256
 #define BLOCK_HEIGHT 256
-#define TEXTURE_PADDING 1  // Increased padding to ensure no bleeding
+#define TEXTURE_PADDING 1 // Increased padding to ensure no bleeding
 
 int scrap_allocated[MAX_SCRAPS][BLOCK_WIDTH];
-byte __attribute__((aligned(32))) scrap_texels[MAX_SCRAPS][BLOCK_WIDTH * BLOCK_HEIGHT];
+byte __attribute__((
+    aligned(32))) scrap_texels[MAX_SCRAPS][BLOCK_WIDTH * BLOCK_HEIGHT];
 qboolean scrap_dirty;
 int scrap_texnum;
 
@@ -209,7 +212,7 @@ int Scrap_AllocBlock(int w, int h, int *x, int *y) {
         if (scrap_allocated[texnum][i + j] > best2)
           best2 = scrap_allocated[texnum][i + j];
       }
-      if (j == w) {  // this is a valid spot
+      if (j == w) { // this is a valid spot
         *x = i;
         *y = best = best2;
       }
@@ -223,10 +226,10 @@ int Scrap_AllocBlock(int w, int h, int *x, int *y) {
 
     return texnum;
   }
-  //return -1; /* Die Gracefully */
+  // return -1; /* Die Gracefully */
   return 0; /* Die Gracefully */
-  //Sys_Error("Scrap_AllocBlock: full");
-  //return 0; /* We Died anyways */
+  // Sys_Error("Scrap_AllocBlock: full");
+  // return 0; /* We Died anyways */
 }
 
 int scrap_uploads;
@@ -240,8 +243,8 @@ void Scrap_Upload(void) {
     GL_Bind(scrap_texnum + texnum);
     GL_Upload8(scrap_texels[texnum], BLOCK_WIDTH, BLOCK_HEIGHT, TEX_ALPHA);
   }
-  
-  glPixelStorei(GL_UNPACK_ALIGNMENT, 4);  
+
+  glPixelStorei(GL_UNPACK_ALIGNMENT, 4);
   scrap_dirty = false;
 }
 
@@ -264,7 +267,7 @@ int GL_LoadPicTexture(qpic_t *pic) {
 typedef struct cachepic_s {
   char name[MAX_QPATH];
   qpic_t pic;
-  byte padding[32];  // for appended glpic
+  byte padding[32]; // for appended glpic
 } cachepic_t;
 
 #define MAX_CACHED_PICS 128
@@ -291,7 +294,7 @@ qpic_t *Draw_PicFromWad(char *name) {
     x = y = 0;
 
     texnum = Scrap_AllocBlock(p->width, p->height, &x, &y);
-    if(texnum == -1 ){
+    if (texnum == -1) {
       gl->texnum = GL_LoadPicTexture(p);
       gl->sl = 0;
       gl->sh = 1;
@@ -350,7 +353,7 @@ qpic_t *Draw_CachePic(char *path) {
   //
   dat = (qpic_t *)COM_LoadTempFile(path);
   if (!dat) {
-    //Sys_Error("Draw_CachePic: failed to load %s", path);
+    // Sys_Error("Draw_CachePic: failed to load %s", path);
     Con_Printf("Draw_CachePic: failed to load %s\n", path);
     /* shareware 0.91 doesnt have this */
     /*@Note: SW Hack */
@@ -400,8 +403,7 @@ void Draw_CharToConback(int num, byte *dest) {
   }
 }
 
-typedef struct
-{
+typedef struct {
   char *name;
   int minimize, maximize;
 } glmode_t;
@@ -459,7 +461,9 @@ void Draw_TextureMode_f(void) {
   // change all the existing mipmap texture objects
   for (i = 0, glt = gltextures; i < numgltextures; i++, glt++) {
     GL_Bind(glt->texnum);
-    glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, ((glt->flags & TEX_MIP) == TEX_MIP) ? gl_filter_min: gl_filter_max);
+    glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER,
+                    ((glt->flags & TEX_MIP) == TEX_MIP) ? gl_filter_min
+                                                        : gl_filter_max);
     glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, gl_filter_max);
   }
   for (i = 0; i < MAX_LIGHTMAPS; i++) {
@@ -481,7 +485,9 @@ void Draw_Set_TextureMode(int i) {
     // change all the existing mipmap texture objects
     for (i = 0, glt = gltextures; i < numgltextures; i++, glt++) {
       GL_Bind(glt->texnum);
-      glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, ((glt->flags & TEX_MIP) == TEX_MIP) ? gl_filter_min: gl_filter_max);
+      glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER,
+                      ((glt->flags & TEX_MIP) == TEX_MIP) ? gl_filter_min
+                                                          : gl_filter_max);
       glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, gl_filter_max);
     }
     for (i = 0; i < MAX_LIGHTMAPS; i++) {
@@ -531,7 +537,7 @@ void Draw_Init(void) {
   draw_chars = W_GetLumpName("conchars");
   for (i = 0; i < 256 * 64; i++)
     if (draw_chars[i] == 0)
-      draw_chars[i] = 255;  // proper transparent color
+      draw_chars[i] = 255; // proper transparent color
 
   // now turn them into textures
   char_texture = GL_LoadTexture("charset", 128, 128, draw_chars, TEX_ALPHA);
@@ -602,7 +608,8 @@ void Draw_Init(void) {
   ncdata = cb->data;
 #endif
   gl = (glpic_t *)conback->data;
-  gl->texnum = GL_LoadTexture("conback", conback->width, conback->height, ncdata, TEX_NONE);
+  gl->texnum = GL_LoadTexture("conback", conback->width, conback->height,
+                              ncdata, TEX_NONE);
   gl->sl = 0;
   gl->sh = 1;
   gl->tl = 0;
@@ -614,12 +621,12 @@ void Draw_Init(void) {
   Hunk_FreeToLowMark(start);
 
   // save a texture slot for translated picture
-  glGenTextures(1, (GLuint*)&translate_texture);
+  glGenTextures(1, (GLuint *)&translate_texture);
 
   // save slots for scraps
-  GLuint temp[MAX_SCRAPS-1];
-  glGenTextures(1, (GLuint*)&scrap_texnum);
-  glGenTextures(MAX_SCRAPS-1, temp);
+  GLuint temp[MAX_SCRAPS - 1];
+  glGenTextures(1, (GLuint *)&scrap_texnum);
+  glGenTextures(MAX_SCRAPS - 1, temp);
 
   //
   // get the other pics we need
@@ -643,12 +650,12 @@ void Draw_Character(int x, int y, int num) {
   float v, u, size;
 
   if (num == 32)
-    return;  // space
+    return; // space
 
   num &= 255;
 
   if (y <= -8)
-    return;  // totally off screen
+    return; // totally off screen
 
   row = num >> 4;
   col = num & 15;
@@ -657,10 +664,10 @@ void Draw_Character(int x, int y, int num) {
   // and ensure proper alignment
   v = row * 0.0625f + 0.001f;
   u = col * 0.0625f + 0.001f;
-  size = 0.0625f - 0.002f;  // Slightly smaller to account for the offset
+  size = 0.0625f - 0.002f; // Slightly smaller to account for the offset
 
   // Ensure x and y are properly aligned for the hardware
-  x = (x + 4) & ~7;  // Align to 8-pixel boundary
+  x = (x + 4) & ~7; // Align to 8-pixel boundary
   y = (y + 4) & ~7;
 
   GL_Bind(char_texture);
@@ -713,9 +720,7 @@ This is for debugging lockups by drawing different chars in different parts
 of the code.
 ================
 */
-void Draw_DebugChar(char num) {
-  (void)num;
-}
+void Draw_DebugChar(char num) { (void)num; }
 
 /*
 =============
@@ -729,33 +734,32 @@ void Draw_AlphaPic(int x, int y, qpic_t *pic, float alpha) {
 
   if (scrap_dirty)
     Scrap_Upload();
-    
+
   gl = (glpic_t *)pic->data;
-  
+
   // Setup blending
   glEnable(GL_BLEND);
   glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-  
+
   // Disable culling for consistent rendering
   glDisable(GL_CULL_FACE);
-  
+
   // Set alpha
   quad_alpha = (uint8_t)(alpha * 255.0f);
-  
+
   // Bind texture and ensure proper filtering
   GL_Bind(gl->texnum);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-  
+
   // Ensure coordinates are hardware aligned
   x = (x + 4) & ~7;
   y = (y + 4) & ~7;
-  
+
   // Draw the quad
-  DrawQuad(x, y, pic->width, pic->height, 
-           gl->sl, gl->tl, 
-           gl->sh - gl->sl, gl->th - gl->tl);
-  
+  DrawQuad(x, y, pic->width, pic->height, gl->sl, gl->tl, gl->sh - gl->sl,
+           gl->th - gl->tl);
+
   // Restore state
   quad_alpha = 255;
   glEnable(GL_CULL_FACE);
@@ -774,7 +778,8 @@ void Draw_Pic(int x, int y, qpic_t *pic) {
     Scrap_Upload();
   gl = (glpic_t *)pic->data;
   GL_Bind(gl->texnum);
-  DrawQuad(x, y, pic->width, pic->height, gl->sl, gl->tl, gl->sh - gl->sl, gl->th - gl->tl);
+  DrawQuad(x, y, pic->width, pic->height, gl->sl, gl->tl, gl->sh - gl->sl,
+           gl->th - gl->tl);
 }
 
 /*
@@ -793,7 +798,7 @@ Draw_TransPicTranslate
 Only used for the player color selection menu
 =============
 */
-static unsigned __attribute__((aligned(32))) trans [64 * 64];
+static unsigned __attribute__((aligned(32))) trans[64 * 64];
 void Draw_TransPicTranslate(int x, int y, qpic_t *pic, byte *translation) {
   GL_OverscanAdjust(&x, &y);
   int v, u;
@@ -814,13 +819,14 @@ void Draw_TransPicTranslate(int x, int y, qpic_t *pic, byte *translation) {
 
       p = src[(int)(u * scale_w)];
       if (p == 255)
-        dest[u] = 0;  // Make transparent pixels actually transparent
+        dest[u] = 0; // Make transparent pixels actually transparent
       else
         dest[u] = d_8to24table[translation[p]];
     }
   }
 
-  glTexImage2D(GL_TEXTURE_2D, 0, gl_alpha_format, 64, 64, 0, GL_RGBA, GL_UNSIGNED_BYTE, trans);
+  glTexImage2D(GL_TEXTURE_2D, 0, gl_alpha_format, 64, 64, 0, GL_RGBA,
+               GL_UNSIGNED_BYTE, trans);
 
   glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
   glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
@@ -899,40 +905,69 @@ void Draw_FadeScreen(void) {
 
   glvert_fast_t quadvert[4];
   /* 1----2
-	   |    |
-		 |    |
-		 4----3
-		 Strip: 1423
-		 2Tris: 124423
- 	*/
-  //Vertex 1
-  //Quad vertex
-  //quadvert[0] = (glvert_fast_t){.flags = VERTEX, .vert = {0, 0, 0}, .texture = {0, 0}, .color = {0, 0, 0, (uint8_t)(255 * OPACITY)}, .pad0 = {0}};
-  quadvert[0] = (glvert_fast_t){.flags = VERTEX, .vert = {0, 0, 0}, .texture = {0, 0}, .color = { .packed = PACK_BGRA8888(0,0,0,(uint8_t)(255 * OPACITY))} , .pad0 = {0}};
+           |    |
+                 |    |
+                 4----3
+                 Strip: 1423
+                 2Tris: 124423
+        */
+  // Vertex 1
+  // Quad vertex
+  // quadvert[0] = (glvert_fast_t){.flags = VERTEX, .vert = {0, 0, 0}, .texture
+  // = {0, 0}, .color = {0, 0, 0, (uint8_t)(255 * OPACITY)}, .pad0 = {0}};
+  quadvert[0] = (glvert_fast_t){
+      .flags = VERTEX,
+      .vert = {0, 0, 0},
+      .texture = {0, 0},
+      .color = {.packed = PACK_BGRA8888(0, 0, 0, (uint8_t)(255 * OPACITY))},
+      .pad0 = {0}};
 
-  //Vertex 4
-  //Quad vertex
-  //quadvert[1] = (glvert_fast_t){.flags = VERTEX, .vert = {0, vid.height, 0}, .texture = {0, 0}, .color = {0, 0, 0, (uint8_t)(255 * OPACITY)}, .pad0 = {0}};
-  quadvert[1] = (glvert_fast_t){.flags = VERTEX, .vert = {0, vid.height, 0}, .texture = {0, 0}, .color = { .packed = PACK_BGRA8888(0,0,0,(uint8_t)(255 * OPACITY))}, .pad0 = {0}};
+  // Vertex 4
+  // Quad vertex
+  // quadvert[1] = (glvert_fast_t){.flags = VERTEX, .vert = {0, vid.height, 0},
+  // .texture = {0, 0}, .color = {0, 0, 0, (uint8_t)(255 * OPACITY)}, .pad0 =
+  // {0}};
+  quadvert[1] = (glvert_fast_t){
+      .flags = VERTEX,
+      .vert = {0, vid.height, 0},
+      .texture = {0, 0},
+      .color = {.packed = PACK_BGRA8888(0, 0, 0, (uint8_t)(255 * OPACITY))},
+      .pad0 = {0}};
 
-  //Vertex 2
-  //Quad vertex
-  //quadvert[2] = (glvert_fast_t){.flags = VERTEX, .vert = {vid.width, 0, 0}, .texture = {0, 0}, .color = {0, 0, 0, (uint8_t)(255 * OPACITY)}, .pad0 = {0}};
-  quadvert[2] = (glvert_fast_t){.flags = VERTEX, .vert = {vid.width, 0, 0}, .texture = {0, 0}, .color = { .packed = PACK_BGRA8888(0,0,0,(uint8_t)(255 * OPACITY))},  .pad0 = {0}};
+  // Vertex 2
+  // Quad vertex
+  // quadvert[2] = (glvert_fast_t){.flags = VERTEX, .vert = {vid.width, 0, 0},
+  // .texture = {0, 0}, .color = {0, 0, 0, (uint8_t)(255 * OPACITY)}, .pad0 =
+  // {0}};
+  quadvert[2] = (glvert_fast_t){
+      .flags = VERTEX,
+      .vert = {vid.width, 0, 0},
+      .texture = {0, 0},
+      .color = {.packed = PACK_BGRA8888(0, 0, 0, (uint8_t)(255 * OPACITY))},
+      .pad0 = {0}};
 
-  //Vertex 3
-  //Quad vertex
-  //quadvert[3] = (glvert_fast_t){.flags = VERTEX_EOL, .vert = {vid.width, vid.height, 0}, .texture = {0, 0}, .color = {0, 0, 0, (uint8_t)(255 * OPACITY)}, .pad0 = {0}};
-  quadvert[3] = (glvert_fast_t){.flags = VERTEX_EOL, .vert = {vid.width, vid.height, 0}, .texture = {0, 0}, .color = { .packed = PACK_BGRA8888(0,0,0,(uint8_t)(255 * OPACITY))}, .pad0 = {0}};
+  // Vertex 3
+  // Quad vertex
+  // quadvert[3] = (glvert_fast_t){.flags = VERTEX_EOL, .vert = {vid.width,
+  // vid.height, 0}, .texture = {0, 0}, .color = {0, 0, 0, (uint8_t)(255 *
+  // OPACITY)}, .pad0 = {0}};
+  quadvert[3] = (glvert_fast_t){
+      .flags = VERTEX_EOL,
+      .vert = {vid.width, vid.height, 0},
+      .texture = {0, 0},
+      .color = {.packed = PACK_BGRA8888(0, 0, 0, (uint8_t)(255 * OPACITY))},
+      .pad0 = {0}};
 
   glEnableClientState(GL_COLOR_ARRAY);
   glEnableClientState(GL_TEXTURE_COORD_ARRAY);
   glVertexPointer(3, GL_FLOAT, sizeof(glvert_fast_t), &quadvert[0].vert);
   glTexCoordPointer(2, GL_FLOAT, sizeof(glvert_fast_t), &quadvert[0].texture);
 #ifdef WIN98
-  glColorPointer(4, GL_UNSIGNED_BYTE, sizeof(glvert_fast_t), &quadvert[0].color);
+  glColorPointer(4, GL_UNSIGNED_BYTE, sizeof(glvert_fast_t),
+                 &quadvert[0].color);
 #else
-  glColorPointer(GL_BGRA, GL_UNSIGNED_BYTE, sizeof(glvert_fast_t), &quadvert[0].color);
+  glColorPointer(GL_BGRA, GL_UNSIGNED_BYTE, sizeof(glvert_fast_t),
+                 &quadvert[0].color);
 #endif
   glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
 
@@ -974,8 +1009,7 @@ Erases the disc icon.
 Call after completing any disc IO
 ================
 */
-void Draw_EndDisc(void) {
-}
+void Draw_EndDisc(void) {}
 
 /*
 ================
@@ -1024,7 +1058,8 @@ int GL_FindTexture(char *identifier) {
 GL_ResampleTexture
 ================
 */
-void GL_ResampleTexture(unsigned *in, int inwidth, int inheight, unsigned *out, int outwidth, int outheight) {
+void GL_ResampleTexture(unsigned *in, int inwidth, int inheight, unsigned *out,
+                        int outwidth, int outheight) {
   int i, j;
   unsigned *inrow;
   unsigned frac, fracstep;
@@ -1051,7 +1086,8 @@ void GL_ResampleTexture(unsigned *in, int inwidth, int inheight, unsigned *out, 
 GL_Resample8BitTexture -- JACK
 ================
 */
-void GL_Resample8BitTexture(unsigned char *in, int inwidth, int inheight, unsigned char *out, int outwidth, int outheight) {
+void GL_Resample8BitTexture(unsigned char *in, int inwidth, int inheight,
+                            unsigned char *out, int outwidth, int outheight) {
   int i, j;
   unsigned char *inrow;
   unsigned frac, fracstep;
@@ -1224,14 +1260,17 @@ void GL_Upload32(unsigned *data, int width, int height, uint8_t flags) {
 
   if (scaled_width == width && scaled_height == height) {
     if (!mipmap) {
-      glTexImage2D(GL_TEXTURE_2D, 0, samples, scaled_width, scaled_height, 0, GL_RGBA, GL_UNSIGNED_BYTE, data);
+      glTexImage2D(GL_TEXTURE_2D, 0, samples, scaled_width, scaled_height, 0,
+                   GL_RGBA, GL_UNSIGNED_BYTE, data);
       goto done;
     }
     memcpy(scaled, data, width * height * 4);
   } else
-    GL_ResampleTexture(data, width, height, scaled, scaled_width, scaled_height);
+    GL_ResampleTexture(data, width, height, scaled, scaled_width,
+                       scaled_height);
 
-  glTexImage2D(GL_TEXTURE_2D, 0, samples, scaled_width, scaled_height, 0, GL_RGBA, GL_UNSIGNED_BYTE, scaled);
+  glTexImage2D(GL_TEXTURE_2D, 0, samples, scaled_width, scaled_height, 0,
+               GL_RGBA, GL_UNSIGNED_BYTE, scaled);
   if (mipmap) {
     int miplevel;
 
@@ -1245,10 +1284,12 @@ void GL_Upload32(unsigned *data, int width, int height, uint8_t flags) {
       if (scaled_height < 1)
         scaled_height = 1;
       miplevel++;
-      glTexImage2D(GL_TEXTURE_2D, miplevel, samples, scaled_width, scaled_height, 0, GL_RGBA, GL_UNSIGNED_BYTE, scaled);
+      glTexImage2D(GL_TEXTURE_2D, miplevel, samples, scaled_width,
+                   scaled_height, 0, GL_RGBA, GL_UNSIGNED_BYTE, scaled);
     }
     GL_MipMap((byte *)scaled, 1, 1);
-    glTexImage2D(GL_TEXTURE_2D, miplevel, samples, 1, 1, 0, GL_RGBA, GL_UNSIGNED_BYTE, scaled);
+    glTexImage2D(GL_TEXTURE_2D, miplevel, samples, 1, 1, 0, GL_RGBA,
+                 GL_UNSIGNED_BYTE, scaled);
   }
 done:;
 #endif
@@ -1268,8 +1309,9 @@ done:;
 #endif
 }
 
-static void GL_Upload8_EXT(byte* restrict data, int width, int height,uint8_t flags) {
-#ifdef _arch_dreamcast  // BlackAura - begin
+static void GL_Upload8_EXT(byte *restrict data, int width, int height,
+                           uint8_t flags) {
+#ifdef _arch_dreamcast // BlackAura - begin
   qboolean mipmap = ((flags & TEX_MIP) == TEX_MIP);
 
   int scaled_width, scaled_height;
@@ -1294,31 +1336,35 @@ static void GL_Upload8_EXT(byte* restrict data, int width, int height,uint8_t fl
   if (scaled_height > (int)gl_max_size.value)
     scaled_height = gl_max_size.value;
 
-  if(scaled_width == 256)
+  if (scaled_width == 256)
     scaled_width >>= (int)gl_picmip.value;
-  if(scaled_height == 256)
+  if (scaled_height == 256)
     scaled_height >>= (int)gl_picmip.value;
 
-#if  0/*def DEBUG*/
+#if 0 /*def DEBUG*/
   printf("GL_Upload8: %dx%d\t %d bytes\n", scaled_width, scaled_height, scaled_width*scaled_height);
   printf("GL Mem left:%u\n", (unsigned int)glGetFreeVRAM_INTERNAL_KOS());
 #endif
 
-  if(!scaled){
-    scaled_raw = buffer_aligned; //Hunk_TempAlloc(256 * 256 + 32);
+  if (!scaled) {
+    scaled_raw = buffer_aligned; // Hunk_TempAlloc(256 * 256 + 32);
     scaled = scaled_raw; //(unsigned char*)ALIGN((uint32_t)scaled_raw, 32);
   }
 
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, (mipmap) ? gl_filter_min:gl_filter_max);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER,
+                  (mipmap) ? gl_filter_min : gl_filter_max);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, gl_filter_max);
   if ((scaled_width == width) && (scaled_height == height)) {
     uint32_t ptr_unchecked = (uint32_t)data;
     uint32_t ptr_aligned = ALIGN((uint32_t)data, 32);
-    if(ptr_unchecked != ptr_aligned){
-      memcpy(buffer_aligned, data,  scaled_width * scaled_height * 1);
-      glTexImage2D(GL_TEXTURE_2D, 0, GL_COLOR_INDEX8_EXT, scaled_width, scaled_height, 0, GL_COLOR_INDEX, GL_UNSIGNED_BYTE, buffer_aligned);
+    if (ptr_unchecked != ptr_aligned) {
+      memcpy(buffer_aligned, data, scaled_width * scaled_height * 1);
+      glTexImage2D(GL_TEXTURE_2D, 0, GL_COLOR_INDEX8_EXT, scaled_width,
+                   scaled_height, 0, GL_COLOR_INDEX, GL_UNSIGNED_BYTE,
+                   buffer_aligned);
     } else {
-      glTexImage2D(GL_TEXTURE_2D, 0, GL_COLOR_INDEX8_EXT, scaled_width, scaled_height, 0, GL_COLOR_INDEX, GL_UNSIGNED_BYTE, data);
+      glTexImage2D(GL_TEXTURE_2D, 0, GL_COLOR_INDEX8_EXT, scaled_width,
+                   scaled_height, 0, GL_COLOR_INDEX, GL_UNSIGNED_BYTE, data);
     }
     if (mipmap)
       memcpy(scaled, data, width * height);
@@ -1326,29 +1372,33 @@ static void GL_Upload8_EXT(byte* restrict data, int width, int height,uint8_t fl
       return;
     }
   } else {
-    GL_Resample8BitTexture(data, width, height, scaled, scaled_width, scaled_height);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_COLOR_INDEX8_EXT, scaled_width, scaled_height, 0, GL_COLOR_INDEX, GL_UNSIGNED_BYTE, scaled);
+    GL_Resample8BitTexture(data, width, height, scaled, scaled_width,
+                           scaled_height);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_COLOR_INDEX8_EXT, scaled_width,
+                 scaled_height, 0, GL_COLOR_INDEX, GL_UNSIGNED_BYTE, scaled);
   }
 
   if ((scaled_width == scaled_height) && mipmap) {
-    //Only using scaled_width from now on;
-//#define PARANOID
+    // Only using scaled_width from now on;
+    // #define PARANOID
     int miplevel = 0;
-    #ifdef PARANOID
-    printf("Begin mip for %dx%d hopefully %d: ", scaled_width, scaled_height, log2(scaled_width));
-    #endif
+#ifdef PARANOID
+    printf("Begin mip for %dx%d hopefully %d: ", scaled_width, scaled_height,
+           log2(scaled_width));
+#endif
     while (scaled_width > 1) {
       GL_MipMap8Bit(scaled, scaled_width, scaled_width);
       scaled_width >>= 1;
 
-      glTexImage2D(GL_TEXTURE_2D, ++miplevel, GL_COLOR_INDEX8_EXT, scaled_width, scaled_width, 0, GL_COLOR_INDEX, GL_UNSIGNED_BYTE, scaled);
-      #ifdef PARANOID
+      glTexImage2D(GL_TEXTURE_2D, ++miplevel, GL_COLOR_INDEX8_EXT, scaled_width,
+                   scaled_width, 0, GL_COLOR_INDEX, GL_UNSIGNED_BYTE, scaled);
+#ifdef PARANOID
       printf("..%d", miplevel);
-      #endif
+#endif
     }
-    #ifdef PARANOID
+#ifdef PARANOID
     printf("\n");
-    #endif
+#endif
 #undef PARANOID
   }
   return;
@@ -1357,7 +1407,7 @@ static void GL_Upload8_EXT(byte* restrict data, int width, int height,uint8_t fl
   (void)width;
   (void)height;
   (void)flags;
-#endif  // BlackAura
+#endif // BlackAura
 }
 
 /*
@@ -1379,8 +1429,8 @@ void GL_Upload8(byte *data, int width, int height, uint8_t flags) {
 
   /* Work out size and allocate some memory for it */
   // BlackAura - end
-  n = width * height;  // BlackAura - edited
-                       // BlackAura - begin
+  n = width * height; // BlackAura - edited
+                      // BlackAura - begin
   xlated = (unsigned int *)malloc(n * sizeof(int));
   if (!xlated)
     Sys_Error("GL_Upload8: Can't change texture format - out of memory");
@@ -1389,14 +1439,15 @@ void GL_Upload8(byte *data, int width, int height, uint8_t flags) {
   while (n) {
     byte i = *data++;
     // BlackAura - begin
-    if (i == 255)  // BlackAura - edited
+    if (i == 255) // BlackAura - edited
       noalpha = false;
     // BlackAura - begin
     *ptr++ = d_8to24table[i];
     n--;
   }
 
-  /* If we didn't find any transparent pixels, don't upload with an alpha channel */
+  /* If we didn't find any transparent pixels, don't upload with an alpha
+   * channel */
   if (noalpha)
     flags = flags ^ TEX_ALPHA;
 
@@ -1416,9 +1467,10 @@ Checksum / memory leak fix thanks to LordHavoc
 This will slow load times a bit, but we can't put up with memory leaks
 ================
 */
-static int lhcsumtable[256];  // BlackAura
-int GL_LoadTexture(char *identifier, int width, int height, byte *data, uint8_t flags) {
-  int i, s, lhcsum;  // BlackAura - edited
+static int lhcsumtable[256]; // BlackAura
+int GL_LoadTexture(char *identifier, int width, int height, byte *data,
+                   uint8_t flags) {
+  int i, s, lhcsum; // BlackAura - edited
   gltexture_t *glt;
 
   // BlackAura - begin
@@ -1427,8 +1479,10 @@ int GL_LoadTexture(char *identifier, int width, int height, byte *data, uint8_t 
   // not following any standards.
   lhcsum = 0;
   s = width * height;
-  for (i = 0; i < 256; i++) lhcsumtable[i] = i + 1;
-  for (i = 0; i < s; i++) lhcsum += (lhcsumtable[data[i] & 255]++);
+  for (i = 0; i < 256; i++)
+    lhcsumtable[i] = i + 1;
+  for (i = 0; i < s; i++)
+    lhcsum += (lhcsumtable[data[i] & 255]++);
   // BlackAura - end
 
   // see if the texture is already present
@@ -1437,9 +1491,12 @@ int GL_LoadTexture(char *identifier, int width, int height, byte *data, uint8_t 
       if (!strcmp(identifier, glt->identifier)) {
         // BlackAura - begin
         // LordHavoc: everyone hates cache mismatchs, so I fixed it
-        if (lhcsum != glt->lhcsum || width != glt->width || height != glt->height) {
-          Con_DPrintf("GL_LoadTexture: cache mismatch, replacing old texture\n");
-          goto GL_LoadTexture_setup;  // drop out with glt pointing to the texture to replace
+        if (lhcsum != glt->lhcsum || width != glt->width ||
+            height != glt->height) {
+          Con_DPrintf(
+              "GL_LoadTexture: cache mismatch, replacing old texture\n");
+          goto GL_LoadTexture_setup; // drop out with glt pointing to the
+                                     // texture to replace
         }
         return glt->texnum;
         // BlackAura - end
@@ -1453,7 +1510,7 @@ int GL_LoadTexture(char *identifier, int width, int height, byte *data, uint8_t 
   numgltextures++;
 
   int len = 0;
-  if(identifier){
+  if (identifier) {
     len = strlen(identifier);
     memcpy(glt->identifier, identifier, len);
   }
@@ -1464,7 +1521,7 @@ int GL_LoadTexture(char *identifier, int width, int height, byte *data, uint8_t 
 
   // LordHavoc: label to drop out of the loop into the setup code
 GL_LoadTexture_setup:
-  glt->lhcsum = lhcsum;  // LordHavoc: used to verify textures are identical
+  glt->lhcsum = lhcsum; // LordHavoc: used to verify textures are identical
   // BlackAura - end
   glt->width = width;
   glt->height = height;
@@ -1487,25 +1544,49 @@ void DrawQuad_NoTex(float x, float y, float w, float h, int c) {
   const uint8_t g = host_basepal[c * 3 + 1];
   const uint8_t b = host_basepal[c * 3 + 2];
   glvert_fast_t quadvert[4];
-  //Vertex 1
-  //Quad vertex
-  //quadvert[0] = (glvert_fast_t){.flags = VERTEX, .vert = {x, y, 0}, .texture = {0, 0}, .color = {b, g, r, 255}, .pad0 = {0}};
-  quadvert[0] = (glvert_fast_t){.flags = VERTEX, .vert = {x, y, 0}, .texture = {0, 0}, .color = { .packed = PACK_BGRA8888(b,g,r,255)}, .pad0 = {0}};
+  // Vertex 1
+  // Quad vertex
+  // quadvert[0] = (glvert_fast_t){.flags = VERTEX, .vert = {x, y, 0}, .texture
+  // = {0, 0}, .color = {b, g, r, 255}, .pad0 = {0}};
+  quadvert[0] =
+      (glvert_fast_t){.flags = VERTEX,
+                      .vert = {x, y, 0},
+                      .texture = {0, 0},
+                      .color = {.packed = PACK_BGRA8888(b, g, r, 255)},
+                      .pad0 = {0}};
 
-  //Vertex 4
-  //Quad vertex
-  //quadvert[1] = (glvert_fast_t){.flags = VERTEX, .vert = {x, y + h, 0}, .texture = {0, 0}, .color = {b, g, r, 255}, .pad0 = {0}};
-  quadvert[1] = (glvert_fast_t){.flags = VERTEX, .vert = {x, y + h, 0}, .texture = {0, 0}, .color = { .packed = PACK_BGRA8888(b,g,r,255)}, .pad0 = {0}};
+  // Vertex 4
+  // Quad vertex
+  // quadvert[1] = (glvert_fast_t){.flags = VERTEX, .vert = {x, y + h, 0},
+  // .texture = {0, 0}, .color = {b, g, r, 255}, .pad0 = {0}};
+  quadvert[1] =
+      (glvert_fast_t){.flags = VERTEX,
+                      .vert = {x, y + h, 0},
+                      .texture = {0, 0},
+                      .color = {.packed = PACK_BGRA8888(b, g, r, 255)},
+                      .pad0 = {0}};
 
-  //Vertex 2
-  //Quad vertex
-  //quadvert[2] = (glvert_fast_t){.flags = VERTEX, .vert = {x + w, y, 0}, .texture = {0, 0}, .color = {b, g, r, 255}, .pad0 = {0}};
-  quadvert[2] = (glvert_fast_t){.flags = VERTEX, .vert = {x + w, y, 0}, .texture = {0, 0}, .color = { .packed = PACK_BGRA8888(b,g,r,255)}, .pad0 = {0}};
+  // Vertex 2
+  // Quad vertex
+  // quadvert[2] = (glvert_fast_t){.flags = VERTEX, .vert = {x + w, y, 0},
+  // .texture = {0, 0}, .color = {b, g, r, 255}, .pad0 = {0}};
+  quadvert[2] =
+      (glvert_fast_t){.flags = VERTEX,
+                      .vert = {x + w, y, 0},
+                      .texture = {0, 0},
+                      .color = {.packed = PACK_BGRA8888(b, g, r, 255)},
+                      .pad0 = {0}};
 
-  //Vertex 3
-  //Quad vertex
-  //quadvert[3] = (glvert_fast_t){.flags = VERTEX_EOL, .vert = {x + w, y + h, 0}, .texture = {0, 0}, .color = {b, g, r, 255}, .pad0 = {0}};
-  quadvert[3] = (glvert_fast_t){.flags = VERTEX_EOL, .vert = {x + w, y + h, 0}, .texture = {0, 0}, .color = { .packed = PACK_BGRA8888(b,g,r,255)}, .pad0 = {0}};
+  // Vertex 3
+  // Quad vertex
+  // quadvert[3] = (glvert_fast_t){.flags = VERTEX_EOL, .vert = {x + w, y + h,
+  // 0}, .texture = {0, 0}, .color = {b, g, r, 255}, .pad0 = {0}};
+  quadvert[3] =
+      (glvert_fast_t){.flags = VERTEX_EOL,
+                      .vert = {x + w, y + h, 0},
+                      .texture = {0, 0},
+                      .color = {.packed = PACK_BGRA8888(b, g, r, 255)},
+                      .pad0 = {0}};
 
   glDisable(GL_TEXTURE_2D);
   glEnableClientState(GL_COLOR_ARRAY);
@@ -1513,70 +1594,71 @@ void DrawQuad_NoTex(float x, float y, float w, float h, int c) {
   glVertexPointer(3, GL_FLOAT, sizeof(glvert_fast_t), &quadvert[0].vert);
   glTexCoordPointer(2, GL_FLOAT, sizeof(glvert_fast_t), &quadvert[0].texture);
 #ifdef WIN98
-  glColorPointer(4, GL_UNSIGNED_BYTE, sizeof(glvert_fast_t), &quadvert[0].color);
+  glColorPointer(4, GL_UNSIGNED_BYTE, sizeof(glvert_fast_t),
+                 &quadvert[0].color);
 #else
-  glColorPointer(GL_BGRA, GL_UNSIGNED_BYTE, sizeof(glvert_fast_t), &quadvert[0].color);
+  glColorPointer(GL_BGRA, GL_UNSIGNED_BYTE, sizeof(glvert_fast_t),
+                 &quadvert[0].color);
 #endif
   glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
   glEnable(GL_TEXTURE_2D);
 }
 
-void DrawQuad(int x, int y, int w, int h, float u, float v, float uw, float vh) {
+void DrawQuad(int x, int y, int w, int h, float u, float v, float uw,
+              float vh) {
   glvert_fast_t quadvert[4];
-  
+
   // Ensure coordinates are hardware aligned
   x = (x + 4) & ~7;
   y = (y + 4) & ~7;
-  
+
   // Adjust texture coordinates to prevent chopping
   float u2 = u + uw;
   float v2 = v + vh;
-  
+
   // Triangle strip order: bottom-left, top-left, bottom-right, top-right
   // Vertex 1 (bottom-left)
   quadvert[0] = (glvert_fast_t){
-    .flags = VERTEX,
-    .vert = {(float)x, (float)(y + h), 0},
-    .texture = {u, v2},
-    .color = { .packed = PACK_BGRA8888(255,255,255,quad_alpha)},
-    .pad0 = {0}
-  };
+      .flags = VERTEX,
+      .vert = {(float)x, (float)(y + h), 0},
+      .texture = {u, v2},
+      .color = {.packed = PACK_BGRA8888(255, 255, 255, quad_alpha)},
+      .pad0 = {0}};
 
   // Vertex 2 (top-left)
   quadvert[1] = (glvert_fast_t){
-    .flags = VERTEX,
-    .vert = {(float)x, (float)y, 0},
-    .texture = {u, v},
-    .color = { .packed = PACK_BGRA8888(255,255,255,quad_alpha)},
-    .pad0 = {0}
-  };
+      .flags = VERTEX,
+      .vert = {(float)x, (float)y, 0},
+      .texture = {u, v},
+      .color = {.packed = PACK_BGRA8888(255, 255, 255, quad_alpha)},
+      .pad0 = {0}};
 
   // Vertex 3 (bottom-right)
   quadvert[2] = (glvert_fast_t){
-    .flags = VERTEX,
-    .vert = {(float)(x + w), (float)(y + h), 0},
-    .texture = {u2, v2},
-    .color = { .packed = PACK_BGRA8888(255,255,255,quad_alpha)},
-    .pad0 = {0}
-  };
+      .flags = VERTEX,
+      .vert = {(float)(x + w), (float)(y + h), 0},
+      .texture = {u2, v2},
+      .color = {.packed = PACK_BGRA8888(255, 255, 255, quad_alpha)},
+      .pad0 = {0}};
 
   // Vertex 4 (top-right)
   quadvert[3] = (glvert_fast_t){
-    .flags = VERTEX_EOL,
-    .vert = {(float)(x + w), (float)y, 0},
-    .texture = {u2, v},
-    .color = { .packed = PACK_BGRA8888(255,255,255,quad_alpha)},
-    .pad0 = {0}
-  };
+      .flags = VERTEX_EOL,
+      .vert = {(float)(x + w), (float)y, 0},
+      .texture = {u2, v},
+      .color = {.packed = PACK_BGRA8888(255, 255, 255, quad_alpha)},
+      .pad0 = {0}};
 
   glEnableClientState(GL_COLOR_ARRAY);
   glEnableClientState(GL_TEXTURE_COORD_ARRAY);
   glVertexPointer(3, GL_FLOAT, sizeof(glvert_fast_t), &quadvert[0].vert);
   glTexCoordPointer(2, GL_FLOAT, sizeof(glvert_fast_t), &quadvert[0].texture);
 #ifdef WIN98
-  glColorPointer(4, GL_UNSIGNED_BYTE, sizeof(glvert_fast_t), &quadvert[0].color);
+  glColorPointer(4, GL_UNSIGNED_BYTE, sizeof(glvert_fast_t),
+                 &quadvert[0].color);
 #else
-  glColorPointer(GL_BGRA, GL_UNSIGNED_BYTE, sizeof(glvert_fast_t), &quadvert[0].color);
+  glColorPointer(GL_BGRA, GL_UNSIGNED_BYTE, sizeof(glvert_fast_t),
+                 &quadvert[0].color);
 #endif
   glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
 }
