@@ -1,6 +1,11 @@
 # nuQuake Enhanced © 2024 David Croshaw
 ## Free and Open for the Community!
 
+## Main Branch EOL Notice
+As of 6/12/2026, the main branch of this project is current on EOL status. It shall remain on EOL for the forseeable future.
+Various PR's may be pushed by 3rd-parties on the development branch, but it will not be guaranteed to work, will not be pushed to main, and will not be pushed in
+a timely manner. You are free to fork this repository and work on it seperately.
+
 ## Working:
 - The Game
 - 16-bit Sound and CDDA Audio
